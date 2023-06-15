@@ -1,20 +1,3 @@
-# SMC 
-+ To test client end, go to the folder SMC/cmd/client and run command 
-
-	go run main.go -cid="c1"
-+ To test server end, go to the folder SMC/cmd/server and run command 
-  
-  go run main.go -port=":8080" -sid="s1"
-
-## Status
-+ Client end could splite single secret and send to servers. Secret, servers' urls and parameters for packed secret sharing can be read from config file.
-+ Server end could receive share from different client. 
-
-## To Do
-+ Test aggregating shares and reconstruct sum of secrets.
-+ Let server listen to client, aggregate shares and send to output party concurrently.
-+ Change go.mod to import packed secret sharing from github 
-  
 # Secure Aggregation with Input Certification
 
 | Parameter              | Description                                                                              |
@@ -42,9 +25,9 @@ We assume secure and authenticated channels from each client and all the servers
 4. Each server $s_j$ locally performs the following checks for each client $u_i$ and sets a bit $happy_i = 0$ if any of them fail, otherwise $happy_i = 1$:
 	- $h_{i,j}$ is valid, i.e., check if $h_{i,j} = Hash(\pi_{i,0})$
 	- $Proof.Verify(\pi_{i,0}, \pi_{i,j}, sh(i,j))$ outputs 1
-		- (Ligero Hash Check) The hash of the received input column matches the hash received as part of the proof $\pi_{i,0}$
-		- (Ligero Degree test) The random linear combination of the input column (with respect to the given randomness) matches the corresponding entry in the output of the degree test (for the input).
-		- (Ligero Linear test) Checks that the shares $sh_{i,j}$ are a linear combination of the inputs used in the proof $\pi_{i,0}$
+		//- (Ligero Hash Check) The hash of the received input column matches the hash received as part of the proof $\pi_{i,0}$
+		//- (Ligero Degree test) The random linear combination of the input column (with respect to the given randomness) matches the corresponding entry in the output of the degree test (for the input).
+		//- (Ligero Linear test) Checks that the shares $sh_{i,j}$ are a linear combination of the inputs used in the proof $\pi_{i,0}$
 
 5. Server $s_j$ initializes a set $V_j$ with all the clients that pass all of the above checks, i.e., clients with $happy_i = 1$.
 6. Each server $s_j$ sends the tuple $\{(i, h_{i,j})\}$ for all clients $u_i \in V_j$ to all servers.
@@ -56,3 +39,23 @@ We assume secure and authenticated channels from each client and all the servers
 8. Upon receiving the set $V$, the servers aggregate the columns received from each client in $V$. 
 9. Then the aggregated columns are sent to the output party who can then reconstruct the aggregate.
 
+
+## Implementation Details
+
+### Executing Program
++ To test client end, go to the folder SMC/cmd/client and run command 
+
+	go run main.go -cid="c1"
++ To test server end, go to the folder SMC/cmd/server and run command 
+  
+  go run main.go -port=":8080" -sid="s1"
+
+### Current Status
++ Client end could splite single secret and send to servers. Secret, servers' urls and parameters for packed secret sharing can be read from config file.
++ Server end could receive share from different client. 
+
+### To Do
++ Test aggregating shares and reconstruct sum of secrets.
++ Let server listen to client, aggregate shares and send to output party concurrently.
++ Change go.mod to import packed secret sharing from github 
+  
