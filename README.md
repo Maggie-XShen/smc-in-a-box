@@ -24,20 +24,20 @@ We assume secure and authenticated channels from each client and all the servers
 ### Phase 2: Client Elimination
 4. Each server $s_j$ locally performs the following checks for each client $u_i$ and sets a bit $happy_i = 0$ if any of them fail, otherwise $happy_i = 1$:
 	- $h_{i,j}$ is valid, i.e., check if $h_{i,j} = Hash(\pi_{i,0})$
-	- $Proof.Verify(\pi_{i,0}, \pi_{i,j}, sh(i,j))$ outputs 1
-		//- (Ligero Hash Check) The hash of the received input column matches the hash received as part of the proof $\pi_{i,0}$
-		//- (Ligero Degree test) The random linear combination of the input column (with respect to the given randomness) matches the corresponding entry in the output of the degree test (for the input).
-		//- (Ligero Linear test) Checks that the shares $sh_{i,j}$ are a linear combination of the inputs used in the proof $\pi_{i,0}$
+	- $Proof.Verify(\pi_{i,0}, \pi_{i,j}, sh_{i,j})$ outputs 1
+		<!--- - (Ligero Hash Check) The hash of the received input column matches the hash received as part of the proof $\pi_{i,0}$
+		- (Ligero Degree test) The random linear combination of the input column (with respect to the given randomness) matches the corresponding entry in the output of the degree test (for the input).
+		- (Ligero Linear test) Checks that the shares $sh_{i,j}$ are a linear combination of the inputs used in the proof $\pi_{i,0}$ -->
 
 5. Server $s_j$ initializes a set $V_j$ with all the clients that pass all of the above checks, i.e., clients with $happy_i = 1$.
-6. Each server $s_j$ sends the tuple $\{(i, h_{i,j})\}$ for all clients $u_i \in V_j$ to all servers.
+6. Each server $s_j$ sends the tupleS \{ $(i, h_{i,j})$ \} $_{u_i \in V_j}$ to all the servers.
 7. The servers compute a set $V$ such that client $u_i$ is included in $V$ if:
-	//- All servers sent messages of the form $(i, *)$
-	- All servers sent the same hash with respect to client $i$, i.e., two different hashes were received, i.e., $h_{i,k} = h_{i,l} \neq \bot$ for all $k, l \in [ns]$
+	<!--- - All servers sent messages of the form $(i, *)$ -->
+	- All servers sent the same hash with respect to client $i$, i.e., $h_{i,k} = h_{i,l} \neq \bot$ for all $k, l \in [ns]$
 
 ### Phase 3: Output Reconstruction
-8. Upon receiving the set $V$, the servers aggregate the columns received from each client in $V$. 
-9. Then the aggregated columns are sent to the output party who can then reconstruct the aggregate.
+8. Each server $s_j$ aggregates the shares it received from all clients in $V$ as follows: $O_j = \sum_{u_i\in V} sh_{i,j}$ and send $O_j$ to the output party.
+9. The output party reconstructs $(O_1, \ldots, O_{ns})$ to obtain the aggregate.
 
 
 ## Implementation Details
