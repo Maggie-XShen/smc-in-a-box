@@ -69,7 +69,11 @@ func (p *PackedSecretSharing) Split(secrets []int) ([]Share, error) {
 func (p *PackedSecretSharing) Reconstruct(parts []Share) ([]int, error) {
 	//need t+k shares to reconstruct
 	if len(parts) < p.t+p.k {
-		return nil, fmt.Errorf("cannot do this, as number of shares less than t+k")
+		return nil, fmt.Errorf("cannot reconstruct, as number of shares less than t+k")
+	}
+
+	if len(parts) > p.n {
+		return nil, fmt.Errorf("cannot reconstruct, as number of shares more than n")
 	}
 
 	var x_samples []int

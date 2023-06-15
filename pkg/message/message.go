@@ -1,4 +1,4 @@
-package utils
+package message
 
 import (
 	"bytes"
@@ -26,6 +26,12 @@ type Server_Msg struct {
 	Timestamp  string       `json:"Timestamp"`
 }
 
+type OutputParty_Msg struct {
+	Exp_ID    string `json:"Exp_ID"`
+	Due       string `json:"Due"`
+	Completed bool   `json:"Completed"`
+}
+
 type Writer interface {
 	WriteToJson() []byte
 }
@@ -46,6 +52,21 @@ func (c *Client_Msg) WriteToJson() []byte {
 	return message
 }
 
+func (op *OutputParty_Msg) WriteToJson() []byte {
+	msg := &OutputParty_Msg{
+		Exp_ID:    op.Exp_ID,
+		Due:       op.Due,
+		Completed: false,
+	}
+	message, err := json.Marshal(msg)
+
+	if err != nil {
+		log.Fatalf("impossible to marshall response: %s", err) //Todo: change log message
+	}
+
+	return message
+}
+
 func (s *Server_Msg) WriteToJson() []byte {
 	msg := &Server_Msg{
 		Exp_ID:     s.Exp_ID,
@@ -56,7 +77,7 @@ func (s *Server_Msg) WriteToJson() []byte {
 	message, err := json.Marshal(msg)
 
 	if err != nil {
-		log.Fatalf("impossible to marshall response: %s", err)
+		log.Fatalf("impossible to marshall response: %s", err) //Todo: change log message
 	}
 
 	return message
@@ -82,6 +103,16 @@ func ReadServerMsg(req *http.Request) *Server_Msg {
 	return &t
 }
 
+func ReadExpMsg(req *http.Request) *OutputParty_Msg {
+	decoder := json.NewDecoder(req.Body)
+	var t OutputParty_Msg
+	err := decoder.Decode(&t)
+	if err != nil {
+		log.Fatalf("Error: %s", err)
+	}
+	return &t
+}
+
 func Send(address string, data []byte) {
 	req, err := http.NewRequest("POST", address, bytes.NewBuffer(data))
 	if err != nil {
@@ -94,6 +125,7 @@ func Send(address string, data []byte) {
 	if err != nil {
 		log.Fatalf("impossible to send request: %s", err)
 	}
+
 	log.Printf("response Status:%s", res.Status)
 
 	//defer res.Body.Close()

@@ -7,20 +7,15 @@ import (
 	"net/http"
 	"time"
 
+	"example.com/SMC/cmd/outputparty/config"
+	"example.com/SMC/pkg/message"
 	"example.com/SMC/pkg/packed"
-	"example.com/SMC/pkg/utils"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
 var db *gorm.DB
-
-type Configuration struct {
-	N int
-	T int
-	K int
-	Q int
-}
+var URLs []string
 
 type Experiment struct {
 	Exp_ID    string `json:"Exp_ID"`
@@ -29,28 +24,35 @@ type Experiment struct {
 }
 
 type Server struct {
-	Exp_ID     string
-	Server_ID  string
-	Sum_Shares packed.Share `json:"Sum_Shares"`
+	Exp_ID         string
+	Server_ID      string
+	SumShare_Value int
+	SumShare_Index int
 }
 
 type OutputParty struct {
-	Server_ID string
+	OutputParty_ID string
 }
 
 func NewOutputParty(id string) *OutputParty {
-	return &OutputParty{Server_ID: id}
+	return &OutputParty{OutputParty_ID: id}
 }
 
-func (op *OutputParty) reveal(shares []packed.Share, n, t, k, q int) ([]int, error) {
-	//Todo: read parameters for packed secret sharing from file
-	npss, err := packed.NewPackedSecretSharing(n, t, k, q)
+func (op *OutputParty) reveal(shares []packed.Share) ([]int, error) {
+	//read parameters for packed secret sharing from file
+	conf := config.LoadConfig("config/config.json")
+	npss, err := packed.NewPackedSecretSharing(conf.N, conf.T, conf.K, conf.Q)
+	if err != nil {
+		log.Fatal(err)
+	}
 
+	fmt.Println("test")
 	result, err := npss.Reconstruct(shares)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(result)
+
+	fmt.Printf("%v", result)
 
 	return result, nil
 }
@@ -76,12 +78,14 @@ func (op *OutputParty) waitForEndOfExperiment(ticker *time.Ticker) {
 			// check if all servers send their share
 			if r.RowsAffected == 3 { // TODO: get number of servers from config gile
 				// reconstruct sum of secrets
-				shares := make([]packed.Share, 3)
+				var shares []packed.Share
 				for _, server := range servers {
-					shares = append(shares, server.Sum_Shares)
+					shares = append(shares, packed.Share{Value: server.SumShare_Value, Index: server.SumShare_Index})
 				}
 
-				op.reveal(shares, n, t, k, q)
+				fmt.Printf("%+v\n", shares)
+
+				op.reveal(shares)
 
 				//set exp to completed
 				r = db.Model(&exp).Where("exp_ID = ?", exp.Exp_ID).Update("Completed", true)
@@ -98,7 +102,8 @@ func (op *OutputParty) waitForEndOfExperiment(ticker *time.Ticker) {
 }
 
 func (op *OutputParty) serverDataHandler(rw http.ResponseWriter, req *http.Request) {
-	server_msg := utils.ReadServerMsg(req)
+	server_msg := message.ReadServerMsg(req)
+	fmt.Printf("%v\n", server_msg)
 
 	//Todo: check validity of server
 
@@ -118,46 +123,76 @@ func (op *OutputParty) serverDataHandler(rw http.ResponseWriter, req *http.Reque
 		return
 	} else {
 		s := Server{
-			Exp_ID:     server_msg.Exp_ID,
-			Server_ID:  server_msg.Server_ID,
-			Sum_Shares: server_msg.Sum_Shares,
+			Exp_ID:         server_msg.Exp_ID,
+			Server_ID:      server_msg.Server_ID,
+			SumShare_Value: server_msg.Sum_Shares.Value,
+			SumShare_Index: server_msg.Sum_Shares.Index,
 		}
 		db.Create(&s)
 	}
 
-	// send back result to the client
+	// send back result to the server
 	rw.Header().Set("Content-Type", "application/json")
 	rw.WriteHeader(http.StatusOK)
 
 }
 
-func main() {
-	port := flag.String("port", ":8080", "the port on which the server will listen")
-	oid := flag.String("oid", "o1", "output party ID")
-
-	// Todo: set experiments information from file
-	exp := &Experiment{ // Todo: set experiments information from output party message
-		Exp_ID:    "exp1",
-		Due:       "2023-06-01",
-		Completed: false,
-	}
-
+func (op *OutputParty) ConnectDB(oid string) {
 	// open a database
 	var err error
-	db_name := fmt.Sprintf("OutputParty-%s.db", *oid)
+	db_name := fmt.Sprintf("OutputParty-%s.db", oid)
 	db, err = gorm.Open(sqlite.Open(db_name), &gorm.Config{})
 	if err != nil {
-		panic("Failed to connect database") // Todo: change to log
+		panic("failed to connect database") // Todo: change to log
 	}
 	log.Println("Connection to Database Established")
 
 	db.AutoMigrate(&Experiment{})
 
+	db.AutoMigrate(&Server{})
+}
+
+func (op *OutputParty) HandelExpInfor() {
+
+	var exp Experiment
+	checkExp := db.Find(&exp, "exp_id = ?", exp.Exp_ID)
+
+	if checkExp.RowsAffected != 0 {
+		log.Println("Experiment already exists!")
+		return
+	}
+
+	// Todo: set experiments information from file
+	exp.Exp_ID = "exp1"
+	exp.Due = "2023-06-01"
+	exp.Completed = false
 	db.Create(&exp)
 
-	db.AutoMigrate(&Server{})
+	msg := message.OutputParty_Msg{Exp_ID: exp.Exp_ID, Due: exp.Due, Completed: exp.Completed}
+	fmt.Printf("%+v\n", msg)
+	writer := &msg
+	for _, url := range URLs {
+		message.Send(url, writer.WriteToJson())
+	}
 
-	outputParty := NewOutputParty(*oid)
+}
+
+func main() {
+	//read configuration
+	confpath := flag.String("confpath", "config/config.json", "config file path") // confpath := "config.json"
+	exppath := flag.String("exppath", "exp.json", "experiment file path")
+	flag.Parse()
+
+	conf := config.LoadConfig(*confpath)
+	URLs = conf.URLs
+
+	outputParty := NewOutputParty(conf.OutputParty_ID)
+	outputParty.ConnectDB(conf.OutputParty_ID)
+
+	if *exppath != "" {
+		outputParty.HandelExpInfor()
+	}
+
 	http.HandleFunc("/serverDataSubmit/", outputParty.serverDataHandler)
 
 	// set up ticker
@@ -165,6 +200,6 @@ func main() {
 	go outputParty.waitForEndOfExperiment(ticker)
 
 	// Todo: read port number from file
-	log.Fatal(http.ListenAndServe(*port, nil))
+	log.Fatal(http.ListenAndServe(":"+conf.Port, nil))
 
 }

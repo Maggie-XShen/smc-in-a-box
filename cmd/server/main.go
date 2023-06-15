@@ -7,8 +7,9 @@ import (
 	"net/http"
 	"time"
 
+	"example.com/SMC/cmd/server/config"
+	"example.com/SMC/pkg/message"
 	"example.com/SMC/pkg/packed"
-	"example.com/SMC/pkg/utils"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -30,6 +31,7 @@ type Experiment struct {
 
 type Server struct {
 	Server_ID   string
+	Port        string
 	Share_Index int
 	URL         string //output party URL
 }
@@ -59,15 +61,15 @@ func (s *Server) waitForEndOfExperiment(ticker *time.Ticker) {
 			}
 
 			// check if all registered clients send their share or time is pased due
-			if r.RowsAffected >= 3 { //TODO: change condition to r.RowsAffected >= numOfClients or passDue
+			if r.RowsAffected >= 2 { //TODO: change condition to r.RowsAffected >= numOfClients or passDue
 				// sum up the shares
 				sumSharesValue := s.addShares(clients)
 
 				// send to output party
-				msg := utils.Server_Msg{Exp_ID: exp.Exp_ID, Server_ID: s.Server_ID, Sum_Shares: packed.Share{Index: s.Share_Index, Value: sumSharesValue}, Timestamp: time.Now().Format("2006-01-02")}
+				msg := message.Server_Msg{Exp_ID: exp.Exp_ID, Server_ID: s.Server_ID, Sum_Shares: packed.Share{Index: s.Share_Index, Value: sumSharesValue}, Timestamp: time.Now().Format("2006-01-02")}
 				fmt.Printf("%+v\n", msg)
-				//writer := &msg
-				//utils.Send(s.URL, writer.WriteToJson())
+				writer := &msg
+				message.Send(s.URL, writer.WriteToJson())
 
 				//set exp to completed
 				r = db.Model(&exp).Where("exp_ID = ?", exp.Exp_ID).Update("Completed", true)
@@ -83,8 +85,23 @@ func (s *Server) waitForEndOfExperiment(ticker *time.Ticker) {
 	}
 }
 
+func (s *Server) ConnectDB(sid string) {
+	// open a database
+	var err error
+	db_name := fmt.Sprintf("server-%s.db", sid)
+	db, err = gorm.Open(sqlite.Open(db_name), &gorm.Config{})
+	if err != nil {
+		panic("failed to connect database") // Todo: change to log
+	}
+	log.Println("Connection to Database Established")
+
+	db.AutoMigrate(&Experiment{})
+
+	db.AutoMigrate(&Client{})
+}
+
 func (s *Server) clientDataHandler(rw http.ResponseWriter, req *http.Request) {
-	client_msg := utils.ReadClientMsg(req)
+	client_msg := message.ReadClientMsg(req)
 
 	var exp Experiment
 	var client Client
@@ -124,6 +141,26 @@ func (s *Server) clientDataHandler(rw http.ResponseWriter, req *http.Request) {
 
 }
 
+func (s *Server) expInforHandler(rw http.ResponseWriter, req *http.Request) {
+	exp_msg := message.ReadExpMsg(req)
+	var exp Experiment
+	checkExp := db.Find(&exp, "exp_id = ?", exp_msg.Exp_ID)
+
+	if checkExp.RowsAffected != 0 {
+		log.Println("Experiment already exists!")
+		rw.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	newExp := &Experiment{
+		Exp_ID:    exp_msg.Exp_ID,
+		Due:       exp_msg.Due,
+		Completed: exp_msg.Completed,
+	}
+
+	db.Create(&newExp)
+}
+
 func (s *Server) addShares(clients []Client) int {
 	sumOfShares := 0
 
@@ -134,41 +171,25 @@ func (s *Server) addShares(clients []Client) int {
 }
 
 func main() {
-	//Todo: read parameters from config file and command
-	port := flag.String("port", ":8080", "the port on which the server will listen")
-	sid := flag.String("sid", "s1", "server ID")
-	index := flag.Int("index", 1, "share index")
-
+	//read configuration
+	confpath := flag.String("confpath", "config/config.json", "config file path") // confpath := "config.json"
+	sid := flag.String("sid", "", "server id")
+	index := flag.Int("index", 100, "share index")
+	port := flag.String("port", "", "port")
 	flag.Parse()
+	conf := config.LoadConfig(*confpath)
 
-	exp := &Experiment{ // Todo: set experiments information from output party message
-		Exp_ID:    "exp1",
-		Due:       "2023-06-01",
-		Completed: false,
-	}
+	server := NewServer(*sid, conf.URL, *index)
 
-	// open a database
-	var err error
-	db_name := fmt.Sprintf("server-%s.db", *sid)
-	db, err = gorm.Open(sqlite.Open(db_name), &gorm.Config{})
-	if err != nil {
-		panic("failed to connect database") // Todo: change to log
-	}
-	log.Println("Connection to Database Established")
+	server.ConnectDB(*sid)
 
-	db.AutoMigrate(&Experiment{})
-
-	db.Create(&exp)
-
-	db.AutoMigrate(&Client{})
-
-	server := NewServer(*sid, "http://127.0.0.1:8085/serverDataSubmit/", *index)
 	http.HandleFunc("/clientDataSubmit/", server.clientDataHandler)
+	http.HandleFunc("/expInforSubmit/", server.expInforHandler)
 
 	// set up ticker
 	ticker := time.NewTicker(1 * time.Second)
 	go server.waitForEndOfExperiment(ticker)
 
-	log.Fatal(http.ListenAndServe(*port, nil)) // Todo: read port number from file
+	log.Fatal(http.ListenAndServe(":"+*port, nil))
 
 }
