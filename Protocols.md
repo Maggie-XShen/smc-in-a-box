@@ -1,53 +1,43 @@
 # **Secure Aggregation with Input Certification**
-## **Objective**
-The objective is ...
-## **Participating Parties**
-* n_c Clients
-* n_s Servers
-* Output Party
-## **Protocol I: Semi-honest Server Model**
-### **Parameters**
-* Input
-  + Client i has input vector of length m (i.e., x_i).
-* Output
-  + The output party receives xi  P(xi ) where P(.) is a robustness predicate, say L2 norm.
-* Adversarial Model
-  + less than n_c -1 malicious clients
-  + t semi-honest servers
-### **Protocol Description**
-**Phase 0:** Setup
 
-We assume secure and authenticated channels (i) from each client and all the servers and (ii) complete communication graph among the servers.
-
-**Phase 1:** Input Sharing & Proof generation
-
-1. Each client i has an input vector of length m which is rearranged into a matrix of dimension b x l. This input is encoded row-by-row using the packed secret sharing scheme to obtain an encoded input matrix of size b x n_s. 
-2. Each column of the encoded input matrix is sent to its corresponding server i.e., column j is sent to server j for all j in [n_s].
-3. The servers extend the input matrix by adding additional rows to construct the extended witness of size b’ x l and then encode into a matrix of size b’ x n_s. This is used to compute the Ligero proof .
-4. The proof  and the column j of the input encoded matrix are sent to server j for all j in [n_s].
-   
-**Phase 2:** Input Consistency
-
-1. Each server j performs the following checks each client i:
-   - Proof verification passes
-   - The hash of the received input column matches the hash received as part of the proof 
-   - The random linear combination of the input column (with respect to the given randomness) matches the corresponding entry in the output of the degree test (for the input).
-2. Server j initializes a set Vj with all the clients that pass all of the above three tests.
-3. Also, server j sends the set Vj to a single server, server 1.
-4. Upon receiving all the sets {Vj}_j \in [n_s], server 1 computes the intersection of all the sets, say V, and sends V to all the servers.
-
-**Phase 3:** Output Reconstruction
-
-1. Upon receiving the set V, the servers aggregate the columns received from each client in V.
-2. Then the aggregated columns are sent to the output party who can then reconstruct the aggregate.
+| Parameter              | Description                                                                              |
+|------------------------|------------------------------------------------------------------------------------------|
+| Participating Parties  | nc clients $\{c_1, \ldots, c_{nc}\}$, ns servers $\{s_1, \ldots, s_{ns}\}$, and output party |
+| Input                  | Client $c_i$ has input vector $x_i$ of length $m$                                          |
+| Output                 | The output party receives $\sum x_i \cdot P(x_i)$ where $P(.)$ is a robustness predicate, say L2 norm. |
+| Adversarial Model      | $< nc - 1$ malicious client, $ts$ semi-honest servers                                         |
 
 
+## Protocol I: Fail-Stop Clients & Semi-Honest Servers
 
-### **Building Blocks**
-## **Protocol II: Malicious Server Model**
-### **Parameters**
-* Input
-* Output
-* Adversarial Model
-### **Protocol Description**
-### **Building Blocks**
+
+### Phase 0: Setup
+We assume secure and authenticated channels from each client and all the servers and a complete communication graph among the servers.
+
+### Phase 1: Input Sharing & Proof Generation
+1. Each client $c_i$ generates the shares by invoking $Share(x_i)$ which outputs $(sh_{i,1}, \ldots, sh_{i,ns})$ where $sh_{i,j}$ is the server $s_j$’s share.
+2. Proof generation: Each client generates the proof as per the Ligero proof system. Specifically, the $ProofGen(x_i, sh_1, \ldots, sh_{ns})$ outputs the proof $\pi_i = (\pi_{i,0}, \ldots, \pi_{i,ns})$ where $\pi_{i,0}$ is given to all servers and $\pi_{i,j}$ is given to server $s_j$.
+3. Each client $c_i$ sends the following to server $s_j$ for all $j$ in $[ns]$:
+	- Client id $i$
+	- Share $sh_{i,j}$
+	- Proof $(\pi_{i,0}, \pi_{i,j})$
+	- $h_{i,j} = Hash(\pi_{i,0})$
+
+### Phase 2: Client Elimination
+4. Each server $s_j$ locally performs the following checks for each client $c_i$ and sets a bit $happy_i = 0$ if any of them fail, otherwise $happy_i = 1$:
+	- $h_{i,j}$ is valid, i.e., check if $h_{i,j} = Hash(\pi_{i,0})$
+	- $Proof.Verify(\pi_{i,0}, \pi_{i,j}, sh_{i,j})$ outputs 1
+		<!--- - (Ligero Hash Check) The hash of the received input column matches the hash received as part of the proof $\pi_{i,0}$
+		- (Ligero Degree test) The random linear combination of the input column (with respect to the given randomness) matches the corresponding entry in the output of the degree test (for the input).
+		- (Ligero Linear test) Checks that the shares $sh_{i,j}$ are a linear combination of the inputs used in the proof $\pi_{i,0}$ -->
+
+5. Server $s_j$ initializes a set $V_j$ with all the clients that pass all of the above checks, i.e., clients with $happy_i = 1$.
+6. Each server $s_j$ sends the tupleS \{ $(i, h_{i,j})$ \} $_{c_i \in V_j}$ to all the servers.
+7. The servers compute a set $V$ such that client $c_i$ is included in $V$ if:
+	<!--- - All servers sent messages of the form $(c_i.id, *)$ -->
+	- All servers sent the same hash with respect to client $c_i$, i.e., $h_{i,k} = h_{i,l} \neq \bot$ for all $k, l \in [ns]$
+
+### Phase 3: Output Reconstruction
+8. Each server $s_j$ aggregates the shares it received from all clients in $V$ as follows: $osh_j = \sum_{c_i\in V} sh_{i,j}$ and send $osh_j$ to the output party.
+9. The output party reconstructs $(osh_1, \ldots, osh_{ns})$ to obtain the aggregate.
+
