@@ -1,9 +1,0 @@
-{
-    "OutputParty_ID": "op1",
-    "Port": "8085",
-    "N": 3,
-    "T": 2,
-    "K": 1,
-    "Q": 41,
-    "URLs": ["http://127.0.0.1:8080/expInforSubmit/", "http://127.0.0.1:8081/expInforSubmit/", "http://127.0.0.1:8082/expInforSubmit/"]
-}

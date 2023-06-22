@@ -1,4 +1,4 @@
-package config
+package outputparty
 
 import (
 	"encoding/json"
@@ -6,22 +6,17 @@ import (
 	"os"
 )
 
-type Configuration struct {
-	Client_ID string
-	URLs      []string //servers urls
-	N         int
-	T         int
-	K         int
-	Q         int
-	Exp_ID    string
-	Secrets   []int
+type Config struct {
+	OutputParty_ID string
+	Port           string
+	N              int
+	T              int
+	K              int
+	Q              int
+	URLs           []string //servers urls
 }
 
-func NewConfig() *Configuration {
-	return &Configuration{}
-}
-
-func LoadConfig(path string) *Configuration {
+func LoadConfig(path string) *Config {
 	file, err := os.Open(path)
 	if err != nil {
 		log.Fatalf("%s", err)
@@ -31,7 +26,7 @@ func LoadConfig(path string) *Configuration {
 
 	decoder := json.NewDecoder(file)
 
-	config := Configuration{}
+	config := Config{}
 	err = decoder.Decode(&config)
 	if err != nil {
 		log.Fatalf("unable to read from config file: %s", err)

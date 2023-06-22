@@ -9,9 +9,10 @@ import (
 	"example.com/SMC/pkg/packed"
 )
 
-type Client_Msg struct {
+type ClientRequest struct {
 	Exp_ID       string       `json:"Exp_ID"`
 	Client_ID    string       `json:"Client_ID"`
+	Token        string       `json:"Token"`
 	Secret_Share packed.Share `json:"Secret_Share"`
 	Timestamp    string       `json:"Timestamp"`
 	//Proof       string       `json:"Proof"`
@@ -19,73 +20,127 @@ type Client_Msg struct {
 	//Signature   string       `json:"Signature"`
 }
 
-type Server_Msg struct {
+type ClientRegistry struct {
+	Exp_ID    string `json:"Exp_ID"`
+	Client_ID string `json:"Client_ID"`
+	Token     string `json:"Token"`
+}
+
+type ServerRequest struct {
 	Exp_ID     string       `json:"Exp_ID "`
 	Server_ID  string       `json:"Server_ID"`
 	Sum_Shares packed.Share `json:"Sum_Shares"`
 	Timestamp  string       `json:"Timestamp"`
 }
 
-type OutputParty_Msg struct {
-	Exp_ID    string `json:"Exp_ID"`
-	Due       string `json:"Due"`
-	Completed bool   `json:"Completed"`
+type OutputPartyRequest struct {
+	Exp_ID string `json:"Exp_ID"`
+	Due    string `json:"Due"`
 }
 
 type Writer interface {
-	WriteToJson() []byte
+	WriteJson() []byte
 }
 
-func (c *Client_Msg) WriteToJson() []byte {
-	msg := &Client_Msg{
+type Reader interface {
+	ReadJson(req *http.Request)
+}
+
+func (c *ClientRequest) WriteJson() []byte {
+	msg := &ClientRequest{
 		Exp_ID:       c.Exp_ID,
 		Client_ID:    c.Client_ID,
 		Secret_Share: c.Secret_Share,
-		Timestamp:    c.Timestamp, // Todo: decide time format
+		Timestamp:    c.Timestamp,
 	}
 	message, err := json.Marshal(msg)
 
 	if err != nil {
-		log.Fatalf("impossible to marshall response: %s", err)
+		log.Fatalf("Cannot marshall client request: %s", err)
 	}
 
 	return message
 }
 
-func (op *OutputParty_Msg) WriteToJson() []byte {
-	msg := &OutputParty_Msg{
-		Exp_ID:    op.Exp_ID,
-		Due:       op.Due,
-		Completed: false,
+func (c *ClientRegistry) WriteJson() []byte {
+	msg := &ClientRequest{
+		Exp_ID:    c.Exp_ID,
+		Client_ID: c.Client_ID,
+		Token:     c.Token,
 	}
 	message, err := json.Marshal(msg)
 
 	if err != nil {
-		log.Fatalf("impossible to marshall response: %s", err) //Todo: change log message
+		log.Fatalf("Cannot marshall client registration: %s", err)
 	}
 
 	return message
 }
 
-func (s *Server_Msg) WriteToJson() []byte {
-	msg := &Server_Msg{
+func (op *OutputPartyRequest) WriteJson() []byte {
+	msg := &OutputPartyRequest{
+		Exp_ID: op.Exp_ID,
+		Due:    op.Due,
+	}
+	message, err := json.Marshal(msg)
+
+	if err != nil {
+		log.Fatalf("Cannot marshall output party request: %s", err)
+	}
+
+	return message
+}
+
+func (s *ServerRequest) WriteJson() []byte {
+	msg := &ServerRequest{
 		Exp_ID:     s.Exp_ID,
 		Server_ID:  s.Server_ID,
 		Sum_Shares: s.Sum_Shares,
-		Timestamp:  s.Timestamp, // Todo: decide time format
+		Timestamp:  s.Timestamp,
 	}
 	message, err := json.Marshal(msg)
 
 	if err != nil {
-		log.Fatalf("impossible to marshall response: %s", err) //Todo: change log message
+		log.Fatalf("Cannot marshall server request: %s", err)
 	}
 
 	return message
 }
 
-func ReadClientMsg(req *http.Request) *Client_Msg {
+func (c *ClientRequest) ReadJson(req *http.Request) ClientRequest {
 	decoder := json.NewDecoder(req.Body)
-	var t Client_Msg
+	var t ClientRequest
+	err := decoder.Decode(&t)
+	if err != nil {
+		log.Fatalf("Cannot decode client request: %s", err)
+	}
+	return t
+}
+
+func (s *ServerRequest) ReadJson(req *http.Request) ServerRequest {
+	decoder := json.NewDecoder(req.Body)
+	var t ServerRequest
+	err := decoder.Decode(&t)
+	if err != nil {
+		log.Fatalf("Cannot decode server request: %s", err)
+	}
+	return t
+}
+
+func (op *OutputPartyRequest) ReadJson(req *http.Request) OutputPartyRequest {
+	decoder := json.NewDecoder(req.Body)
+	var t OutputPartyRequest
+	err := decoder.Decode(&t)
+	if err != nil {
+		log.Fatalf("Cannot decode experiment request: %s", err)
+	}
+	return t
+}
+
+/**
+func ReadClientMsg(req *http.Request) *Client {
+	decoder := json.NewDecoder(req.Body)
+	var t Client
 	err := decoder.Decode(&t)
 	if err != nil {
 		log.Fatalf("Error: %s", err)
@@ -93,9 +148,9 @@ func ReadClientMsg(req *http.Request) *Client_Msg {
 	return &t
 }
 
-func ReadServerMsg(req *http.Request) *Server_Msg {
+func ReadServerMsg(req *http.Request) *Server {
 	decoder := json.NewDecoder(req.Body)
-	var t Server_Msg
+	var t Server
 	err := decoder.Decode(&t)
 	if err != nil {
 		log.Fatalf("Error: %s", err)
@@ -103,27 +158,28 @@ func ReadServerMsg(req *http.Request) *Server_Msg {
 	return &t
 }
 
-func ReadExpMsg(req *http.Request) *OutputParty_Msg {
+func ReadExpMsg(req *http.Request) *OutputParty {
 	decoder := json.NewDecoder(req.Body)
-	var t OutputParty_Msg
+	var t OutputParty
 	err := decoder.Decode(&t)
 	if err != nil {
 		log.Fatalf("Error: %s", err)
 	}
 	return &t
 }
+**/
 
 func Send(address string, data []byte) {
 	req, err := http.NewRequest("POST", address, bytes.NewBuffer(data))
 	if err != nil {
-		log.Fatalf("impossible to build request: %s", err)
+		log.Fatalf("impossible to build http post request: %s", err)
 	}
 	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
 
 	client := &http.Client{}
 	res, err := client.Do(req)
 	if err != nil {
-		log.Fatalf("impossible to send request: %s", err)
+		log.Fatalf("impossible to send http request: %s", err)
 	}
 
 	log.Printf("response Status:%s", res.Status)

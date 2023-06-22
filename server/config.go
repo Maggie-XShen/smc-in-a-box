@@ -1,4 +1,4 @@
-package config
+package server
 
 import (
 	"encoding/json"
@@ -6,18 +6,19 @@ import (
 	"os"
 )
 
-type Configuration struct {
+type Config struct {
 	Server_ID   string
+	Token       string
 	Port        string
 	Share_Index int
 	URL         string
 }
 
-func NewConfig() *Configuration {
-	return &Configuration{}
+func NewConfig() *Config {
+	return &Config{}
 }
 
-func LoadConfig(path string) *Configuration {
+func LoadConfig(path string) *Config {
 	file, err := os.Open(path)
 	if err != nil {
 		log.Fatalf("%s", err)
@@ -27,10 +28,10 @@ func LoadConfig(path string) *Configuration {
 
 	decoder := json.NewDecoder(file)
 
-	config := Configuration{}
+	config := Config{}
 	err = decoder.Decode(&config)
 	if err != nil {
-		log.Fatalf("unable to read from config file: %s", err)
+		log.Fatalf("unable to read from server config file: %s", err)
 		return nil
 	}
 	return &config

@@ -1,0 +1,42 @@
+package client
+
+import (
+	"encoding/json"
+	"log"
+	"os"
+)
+
+type Config struct {
+	Client_ID string
+	Token     string
+	URLs      []string //servers urls
+	N         int
+	T         int
+	K         int
+	Q         int
+	Exp_ID    string
+	Secrets   []int
+}
+
+func NewConfig() *Config {
+	return &Config{}
+}
+
+func LoadConfig(path string) *Config {
+	file, err := os.Open(path)
+	if err != nil {
+		log.Fatalf("%s", err)
+		return nil
+	}
+	defer file.Close()
+
+	decoder := json.NewDecoder(file)
+
+	config := Config{}
+	err = decoder.Decode(&config)
+	if err != nil {
+		log.Fatalf("unable to read from client config file: %s", err)
+		return nil
+	}
+	return &config
+}
