@@ -1,7 +1,7 @@
 package repository
 
 import (
-	"example.com/SMC/pkg/message"
+	"example.com/SMC/pkg/utils/message"
 	"gorm.io/gorm"
 )
 
@@ -40,6 +40,7 @@ func NewStorage(db *gorm.DB) *Storage {
 
 }
 
+/**
 func (storage *Storage) Migrate() {
 	storage.db.AutoMigrate(&Experiment{})
 
@@ -48,7 +49,7 @@ func (storage *Storage) Migrate() {
 	storage.db.AutoMigrate(&ClientRegistry{})
 
 	storage.db.AutoMigrate(&Server{})
-}
+}**/
 
 // create client share record in the client table
 func (storage *Storage) CreateClient(client message.ClientRequest) error {
@@ -105,6 +106,7 @@ func (storage *Storage) CreateExp(experiment message.OutputPartyRequest) error {
 	if result.Error != nil {
 		return result.Error
 	}
+
 	return nil
 }
 
