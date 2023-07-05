@@ -1,0 +1,7 @@
+{
+    "Server_ID": "s1",
+    "Token": "stk1",
+    "Port": "8080",
+    "Share_Index": 1,
+    "URL": "http://127.0.0.1:8085/serverRequestSubmit/"
+}

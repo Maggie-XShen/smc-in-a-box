@@ -2,8 +2,10 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
+	"strconv"
 )
 
 type Server struct {
@@ -35,4 +37,34 @@ func Load(path string) *Server {
 		return nil
 	}
 	return &config
+}
+
+func Generate(num int, ports []string, src string) {
+	//read template.json
+	template, err := os.Open(src)
+	if err != nil {
+		log.Fatalf("%s", err)
+		return
+	}
+	defer template.Close()
+
+	decoder := json.NewDecoder(template)
+
+	config := Server{}
+	err = decoder.Decode(&config)
+	if err != nil {
+		log.Fatalf("unable to read from server_template.json: %s", err)
+		return
+	}
+
+	for i := 1; i <= num; i++ {
+		config.Server_ID = "s" + strconv.Itoa(i)
+		config.Token = "stk" + strconv.Itoa(i)
+		config.Port = ports[i]
+		config.Share_Index = i
+
+		file, _ := json.Marshal(config)
+		file_name := fmt.Sprintf("config_%s.json", config.Server_ID)
+		_ = os.WriteFile(file_name, file, 0644)
+	}
 }

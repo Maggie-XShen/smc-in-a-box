@@ -11,7 +11,7 @@ import (
 
 func main() {
 	//read configuration
-	confpath := flag.String("confpath", "config/config.json", "config file path")
+	confpath := flag.String("confpath", "config/client_template.json", "config file path")
 	flag.Parse()
 	conf := config.Load(*confpath)
 

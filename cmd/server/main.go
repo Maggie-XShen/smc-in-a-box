@@ -11,7 +11,8 @@ import (
 
 func main() {
 	//read configuration
-	confpath := flag.String("confpath", "config/config.json", "config file path")
+	confpath := flag.String("confpath", "config/server_template.json", "config file path")
+	datapath := flag.String("datapath", "./tables.json", "experiments data and registry data path")
 	flag.Parse()
 	conf := config.Load(*confpath)
 
@@ -23,6 +24,8 @@ func main() {
 	storage := repository.NewStorage(db)
 
 	s := NewServer(conf, storage)
+
+	s.Read(*datapath)
 
 	// set up ticker
 	ticker := time.NewTicker(1 * time.Second)

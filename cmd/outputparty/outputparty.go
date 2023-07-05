@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -28,14 +29,14 @@ func SetupDatabase(oid string) (*gorm.DB, error) {
 	db_name := fmt.Sprintf("%s.db", oid)
 
 	// remove old database
-	os.Remove(db_name)
+	os.Remove(db_name) //TODO: need to remove
 
 	// open a database
 	db, err := gorm.Open(sqlite.Open(db_name), &gorm.Config{})
 	if err != nil {
 		return nil, err
 	}
-	log.Println("Connection to Database Established")
+	log.Printf("Connection to %s Database Established\n", db_name)
 
 	db.AutoMigrate(&repository.Experiment{})
 
@@ -44,29 +45,44 @@ func SetupDatabase(oid string) (*gorm.DB, error) {
 	return db, nil
 }
 
-func (op *OutputParty) HandelExpInfor() {
+func (op *OutputParty) ReadExperiments(path string) {
 
 	// TODO: decide how to get experiment information
-	due := time.Now().Add(time.Hour * 10).Format("2006-01-02 15:04:05")
+	type Tables struct {
+		Experiments []message.OutputPartyRequest
+	}
 
-	var exps []message.OutputPartyRequest
-	exps = append(exps, message.OutputPartyRequest{Exp_ID: "exp1", Due: due})
-	exps = append(exps, message.OutputPartyRequest{Exp_ID: "exp2", Due: due})
+	file, err := os.Open(path)
+	if err != nil {
+		log.Fatalf("%s", err)
+		return
+	}
+	defer file.Close()
+
+	decoder := json.NewDecoder(file)
+
+	tables := Tables{}
+	err = decoder.Decode(&tables)
+	if err != nil {
+		log.Fatalf("unable to read from tables file: %s", err)
+		return
+	}
 
 	expService := NewExperimentService(op.storage)
-	for _, exp := range exps {
+	for _, exp := range tables.Experiments {
+		exp.Due = time.Now().Add(time.Hour * 10).Format("2006-01-02 15:04:05")
 		err := expService.CreateExp(exp)
 		if err != nil {
-			log.Println("erro:", err)
-			return
+			log.Println("error:", err)
 		}
 
+		/**
 		msg := message.OutputPartyRequest{Exp_ID: exp.Exp_ID, Due: exp.Due}
 		fmt.Printf("%+v\n", msg)
 		writer := &msg
 		for _, url := range op.cfg.URLs {
 			message.Send(url, writer.WriteJson())
-		}
+		}**/
 	}
 
 }
@@ -78,14 +94,12 @@ func (op *OutputParty) reveal(shares []packed.Share) ([]int, error) {
 		log.Fatal(err)
 	}
 
-	result, err := npss.Reconstruct(shares)
+	results, err := npss.Reconstruct(shares)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("sum of secrets: %v", result)
-
-	return result, nil
+	return results, nil
 }
 
 func (op *OutputParty) WaitForEndOfExperiment(ticker *time.Ticker) {
@@ -125,9 +139,10 @@ func (op *OutputParty) WaitForEndOfExperiment(ticker *time.Ticker) {
 
 				fmt.Printf("output party receives: %+v\n", shares)
 
-				op.reveal(shares)
+				result, _ := op.reveal(shares)
+				fmt.Printf("sum of secrets for %s : %v\n", exp.Exp_ID, result[0])
 
-				//set exp to completed
+				//set experiments to completed
 				err1 := op.storage.UpdateCompletedExperiment(exp.Exp_ID)
 				if err1 != nil {
 					log.Println("cannot set experiment to completed - error:", err1)
@@ -148,7 +163,9 @@ func (op *OutputParty) serverRequestHandler(rw http.ResponseWriter, req *http.Re
 	err := serverService.CreateServer(request.ReadJson(req))
 
 	if err != nil {
+		log.Printf("error: %s\n", err)
 		rw.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintln(rw, err)
 		return
 	}
 

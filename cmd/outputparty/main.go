@@ -12,6 +12,7 @@ import (
 func main() {
 	//read configuration
 	confpath := flag.String("confpath", "config/config.json", "config file path")
+	exppath := flag.String("exppath", "./experiments_data.json", "expemeriment data path")
 	flag.Parse()
 
 	conf := config.Load(*confpath)
@@ -26,7 +27,7 @@ func main() {
 	op := NewOutputParty(conf, storage)
 
 	//read experiment information from file to database
-	op.HandelExpInfor() //TODO: decide how to get experiment information
+	op.ReadExperiments(*exppath) //TODO: decide how to get experiment information
 
 	// set up ticker
 	ticker := time.NewTicker(1 * time.Second)

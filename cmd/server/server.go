@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -35,7 +36,7 @@ func SetupDatabase(sid string) (*gorm.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Println("Connection to Database Established")
+	log.Printf("Connection to %s Database Established\n", db_name)
 
 	db.AutoMigrate(&repository.Experiment{})
 
@@ -46,21 +47,48 @@ func SetupDatabase(sid string) (*gorm.DB, error) {
 	return db, nil
 }
 
-func (s *Server) HandelRegistration() {
+/*
+*Set up experiments table and client registries table before
+client, server and outputparty start communicating
+*
+*/
+func (s *Server) Read(path string) {
+	type Tables struct {
+		Experiments       []message.OutputPartyRequest
+		Client_registries []message.ClientRegistry
+	}
 
-	// Todo: decide how to get client registry information
-	var regs []message.ClientRegistry
-	regs = append(regs, message.ClientRegistry{Exp_ID: "exp1", Client_ID: "c1", Token: "tk1"})
-	regs = append(regs, message.ClientRegistry{Exp_ID: "exp1", Client_ID: "c2", Token: "tk2"})
-	regs = append(regs, message.ClientRegistry{Exp_ID: "exp2", Client_ID: "c1", Token: "tk1"})
-	regs = append(regs, message.ClientRegistry{Exp_ID: "exp2", Client_ID: "c2", Token: "tk2"})
+	file, err := os.Open(path)
+	if err != nil {
+		log.Fatalf("%s", err)
+		return
+	}
+	defer file.Close()
+
+	decoder := json.NewDecoder(file)
+
+	tables := Tables{}
+	err = decoder.Decode(&tables)
+	if err != nil {
+		log.Fatalf("unable to read experiments and registries data: %s", err)
+		return
+	}
+
+	expService := NewExperimentService(s.storage)
+
+	for _, exp := range tables.Experiments {
+		exp.Due = time.Now().Add(time.Hour * 10).Format("2006-01-02 15:04:05")
+		err := expService.CreateExp(exp)
+		if err != nil {
+			log.Println("error:", err)
+		}
+	}
 
 	clientService := NewClientService(s.storage)
-	for _, reg := range regs {
+	for _, reg := range tables.Client_registries {
 		err := clientService.CreateClientRegistry(reg)
 		if err != nil {
-			log.Println("erro:", err)
-			return
+			log.Println("error:", err)
 		}
 	}
 
@@ -74,7 +102,9 @@ func (s *Server) clientRequestHandler(rw http.ResponseWriter, req *http.Request)
 	err := clientService.CreateClient(request.ReadJson(req))
 
 	if err != nil {
+		log.Printf("error: %s\n", err)
 		rw.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintln(rw, err)
 		return
 	}
 
@@ -89,14 +119,10 @@ func (s *Server) expInforHandler(rw http.ResponseWriter, req *http.Request) {
 	err := expService.CreateExp(exp.ReadJson(req))
 
 	if err != nil {
+		log.Printf("error: %s\n", err)
 		rw.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintln(rw, err)
 		return
-	}
-
-	//TODO: need to remove
-	result, _ := s.storage.GetAllExps()
-	if len(result) == 2 {
-		s.HandelRegistration()
 	}
 
 	rw.WriteHeader(http.StatusOK)
@@ -124,7 +150,7 @@ func (s *Server) WaitForEndOfExperiment(ticker *time.Ticker) {
 
 			due, _ := time.Parse("2006-01-02 15:04:05", exp.Due)
 			//currentTime := time.Now()
-			currentTime := due.Add(5 * time.Minute) //Todo: need to change back to time.Now()
+			currentTime := due.Add(5 * time.Minute) //TODO: need to change back to time.Now()
 
 			// check current time is pased due
 			if currentTime.After(due) {
@@ -157,7 +183,7 @@ func (s *Server) WaitForEndOfExperiment(ticker *time.Ticker) {
 
 				// send to output party
 				msg := message.ServerRequest{Exp_ID: exp.Exp_ID, Server_ID: s.cfg.Server_ID, Sum_Shares: packed.Share{Index: s.cfg.Share_Index, Value: sumSharesValue}, Timestamp: time.Now().Format("2006-01-02 15:04:05")}
-				fmt.Printf("server sends: %+v\n", msg)
+				fmt.Printf("server %s sends: %+v\n", s.cfg.Server_ID, msg)
 				writer := &msg
 				message.Send(s.cfg.URL, writer.WriteJson())
 
@@ -171,7 +197,7 @@ func (s *Server) WaitForEndOfExperiment(ticker *time.Ticker) {
 
 		}
 
-		// check if experiment is over and do something (e.g., remove exp and clients information from DB)
+		//TODO: check if experiment is over and do something (e.g., remove exp and clients information from DB)
 
 	}
 }

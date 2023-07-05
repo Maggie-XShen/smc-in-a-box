@@ -23,6 +23,7 @@ func (c *ClientService) CreateClient(request message.ClientRequest) error {
 		return err
 	}
 
+	// TODO : change this check to check if client in the registry table
 	if *exp == (repository.Experiment{}) {
 		return errors.New("experiment does not exist when server creates client share record")
 	}

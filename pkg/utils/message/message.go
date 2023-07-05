@@ -3,6 +3,8 @@ package message
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
+	"io"
 	"log"
 	"net/http"
 
@@ -137,38 +139,6 @@ func (op *OutputPartyRequest) ReadJson(req *http.Request) OutputPartyRequest {
 	return t
 }
 
-/**
-func ReadClientMsg(req *http.Request) *Client {
-	decoder := json.NewDecoder(req.Body)
-	var t Client
-	err := decoder.Decode(&t)
-	if err != nil {
-		log.Fatalf("Error: %s", err)
-	}
-	return &t
-}
-
-func ReadServerMsg(req *http.Request) *Server {
-	decoder := json.NewDecoder(req.Body)
-	var t Server
-	err := decoder.Decode(&t)
-	if err != nil {
-		log.Fatalf("Error: %s", err)
-	}
-	return &t
-}
-
-func ReadExpMsg(req *http.Request) *OutputParty {
-	decoder := json.NewDecoder(req.Body)
-	var t OutputParty
-	err := decoder.Decode(&t)
-	if err != nil {
-		log.Fatalf("Error: %s", err)
-	}
-	return &t
-}
-**/
-
 func Send(address string, data []byte) {
 	req, err := http.NewRequest("POST", address, bytes.NewBuffer(data))
 	if err != nil {
@@ -184,8 +154,10 @@ func Send(address string, data []byte) {
 
 	log.Printf("response Status:%s", res.Status)
 
-	//defer res.Body.Close()
-	//body, _ := io.ReadAll(res.Body)
-	//fmt.Println("response Body:", string(body))
+	defer res.Body.Close()
+	body, _ := io.ReadAll(res.Body)
+	if len(body) > 0 {
+		fmt.Println("response Body:", string(body))
+	}
 
 }
