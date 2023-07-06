@@ -12,7 +12,7 @@ import (
 func main() {
 	//read configuration
 	confpath := flag.String("confpath", "config/server_template.json", "config file path")
-	datapath := flag.String("datapath", "./tables.json", "experiments data and registry data path")
+	datapath := flag.String("datapath", "./data.json", "experiments data and registry data path")
 	flag.Parse()
 	conf := config.Load(*confpath)
 

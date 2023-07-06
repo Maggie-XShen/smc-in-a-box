@@ -1,35 +1,46 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
+	"strconv"
 
 	"example.com/SMC/cmd/server/config"
 )
 
 func main() {
-	/**
-	ns := flag.Int("n", 1, "number of servers")
-	flag.Parse()**/
+
+	n_s := flag.Int("n", 1, "number of servers")
+	flag.Parse()
 
 	// Configure servers
-	urls := []string{"8080", "8081", "8082"}
-	config.GenerateServerConfig(3, urls, "../config/server_template.json", "../config/examples/")
+	var ports []string
+	for i := 0; i < *n_s; i++ {
+		port := fmt.Sprintf("808%s", strconv.Itoa(i))
+		ports = append(ports, port)
+	}
+	config.GenerateServerConfig(*n_s, ports, "../config/server_template.json", "../config/examples/")
 
 	// Start the servers
-	server1 := startServer("../server", "-confpath=../config/examples/config_s1.json", "-datapath=../tables.json")
-	server2 := startServer("../server", "-confpath=../config/examples/config_s2.json", "-datapath=../tables.json")
-	server3 := startServer("../server", "-confpath=../config/examples/config_s3.json", "-datapath=../tables.json")
+	var processes []*exec.Cmd
+	for i := 1; i <= *n_s; i++ {
+		conf_path := fmt.Sprintf("-confpath=../config/examples/config_s%s.json", strconv.Itoa(i))
+		data_path := "-datapath=../data.json"
+		server := startServer("../server", conf_path, data_path)
+		processes = append(processes, server)
+	}
 
-	server1.Wait()
-	server2.Wait()
-	server3.Wait()
+	for _, process := range processes {
+		process.Wait()
+	}
 
 	// Stop the servers
-	stop(server1)
-	stop(server2)
-	stop(server3)
+	for _, process := range processes {
+		stop(process)
+	}
 
 	log.Println("All server have finished.")
 

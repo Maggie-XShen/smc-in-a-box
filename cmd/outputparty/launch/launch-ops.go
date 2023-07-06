@@ -1,26 +1,40 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
+	"strconv"
 
 	"example.com/SMC/cmd/outputparty/config"
 )
 
 func main() {
-	/**
-	nop := flag.Int("n", 1, "number of output parties")
-	flag.Parse()**/
+
+	n_op := flag.Int("n", 1, "number of output parties")
+	flag.Parse()
 
 	// Configure output party
-	config.GenerateOPConfig(1, "../config/outputparty_template.json", "../config/examples/")
+	config.GenerateOPConfig(*n_op, "../config/outputparty_template.json", "../config/examples/")
 
 	// Start the output party
-	op1 := startOP("../outputparty", "-confpath=../config/examples/config_op1.json", "-exppath=../experiments_data.json")
-	op1.Wait()
+	var processes []*exec.Cmd
+	for i := 1; i <= *n_op; i++ {
+		conf_path := fmt.Sprintf("-confpath=../config/examples/config_op%s.json", strconv.Itoa(i))
+		exp_path := "-exppath=../experiments_data.json"
+		outputparty := startOP("../outputparty", conf_path, exp_path)
+		processes = append(processes, outputparty)
+	}
 
-	stop(op1)
+	for _, process := range processes {
+		process.Wait()
+	}
+
+	for _, process := range processes {
+		stop(process)
+	}
 }
 
 func startOP(opCmd string, arg1 string, arg2 string) *exec.Cmd {

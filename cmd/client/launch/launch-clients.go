@@ -1,35 +1,35 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
+	"strconv"
 
 	"example.com/SMC/cmd/client/config"
 )
 
 func main() {
-	/**
-	nc := flag.Int("nc", 1, "number of clients")
-	flag.Parse()**/
+
+	n_c := flag.Int("n", 1, "number of clients")
+	flag.Parse()
 
 	// Configure clients
-	config.GenerateClientConfig(6, "../config/client_template.json", "../config/examples/")
+	config.GenerateClientConfig(*n_c, "../config/client_template.json", "../config/examples/")
 
 	// Start the clients
-	client1 := startClient("../client", "-confpath=../config/examples/config_c1.json")
-	client2 := startClient("../client", "-confpath=../config/examples/config_c2.json")
-	client3 := startClient("../client", "-confpath=../config/examples/config_c3.json")
-	client4 := startClient("../client", "-confpath=../config/examples/config_c4.json")
-	client5 := startClient("../client", "-confpath=../config/examples/config_c5.json")
-	client6 := startClient("../client", "-confpath=../config/examples/config_c6.json")
+	var processes []*exec.Cmd
+	for i := 1; i <= *n_c; i++ {
+		conf_path := fmt.Sprintf("-confpath=../config/examples/config_c%s.json", strconv.Itoa(i))
+		client := startClient("../client", conf_path)
+		processes = append(processes, client)
+	}
 
-	client1.Wait()
-	client2.Wait()
-	client3.Wait()
-	client4.Wait()
-	client5.Wait()
-	client6.Wait()
+	for _, process := range processes {
+		process.Wait()
+	}
 
 	log.Println("All clients have finished.")
 

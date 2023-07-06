@@ -11,7 +11,7 @@ import (
 
 func main() {
 	//read configuration
-	confpath := flag.String("confpath", "config/config.json", "config file path")
+	confpath := flag.String("confpath", "config/outputparty_template.json", "config file path")
 	exppath := flag.String("exppath", "./experiments_data.json", "expemeriment data path")
 	flag.Parse()
 

@@ -8,7 +8,7 @@ import (
 	"strconv"
 )
 
-func GenerateOPConfig(op_num int, src string, des string) {
+func GenerateOPConfig(n_op int, src string, des string) {
 	//check if destination directory exists
 	if _, err := os.Stat(des); os.IsNotExist(err) {
 		err := os.Mkdir(des, os.ModePerm)
@@ -35,9 +35,14 @@ func GenerateOPConfig(op_num int, src string, des string) {
 		return
 	}
 
-	for i := 1; i <= op_num; i++ {
+	var urls []string
+	for i := 0; i < config.N; i++ {
+		url := fmt.Sprintf("http://127.0.0.1:808%s/outputPartyRequestSubmit/", strconv.Itoa(i))
+		urls = append(urls, url)
+	}
+	for i := 1; i <= n_op; i++ {
 		config.OutputParty_ID = "op" + strconv.Itoa(i)
-		//config.URLs = urls
+		config.URLs = urls
 
 		file, _ := json.MarshalIndent(config, "", " ")
 		file_name := fmt.Sprintf("config_%s.json", config.OutputParty_ID)

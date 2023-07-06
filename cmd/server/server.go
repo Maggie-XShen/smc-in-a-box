@@ -168,6 +168,7 @@ func (s *Server) WaitForEndOfExperiment(ticker *time.Ticker) {
 				}
 
 				if len(clients) < len(registeredClients) {
+
 					// TODO: send message "did not get enough clients" to output party
 					//log.Println("did not get enough clients")
 					continue
