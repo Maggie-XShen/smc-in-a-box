@@ -1,0 +1,20 @@
+{
+    "experiments":[
+        {"Exp_ID":"exp1", "Due":"","Owner": "http://127.0.0.1:8090/serverRequestSubmit/"}, 
+        {"Exp_ID":"exp2", "Due":"","Owner": "http://127.0.0.1:8090/serverRequestSubmit/"}
+    ],
+    "client_registries":[
+        {"Exp_ID":"exp1","Client_ID": "c1", "Token": "tk1"},
+        {"Exp_ID": "exp1", "Client_ID": "c2", "Token": "tk2"},
+        {"Exp_ID":"exp1","Client_ID": "c3", "Token": "tk3"},
+        {"Exp_ID":"exp1","Client_ID": "c4", "Token": "tk4"},
+        {"Exp_ID":"exp1","Client_ID": "c5", "Token": "tk5"},
+        {"Exp_ID":"exp1","Client_ID": "c6", "Token": "tk6"},
+        {"Exp_ID":"exp2","Client_ID": "c1", "Token": "tk1"},
+        {"Exp_ID": "exp2", "Client_ID": "c2", "Token": "tk2"},
+        {"Exp_ID": "exp2", "Client_ID": "c3", "Token": "tk3"},
+        {"Exp_ID": "exp2", "Client_ID": "c4", "Token": "tk4"},
+        {"Exp_ID": "exp2", "Client_ID": "c5", "Token": "tk5"},
+        {"Exp_ID": "exp2", "Client_ID": "c6", "Token": "tk6"}
+    ]
+}

@@ -1,0 +1,12 @@
+{
+    "Server_ID": "s1",
+    "Token": "stk1",
+    "Cert_path":"/path to cerfiticate",
+    "Key_path":"/path to private key",
+    "Port": "8081",
+    "Other_server_urls":[
+        "http://127.0.0.1:8082/serverDataSubmit/", 
+        "http://127.0.0.1:8083/serverDataSubmit/"
+    ],
+    "Share_Index": 1
+}

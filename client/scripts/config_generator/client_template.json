@@ -1,0 +1,9 @@
+{
+    "Client_ID": "c1",
+    "Token": "tk1",
+    "URLs": ["http://127.0.0.1:8081/clientRequestSubmit/", "http://127.0.0.1:8082/clientRequestSubmit/", "http://127.0.0.1:8083/clientRequestSubmit/"],
+    "N": 3,
+    "T": 2,
+    "K": 1,
+    "Q": 41
+}

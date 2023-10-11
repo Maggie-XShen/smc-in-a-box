@@ -1,0 +1,12 @@
+{
+ "Server_ID": "s3",
+ "Token": "stk3",
+ "Cert_path": "/path to cerfiticate",
+ "Key_path": "/path to private key",
+ "Port": "8083",
+ "Other_server_urls": [
+  "http://127.0.0.1:8082/serverDataSubmit/",
+  "http://127.0.0.1:8081/serverDataSubmit/"
+ ],
+ "Share_Index": 3
+}

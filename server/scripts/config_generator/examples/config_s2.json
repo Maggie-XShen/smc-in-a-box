@@ -1,0 +1,12 @@
+{
+ "Server_ID": "s2",
+ "Token": "stk2",
+ "Cert_path": "/path to cerfiticate",
+ "Key_path": "/path to private key",
+ "Port": "8082",
+ "Other_server_urls": [
+  "http://127.0.0.1:8081/serverDataSubmit/",
+  "http://127.0.0.1:8083/serverDataSubmit/"
+ ],
+ "Share_Index": 2
+}
