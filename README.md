@@ -40,6 +40,9 @@ To run a single output party instance, go to the folder outputparty/cmd and run 
 If confpath option is not provided, the program will read output party configuration from outputparty/config/outputparty.json
 
 If registrypath option is not provided, the program will read the experiments information from outputparty/cmd/experiments.json
+
+## Note
   
 ## To Do
 + Client consistently sends input.
++ Database migration
