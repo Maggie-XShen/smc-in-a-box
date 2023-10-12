@@ -1,9 +1,9 @@
-## Simple Prototype System for Private Statistics
+# Simple Prototype System for Private Statistics
 A simple prototype system for private statistics,  comprising clients, several secure multiparty computation servers, and output party(e.g., data analyst) written in Golang.
 
 The prototype system simulates a scenario in which the output party designs experiments or conducts surveys to collect statistics, such as a data analyst. In this scenario, the client actively participates in the experiment or survey. Servers play a crucial role in assisting the output party in obtaining statistics without learning the client's input, ensuring the privacy of the client's data remains protected.
 
-# Client
+## Client
 To run a single client instance, go to the folder client/cmd and run command
 ```
 ./cmd -confpath=“path_to_client_config_file” -inputpath=“path_to_client_input_file”
@@ -21,7 +21,7 @@ where n is the number of client instances
   
 Clients config files will be generated automatically and stored in the folder client/scripts/condig_generator/examples
 
-# Server
+## Server
 In dev2.0, it is assumed that each server has pre-existing experiments data and registered clients information. These data are stored at server/cmd/registry.json
 
 To run a single server instance, go to the folder server/cmd and run command
@@ -32,7 +32,7 @@ If confpath option is not provided, the program will read the config file at ser
 
 If registrypath option is not provided, the program will read the experiments information and registered clients information from server/cmd/registry.json
 
-# Output Party
+## Output Party
 To run a single output party instance, go to the folder outputparty/cmd and run command
 ```
 ./cmd -confpath="path_to_output_party_config_file" -exppath="path_to_experiments_file"
@@ -41,5 +41,5 @@ If confpath option is not provided, the program will read output party configura
 
 If registrypath option is not provided, the program will read the experiments information from outputparty/cmd/experiments.json
   
-# To Do
+## To Do
 + Client consistently sends input.
