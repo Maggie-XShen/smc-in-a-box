@@ -4,7 +4,7 @@ A simple prototype system for private statistics,  comprising clients, several s
 The prototype system simulates a scenario in which the output party designs experiments or conducts surveys to collect statistics, such as a data analyst. In this scenario, the client actively participates in the experiment or survey. Servers play a crucial role in assisting the output party in obtaining statistics without learning the client's input, ensuring the privacy of the client's data remains protected.
 
 ## Client
-To run a single client instance, go to the folder client/cmd and run command
+To run a single client instance, first go to the folder client/cmd and run command "go build" to compile the program, then at the same folder run command
 ```
 ./cmd -confpath=“path_to_client_config_file” -inputpath=“path_to_client_input_file”
 ```
@@ -13,7 +13,7 @@ If confpath option is not provided, the program will read the config file at cli
 
 If inputpath option is not provided, the program will read the client input from client/cmd/input.json
 
-To launch several client instances at once and use same client input, go to the folder client/scripts/launch and run command
+To launch several client instances at once and use same client input, first make sure client executable is in the folder client/cmd, then go to the folder client/scripts/launch and run command
 ```
 go run launch-clients.go -n=3
 ```
@@ -24,7 +24,7 @@ Clients config files will be generated automatically and stored in the folder cl
 ## Server
 In dev2.0, it is assumed that each server has pre-existing experiments data and registered clients information. These data are stored at server/cmd/registry.json
 
-To run a single server instance, go to the folder server/cmd and run command
+To run a single server instance, go to the folder server/cmd and and run command "go build" to compile the program, then at the same folder run command
 ```
 ./cmd -confpath="path_to_server_config_file" -registrypath="path_to_registry_file"
 ```
@@ -33,7 +33,7 @@ If confpath option is not provided, the program will read the config file at ser
 If registrypath option is not provided, the program will read the experiments information and registered clients information from server/cmd/registry.json
 
 ## Output Party
-To run a single output party instance, go to the folder outputparty/cmd and run command
+To run a single output party instance, go to the folder outputparty/cmd and run command "go build" to compile the program, then at the same folder run command
 ```
 ./cmd -confpath="path_to_output_party_config_file" -exppath="path_to_experiments_file"
 ```

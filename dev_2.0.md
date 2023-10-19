@@ -1,4 +1,4 @@
-# protocol version: dropout clients, semi-honest server
+## Protocol Version: dropout clients, semi-honest server
 This version introduces server-to-server communication, which facilitates the identification of the overlap in their respective client spaces. When the intersection of their client spaces is empty, the output party cannot comlete the computation.
 
 ## Basic Features
@@ -33,22 +33,29 @@ Phase 5: Servers compute sum of shares of common clients and send result to outp
 
 Phase 6: Output party reveals sum of secrets.
 
-## Implementation (need to modify)
+## Implementation 
 ### Client
 + Configuration
-  + client_id, token(e.g. password), servers_urls, N (number of servers),T, K(number of secrets), Q(prime number), experiment_id, secret
+  + client_id, token(e.g. password), URLs(servers' url), N(number of servers),T(number of malicious servers), K(number of secrets), Q(prime number)
++ Input
+  + exp_id, secrets(client's input)
 
 ### Server
 + Configuration
-  + server_id, token, port(listen client request), sumshare_index, output party url
+  + server_id, token, cert_path(server's certificate path), key_path(server's private key path), port(listen client request), share_index
++ Experiments and Client Registry 
+  + experiments: exp_id, due, owner(output party url)
+  + client registry: exp_id, client_id, token
 + Database
   + Experiment Table: experiment_id, due, completed
   + Client Table: experiment_id, client_id, share_index, share_value
   + Client Registry Table: client_id, token, experiment_id
   
 ### Output Party
-+ Configuration
-  + outputparty_id, port(listen server request), N, T, K, Q, servers_urls
++ Configuration 
+  + outputparty_id, cert_path(output party's certificate path), key_path(output party's private key path), port(listen server request), N, T, K, Q, URLs(servers' url)
++ Experiments
+  + exp_id, due
 + Database
   + Experiment Table: experiment_id, due, completed
   + Server Table: experiment_id, server_id, sumshare_value, sumshare_index

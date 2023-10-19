@@ -2,14 +2,46 @@ package ligero
 
 import (
 	"crypto/rand"
-	"log"
+	"fmt"
 	"math/big"
+	"strings"
 )
+
+func ConvertToColumnwise(matrix [][]int) ([][]int, error) {
+	if len(matrix) == 0 {
+		return nil, fmt.Errorf("matrix cannot be empty")
+	}
+	result := make([][]int, len(matrix[0]))
+	for j := 0; j < len(matrix[0]); j++ {
+		temp := make([]int, len(matrix))
+		for i := 0; i < len(matrix); i++ {
+			temp[i] = matrix[i][j]
+		}
+		result[j] = temp
+	}
+	return result, nil
+}
+
+func ConvertColumnToString(list []int) (string, error) {
+	if len(list) == 0 {
+		return "", fmt.Errorf("list cannot be empty")
+	}
+
+	col := make([]string, len(list))
+	for i := 0; i < len(list); i++ {
+		col[i] = fmt.Sprintf("%064b", list[i])
+	}
+	//concatenate values in the column to a string
+	concatenated := strings.Join(col, "")
+
+	return concatenated, nil
+
+}
 
 func AddMatrix(matrix1 [][]int, matrix2 [][]int) [][]int {
 	result := make([][]int, len(matrix1))
 	for i, a := range matrix1 {
-		for j, _ := range a {
+		for j := range a {
 			result[i] = append(result[i], matrix1[i][j]+matrix2[i][j])
 		}
 	}
@@ -19,7 +51,7 @@ func AddMatrix(matrix1 [][]int, matrix2 [][]int) [][]int {
 func SubMatrix(matrix1 [][]int, matrix2 [][]int) [][]int {
 	result := make([][]int, len(matrix1))
 	for i, a := range matrix1 {
-		for j, _ := range a {
+		for j := range a {
 			result[i] = append(result[i], matrix1[i][j]-matrix2[i][j])
 		}
 	}
@@ -40,17 +72,22 @@ func MulMatrix(matrix1 [][]int, matrix2 [][]int) [][]int {
 }
 
 func GenerateRandomness(length int, q int) []int {
-	r := make([]int, length)
+	randomness := make([]int, length)
+	//rand.Seed(time.Now().UnixNano())
+	checkMap := map[int]bool{}
 	for i := 0; i < length; i++ {
-		value, err := rand.Int(rand.Reader, big.NewInt(int64(q)))
-		if err != nil {
-			log.Fatal(err)
-		}
-		r[i] = int(value.Int64())
+		for {
+			value, err := rand.Int(rand.Reader, big.NewInt(int64(q)))
+			if err == nil && !checkMap[int(value.Int64())] {
+				checkMap[int(value.Int64())] = true
+				randomness[i] = int(value.Int64())
+				break
+			}
 
+		}
 	}
 
-	return r
+	return randomness
 }
 
 // lagrange_constants_for_point returns lagrange constants for the given x
