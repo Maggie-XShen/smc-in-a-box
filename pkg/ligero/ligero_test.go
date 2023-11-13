@@ -44,7 +44,7 @@ func TestRearrange_Extended_Witness(t *testing.T) {
 
 func TestPrepare_Extended_Witness(t *testing.T) {
 	input := []int{10, 25, 35}
-	zk, err := NewLigeroZK(3, 2, 6, 1, 41, 3)
+	zk, err := NewLigeroZK(3, 3, 6, 1, 41, 3)
 
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -52,11 +52,11 @@ func TestPrepare_Extended_Witness(t *testing.T) {
 
 	result, err := zk.prepare_extended_witness(input)
 
-	fmt.Printf("%v", result)
-
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	fmt.Printf("%v", result)
 
 }
 
@@ -83,11 +83,15 @@ func TestEncode_Extended_Witness(t *testing.T) {
 }
 
 func TestGenerate_Code_Proof(t *testing.T) {
-	input := []int{10, 25, 35}
-	zk, err := NewLigeroZK(3, 2, 6, 1, 41, 3)
+
+	input := []int{0, 1, 0}
+	//NewLigeroZK(N_input, M, N_server, T, Q, N_open int)
+	zk, err := NewLigeroZK(3, 1, 6, 1, 41, 3)
+
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		log.Fatal(err)
 	}
+
 	extended_witness, err := zk.prepare_extended_witness(input)
 
 	if err != nil {
@@ -100,8 +104,10 @@ func TestGenerate_Code_Proof(t *testing.T) {
 		log.Fatal(err)
 	}
 
+	seed1 := GenerateRandomness(zk.l, zk.q)
+	code_mask := zk.generate_mask(seed1)
 	randomness1 := GenerateRandomness(zk.m*(1+zk.n_server), zk.q)
-	q_code, err := zk.generate_code_proof(encode, randomness1)
+	q_code, err := zk.generate_code_proof(encode, randomness1, code_mask)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -117,7 +123,7 @@ func TestGenerate_MerkleTree(t *testing.T) {
 		{7, 8, 9},
 	}
 
-	zk, err := NewLigeroZK(3, 2, 6, 1, 41, 3)
+	zk, err := NewLigeroZK(3, 1, 6, 1, 41, 3)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -134,6 +140,7 @@ func TestGenerate_MerkleTree(t *testing.T) {
 	}
 	//get root of merkletree
 	root := tree.Root()
+	fmt.Printf("leaves: %v\n", leaves)
 
 	for _, leaf := range leaves {
 		proof, err := tree.GenerateProof(leaf)
@@ -150,5 +157,31 @@ func TestGenerate_MerkleTree(t *testing.T) {
 			panic("failed to verify proof")
 		}
 	}
+
+}
+
+func TestGenerate(t *testing.T) {
+	input := []int{0, 1, 0}
+	//NewLigeroZK(N_input, M, N_server, T, Q, N_open int)
+	zk, err := NewLigeroZK(3, 1, 6, 1, 41, 3)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	proof, err := zk.Generate(input)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	verify, err := zk.Verify(*proof)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if !verify {
+		fmt.Println("failed verifification!")
+	}
+	fmt.Println("verification succeed!")
 
 }

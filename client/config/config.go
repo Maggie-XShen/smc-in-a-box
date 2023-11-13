@@ -14,6 +14,8 @@ type Client struct {
 	T         int
 	K         int
 	Q         int
+	M         int
+	N_open    int
 }
 
 func NewConfig() *Client {

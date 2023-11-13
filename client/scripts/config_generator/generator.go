@@ -16,6 +16,8 @@ type Client struct {
 	T         int
 	K         int
 	Q         int
+	M         int
+	N_open    int
 }
 
 func GenerateClientConfig(client_num int, src string, des string) {

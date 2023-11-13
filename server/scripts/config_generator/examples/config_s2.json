@@ -6,7 +6,16 @@
  "Port": "8082",
  "Other_server_urls": [
   "http://127.0.0.1:8081/serverDataSubmit/",
-  "http://127.0.0.1:8083/serverDataSubmit/"
+  "http://127.0.0.1:8083/serverDataSubmit/",
+  "http://127.0.0.1:8084/serverDataSubmit/",
+  "http://127.0.0.1:8085/serverDataSubmit/",
+  "http://127.0.0.1:8086/serverDataSubmit/"
  ],
- "Share_Index": 2
+ "Share_Index": 2,
+ "N": 6,
+ "T": 1,
+ "K": 1,
+ "Q": 41,
+ "M": 1,
+ "N_open": 3
 }

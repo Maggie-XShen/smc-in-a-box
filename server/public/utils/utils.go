@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"example.com/SMC/pkg/ligero"
 	"example.com/SMC/pkg/packed"
 	"gorm.io/datatypes"
 )
@@ -14,6 +15,7 @@ type ClientRequest struct {
 	Client_ID    string       `json:"Client_ID"`
 	Token        string       `json:"Token"`
 	Secret_Share packed.Share `json:"Secret_Share"`
+	Proof        ligero.Proof `json:"Proof"`
 	Timestamp    string       `json:"Timestamp"`
 	//Proof       string       `json:"Proof"`
 	//Hash_proof  string       `json:"HashProof"`
@@ -97,10 +99,12 @@ func (s *ServerRequest) ToJson() []byte {
 func (c *ClientRequest) ReadJson(req *http.Request) ClientRequest {
 	decoder := json.NewDecoder(req.Body)
 	var t ClientRequest
+
 	err := decoder.Decode(&t)
 	if err != nil {
 		log.Fatalf("Cannot decode client request: %s", err)
 	}
+
 	return t
 }
 

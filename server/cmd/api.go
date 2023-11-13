@@ -58,8 +58,6 @@ func (c *ClientService) CreateClient(request utils.ClientRequest) error {
 		return errors.New("client record already exists when server creates client share record")
 	}
 
-	//Todo: check bad events of client share
-
 	err = c.store.InsertClientShare(request)
 	if err != nil {
 		return err

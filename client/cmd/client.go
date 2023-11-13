@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"example.com/SMC/client/config"
+	"example.com/SMC/pkg/ligero"
 	"example.com/SMC/pkg/packed"
 )
 
@@ -23,15 +24,30 @@ func NewClient(conf *config.Client) *Client {
 func (c *Client) GenerateShares(secrets []int) ([]packed.Share, error) {
 	npss, err := packed.NewPackedSecretSharing(c.cfg.N, c.cfg.T, c.cfg.K, c.cfg.Q)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	shares, err := npss.Split(secrets)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	return shares, nil
+}
+
+func (c *Client) GenerateZKP(input []int) (*ligero.Proof, error) {
+	//NewLigeroZK(N_input, M, N_server, T, Q, N_open int)
+	zk, err := ligero.NewLigeroZK(c.cfg.K, c.cfg.M, c.cfg.N, c.cfg.T, c.cfg.Q, c.cfg.N_open)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	proof, err := zk.Generate(input)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return proof, nil
 }
 
 func (c *Client) Run(inputpath string) {
@@ -39,13 +55,19 @@ func (c *Client) Run(inputpath string) {
 	urls := c.cfg.URLs
 
 	for _, input := range inputs {
-		shares, _ := c.GenerateShares(input.Secrets)
+		shares, err := c.GenerateShares(input.Secrets)
+		if err != nil {
+			log.Fatal(err)
+		}
+		/**
+		proof, err := c.GenerateZKP(input.Secrets)
+		if err != nil {
+			log.Fatal(err)
+		}**/
 		current_time := time.Now().Format("2006-01-02 15:04:05")
 		for i := 0; i < len(urls); i++ {
 			msg := ClientRequest{Exp_ID: input.Exp_ID, Client_ID: c.cfg.Client_ID, Token: c.cfg.Token, Secret_Share: shares[i], Timestamp: current_time}
-			fmt.Printf("client sends: %+v\n", msg)
 			writer := &msg
-
 			c.Send(urls[i], writer.ToJson())
 		}
 

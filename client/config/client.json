@@ -1,9 +1,11 @@
 {
     "Client_ID": "c1",
     "Token": "tk1",
-    "URLs": ["http://127.0.0.1:8081/clientRequestSubmit/", "http://127.0.0.1:8082/clientRequestSubmit/", "http://127.0.0.1:8083/clientRequestSubmit/"],
-    "N": 3,
-    "T": 2,
+    "URLs": ["http://127.0.0.1:8081/clientRequestSubmit/", "http://127.0.0.1:8082/clientRequestSubmit/", "http://127.0.0.1:8083/clientRequestSubmit/", "http://127.0.0.1:8084/clientRequestSubmit/", "http://127.0.0.1:8085/clientRequestSubmit/", "http://127.0.0.1:8086/clientRequestSubmit/"],
+    "N": 6,
+    "T": 1,
     "K": 1,
-    "Q": 41 
+    "Q": 41,
+    "M": 1, 
+    "N_open":3
 }

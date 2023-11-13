@@ -14,6 +14,12 @@ type Server struct {
 	Port              string
 	Other_server_urls []string
 	Share_Index       int
+	N                 int
+	T                 int
+	K                 int
+	Q                 int
+	M                 int
+	N_open            int
 }
 
 func NewConfig() *Server {

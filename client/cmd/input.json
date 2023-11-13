@@ -1,4 +1,4 @@
 [
-    {"Exp_ID":"exp1", "Secrets": [1]}, 
-    {"Exp_ID":"exp2", "Secrets": [0]}
+    {"Exp_ID":"exp1", "Secrets": [0]}, 
+    {"Exp_ID":"exp2", "Secrets": [1]}
 ]

@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 
+	"example.com/SMC/pkg/ligero"
 	"example.com/SMC/pkg/packed"
 )
 
@@ -13,8 +14,8 @@ type ClientRequest struct {
 	Client_ID    string       `json:"Client_ID"`
 	Token        string       `json:"Token"`
 	Secret_Share packed.Share `json:"Secret_Share"`
+	Proof        ligero.Proof `json:"Proof"`
 	Timestamp    string       `json:"Timestamp"`
-	//Proof       string       `json:"Proof"`
 	//Hash_proof  string       `json:"HashProof"`
 	//Signature   string       `json:"Signature"`
 }
@@ -29,6 +30,7 @@ func (c *ClientRequest) ToJson() []byte {
 		Exp_ID:       c.Exp_ID,
 		Client_ID:    c.Client_ID,
 		Secret_Share: c.Secret_Share,
+		Proof:        c.Proof,
 		Timestamp:    c.Timestamp,
 	}
 	message, err := json.Marshal(msg)

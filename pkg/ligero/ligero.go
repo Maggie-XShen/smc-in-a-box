@@ -10,50 +10,64 @@ import (
 	merkletree "github.com/wealdtech/go-merkletree"
 )
 
-// n_i: length of input vector
-// n_s: number of servers
+// n_input: length of input vector
+// n_server: number of servers
 // m: rows number of rearranged input vecotr in the m*l matrix
 // l: columns number of rearranged input vector in the m*l matrix, where n_i = m*l
-// t: number of malicious servers
+// t: the maximum number of shares that may be seen without learning anything about the secret;
+// use in the secret sharing of each input value
 // q: a modulus
-// n_encode:
-// n_open_col: number of opened column
+// n_encode:the number of shares that each row of rearranged input vector is split into
+// n_open_col: number of opened columns
 
 type LigeroZK struct {
 	n_input, m, l, n_server, t, q, n_encode, n_open_col int
 }
 
 type Proof struct {
-	MerkleRoot  []byte
-	ColumnCheck []OpenedColumn
-	Q_code      []int
-	Q_quadra    []int
-	Q_linear    []int
+	MerkleRoot        []byte         `json:"MerkleRoot"`
+	ColumnCheck       []OpenedColumn `json:"ColumnCheck"`
+	Q_code            []int          `json:"Q_code"`
+	Q_quadra          []int          `json:"Q_quadra"`
+	Q_linear          []int          `json:"Q_linear"`
+	Code_randomness   []int          `json:"Code_randomness"`
+	Quadra_randomness []int          `json:"Quadra_randomness"`
+	Linear_randomness []int          `json:"Linear_randomness"`
 }
 
 type OpenedColumn struct {
-	list     []int
-	authpath *merkletree.Proof
+	List        []int    `json:"List"`
+	Index       int      `json:"Col_index"`
+	Code_mask   int      `json:"Code_mask"`
+	Linear_mask int      `json:"Linear_mask"`
+	Quadra_mask int      `json:"Quadra_mask"`
+	Authpath    [][]byte `json:"Authpath"`
 }
 
-func NewLigeroZK(Ni, M, Ns, T, Q, N_open int) (*LigeroZK, error) {
+func NewLigeroZK(N_input, M, N_server, T, Q, N_open int) (*LigeroZK, error) {
 	// m has to larger than 0
 	if M <= 0 {
 		return nil, fmt.Errorf("m cannot be less than 1")
 	}
 
-	if M > Ni {
-		return nil, fmt.Errorf("m cannot be less than n_s")
+	if M > N_input {
+		return nil, fmt.Errorf("m cannot be larger than n_input")
+	}
+
+	if 3*T+1 > N_server {
+		return nil, fmt.Errorf("n_server cannot be less than 3t+1")
+	}
+
+	if N_open <= 0 {
+		return nil, fmt.Errorf("n_open cannot be less than 1")
 	}
 
 	// Calculate l as the upper ceiling of len(slice) divided by m
-	L := int(math.Ceil(float64(Ni) / float64(M)))
+	L := int(math.Ceil(float64(N_input) / float64(M)))
 
-	NEncode := 3*T + 2*L + 1
+	N_encode := 2*N_open + 2*L + 1
 
-	//TODO: check if N_open is less than NEncode and larger than 0
-
-	return &LigeroZK{n_input: Ni, m: M, l: L, n_server: Ns, t: T, q: Q, n_encode: NEncode, n_open_col: N_open}, nil
+	return &LigeroZK{n_input: N_input, m: M, l: L, n_server: N_server, t: T, q: Q, n_encode: N_encode, n_open_col: N_open}, nil
 }
 
 func (zk *LigeroZK) Generate(input []int) (*Proof, error) {
@@ -68,16 +82,59 @@ func (zk *LigeroZK) Generate(input []int) (*Proof, error) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	//fmt.Printf("extended_witness: %v\n", extended_witness)
 
 	encoded_witness, err := zk.encode_extended_witness(extended_witness)
 	if err != nil {
 		log.Fatal(err)
 	}
+	//fmt.Printf("encoded_witness: %v\n", encoded_witness)
 
 	encoded_witeness_columnwise, err := ConvertToColumnwise(encoded_witness)
 	if err != nil {
 		log.Fatal(err)
 	}
+	//fmt.Printf("encoded_witeness_columnwise: %v\n", encoded_witeness_columnwise)
+
+	seed1 := GenerateRandomness(zk.l, zk.q)
+	code_mask := zk.generate_mask(seed1)
+	randomness1 := GenerateRandomness(zk.m*(1+zk.n_server), zk.q)
+
+	q_code, err := zk.generate_code_proof(encoded_witness, randomness1, code_mask)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	//fmt.Printf("seed1: %v\n", seed1)
+	//fmt.Printf("code_mask: %v\n", code_mask)
+	//fmt.Printf("randomness1: %v\n", randomness1)
+	//fmt.Printf("q_code: %v\n", q_code)
+
+	seed2 := make([]int, zk.l)
+	quadra_mask := zk.generate_mask(seed2)
+	randomness2 := GenerateRandomness(zk.m, zk.q)
+
+	q_quadra, err := zk.generate_quadratic_proof(encoded_witness, randomness2, quadra_mask)
+	if err != nil {
+		log.Fatal(err)
+	}
+	//fmt.Printf("seed2: %v\n", seed2)
+	//fmt.Printf("quadra_mask: %v\n", quadra_mask)
+	//fmt.Printf("randomness2: %v\n", randomness2)
+	//fmt.Printf("q_quadra: %v\n", q_quadra)
+
+	seed3 := make([]int, zk.l)
+	linear_mask := zk.generate_mask(seed3)
+	randomness3 := GenerateRandomness(zk.m, zk.q)
+
+	q_linear, err := zk.generate_linear_proof(encoded_witness, randomness3, linear_mask)
+	if err != nil {
+		log.Fatal(err)
+	}
+	//fmt.Printf("seed3: %v\n", seed3)
+	//fmt.Printf("linear_mask: %v\n", linear_mask)
+	//fmt.Printf("randomness3: %v\n", randomness3)
+	//fmt.Printf("q_linear: %v\n", q_linear)
 
 	//commit to the Extended Witness via Merkle Tree
 	tree, leaves, err := zk.generate_merkletree(encoded_witeness_columnwise)
@@ -89,35 +146,48 @@ func (zk *LigeroZK) Generate(input []int) (*Proof, error) {
 
 	//generate column check
 	randomness0 := GenerateRandomness(zk.n_open_col, len(leaves)) //TODO: need to verify the second parameter
-	column_check, err := zk.generate_column_check(tree, leaves, randomness0, encoded_witeness_columnwise)
+
+	column_check, err := zk.generate_column_check(tree, leaves, randomness0, code_mask, quadra_mask, linear_mask, encoded_witeness_columnwise)
 	if err != nil {
 		log.Fatal(err)
 	}
+	//fmt.Printf("opened columns index: %v\n", randomness0)
+	//fmt.Printf("column_check: %v\n\n\n", column_check)
 
-	randomness1 := GenerateRandomness(zk.m*(1+zk.n_server), zk.q)
-	q_code, err := zk.generate_code_proof(encoded_witness, randomness1)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	randomness2 := GenerateRandomness(zk.m, zk.q)
-	q_quadra, err := zk.generate_quadratic_proof(encoded_witness, randomness2)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	randomness3 := GenerateRandomness(zk.m, zk.q)
-	q_linear, err := zk.generate_linear_proof(encoded_witness, randomness3)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return &Proof{MerkleRoot: root, ColumnCheck: column_check, Q_code: q_code, Q_quadra: q_quadra, Q_linear: q_linear}, nil
+	return &Proof{MerkleRoot: root, ColumnCheck: column_check, Q_code: q_code, Q_quadra: q_quadra, Q_linear: q_linear, Code_randomness: randomness1, Quadra_randomness: randomness2, Linear_randomness: randomness3}, nil
 
 }
 
-func (zk *LigeroZK) Verify() {
+func (zk *LigeroZK) Verify(proof Proof) (bool, error) {
+	//verify opened columns are correct
+	openenColumnTest, err := zk.veify_opened_columns(proof.ColumnCheck, proof.MerkleRoot)
+	if err != nil {
+		return false, err
+	}
 
+	if !openenColumnTest {
+		return false, fmt.Errorf("openenColumnTest failed")
+	}
+
+	//verify code test proof
+	codeTest, err := zk.verify_code_proof(proof.Q_code, proof.Code_randomness, proof.ColumnCheck)
+	if !codeTest && err != nil {
+		return false, err
+	}
+
+	//verify quadratic test proof
+	quadraticTest, err := zk.verify_quadratic_constraints(proof.Q_quadra, proof.Quadra_randomness, proof.ColumnCheck)
+	if !quadraticTest && err != nil {
+		return false, err
+	}
+
+	//verify linear test proof
+	linearTest, err := zk.verify_linear_proof(proof.Q_linear, proof.Linear_randomness, proof.ColumnCheck)
+	if !linearTest && err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
 /**
@@ -151,6 +221,7 @@ func (zk *LigeroZK) rearrange_input(input []int, m int) ([][]int, error) {
 }**/
 
 // Generate shares of each value in the input vector, store them with input values in a matrix, which is called extended witness
+// parameter input: client's input vector
 func (zk *LigeroZK) prepare_extended_witness(input []int) ([][]int, error) {
 	if len(input) == 0 {
 		return nil, fmt.Errorf("Invalid input: Input is empty")
@@ -163,11 +234,6 @@ func (zk *LigeroZK) prepare_extended_witness(input []int) ([][]int, error) {
 	matrix1 := make([][]int, zk.m*(1+zk.n_server))
 	for i := range matrix1 {
 		matrix1[i] = make([]int, zk.l)
-	}
-
-	matrix2 := make([][]int, zk.m)
-	for i := range matrix2 {
-		matrix2[i] = make([]int, zk.l)
 	}
 
 	npss, err := packed.NewPackedSecretSharing(zk.n_server, zk.t, 1, zk.q)
@@ -218,7 +284,7 @@ func (zk *LigeroZK) encode_extended_witness(input [][]int) ([][]int, error) {
 		matrix[i] = make([]int, zk.n_encode)
 	}
 
-	npss, err := packed.NewPackedSecretSharing(zk.n_encode, zk.t, zk.l, zk.q)
+	npss, err := packed.NewPackedSecretSharing(zk.n_encode, zk.n_open_col, zk.l, zk.q)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -243,19 +309,22 @@ func (zk *LigeroZK) encode_extended_witness(input [][]int) ([][]int, error) {
 }
 
 // commit encoded extended witness via Merkle Tree
+// parameter input:columnwise encoded extended witness,
+// each row of the input is a column of eacoded extended witness
 func (zk *LigeroZK) generate_merkletree(input [][]int) (*merkletree.MerkleTree, [][]byte, error) {
 
 	// hash each opened column
 	leaves := make([][]byte, len(input))
 
-	for j := 0; j < len(input[0]); j++ {
+	for i := 0; i < len(input); i++ {
 		col := make([]string, len(input))
-		for i := 0; i < len(input); i++ {
-			col[i] = fmt.Sprintf("%064b", input[i][j])
+		for j := 0; j < len(input[0]); j++ {
+			col[j] = fmt.Sprintf("%064b", input[i][j])
 		}
 		//concatenate values in the column to a string
 		concatenated := strings.Join(col, "")
-		leaves[j] = []byte(concatenated)
+		leaves[i] = []byte(concatenated)
+
 	}
 
 	//Create a new Merkle Tree from hashed columns
@@ -269,45 +338,24 @@ func (zk *LigeroZK) generate_merkletree(input [][]int) (*merkletree.MerkleTree, 
 }
 
 // randomly choose t' columns and get their authentication paths
-func (zk *LigeroZK) generate_column_check(tree *merkletree.MerkleTree, leaves [][]byte, col_index []int, input [][]int) ([]OpenedColumn, error) {
-	column_check := make([]OpenedColumn, len(col_index))
-	//choose random columns
-	for i, _ := range col_index {
-		index := col_index[i]
+func (zk *LigeroZK) generate_column_check(tree *merkletree.MerkleTree, leaves [][]byte, cols []int, c_mask []int, q_mask []int, l_mask []int, input [][]int) ([]OpenedColumn, error) {
+	column_check := make([]OpenedColumn, len(cols))
+
+	for i := range cols {
+		index := cols[i]
 		proof, err := tree.GenerateProof(leaves[index])
 		if err != nil {
 			return nil, err
 		}
-		column_check[i] = OpenedColumn{list: input[index], authpath: proof}
+		column_check[i] = OpenedColumn{List: input[index], Index: index, Code_mask: c_mask[index], Quadra_mask: q_mask[index], Linear_mask: l_mask[index], Authpath: *&proof.Hashes}
+
 	}
+
 	return column_check, nil
 }
 
-func (zk *LigeroZK) veify_opened_columns(open_cols []OpenedColumn, root []byte) (bool, error) {
-	//TODO: chcek cols and roor are not empty
-	for _, col := range open_cols {
-		concatenated, err := ConvertColumnToString(col.list)
-		if err != nil {
-			return false, err
-		}
-
-		verified, err := merkletree.VerifyProof([]byte(concatenated), col.authpath, root)
-		if err != nil {
-			return false, err
-		}
-
-		if !verified {
-			return false, nil
-		}
-
-	}
-
-	return true, nil
-
-}
-
 // generate proof that is used to check if encoded extended witness is encoded correctly
-func (zk *LigeroZK) generate_code_proof(input [][]int, randomness []int) ([]int, error) {
+func (zk *LigeroZK) generate_code_proof(input [][]int, randomness []int, mask []int) ([]int, error) {
 	if len(input) == 0 {
 		return nil, fmt.Errorf("Invalid input: Input is empty")
 	}
@@ -315,10 +363,6 @@ func (zk *LigeroZK) generate_code_proof(input [][]int, randomness []int) ([]int,
 	if len(input) != zk.m*(1+zk.n_server) || len(input[0]) != zk.n_encode {
 		return nil, fmt.Errorf("Invalid input")
 	}
-
-	//generate mask
-	r := GenerateRandomness(zk.l, zk.q)
-	mask := zk.generate_mask(r)
 
 	//compute q_code
 	r_matrix := make([][]int, 1)
@@ -326,18 +370,27 @@ func (zk *LigeroZK) generate_code_proof(input [][]int, randomness []int) ([]int,
 	mask_matrix := make([][]int, 1)
 	mask_matrix[0] = mask
 
-	temp_matrix := MulMatrix(r_matrix, input)
-	q_code := AddMatrix(temp_matrix, mask_matrix)
+	temp_matrix, err := MulMatrix(r_matrix, input, zk.q)
+	if err != nil {
+		return nil, err
+	}
+	q_code := AddMatrix(temp_matrix, mask_matrix, zk.q)
 	if len(q_code) != 1 {
 		return nil, fmt.Errorf("Invalid q_code")
 	}
 
-	return q_code[0], nil
+	proof := make([]int, zk.n_open_col+zk.l)
+	for i := 0; i < zk.n_open_col+zk.l; i++ {
+		proof[i] = q_code[0][i]
+	}
+
+	return proof, nil
 
 }
 
 // generate proof that is used to check if input is a vector of 0/1
-func (zk *LigeroZK) generate_quadratic_proof(input [][]int, randomness []int) ([]int, error) {
+func (zk *LigeroZK) generate_quadratic_proof(input [][]int, randomness []int, mask []int) ([]int, error) {
+	//fmt.Printf("input:%v\n", input)
 	if len(input) == 0 {
 		return nil, fmt.Errorf("Invalid input: Input is empty")
 	}
@@ -346,17 +399,22 @@ func (zk *LigeroZK) generate_quadratic_proof(input [][]int, randomness []int) ([
 		return nil, fmt.Errorf("Invalid input")
 	}
 
-	//generate mask
-	r := make([]int, zk.l)
-	mask := zk.generate_mask(r)
-
 	//generate q_quadra
-	result := mask
+	result := make([]int, zk.n_encode)
 
+	index := 0
 	for row := 0; row < len(input); row = row + zk.n_server + 1 {
 		for col := 0; col < len(input[0]); col++ {
-			result[col] += randomness[row] * input[row][col] * (1 - input[row][col])
+			result[col] += randomness[index] * input[row][col] * (1 - input[row][col])
+			//result[col] = mod(result[col], zk.q)
 		}
+		index += 1
+	}
+
+	//fmt.Printf("input:%v\n", result)
+	for i := 0; i < len(result); i++ {
+		result[i] = result[i] + mask[i]
+		result[i] = mod(result[i], zk.q)
 	}
 
 	return result, nil
@@ -364,7 +422,7 @@ func (zk *LigeroZK) generate_quadratic_proof(input [][]int, randomness []int) ([
 }
 
 // generate proof that is used to check shares of input values are correctly generated
-func (zk *LigeroZK) generate_linear_proof(input [][]int, randomness []int) ([]int, error) {
+func (zk *LigeroZK) generate_linear_proof(input [][]int, randomness []int, mask []int) ([]int, error) {
 	if len(input) == 0 {
 		return nil, fmt.Errorf("Invalid input: Input is empty")
 	}
@@ -372,10 +430,6 @@ func (zk *LigeroZK) generate_linear_proof(input [][]int, randomness []int) ([]in
 	if len(input) != zk.m*(1+zk.n_server) || len(input[0]) != zk.n_encode {
 		return nil, fmt.Errorf("Invalid input")
 	}
-
-	//generate mask
-	r := make([]int, zk.l)
-	mask := zk.generate_mask(r)
 
 	//generate lagrange constants
 	x_samples := make([]int, zk.n_server)
@@ -386,39 +440,215 @@ func (zk *LigeroZK) generate_linear_proof(input [][]int, randomness []int) ([]in
 	constants := GenerateLagrangeConstants(x_samples, -1, zk.q)
 
 	//generate q_linear
-	result := mask
+	result := make([]int, zk.n_encode)
 
+	index := 0
 	for row := 0; row < len(input); row = row + zk.n_server + 1 {
 		for col := 0; col < len(input[0]); col++ {
-			result[col] = randomness[row] * input[row][col]
-		}
-
-		for j := 1; j < zk.n_server+1; j++ {
-			for col := 0; col < len(input[0]); col++ {
-				result[col] -= constants[j-1] * input[row+j][col]
+			//result[col] = result[col]+input[row][col]
+			temp := input[row][col]
+			for j := 1; j < zk.n_server+1; j++ {
+				temp = temp - constants[j-1]*input[row+j][col]
 			}
+			result[col] = result[col] + temp*randomness[index]
 		}
+		index += 1
+	}
 
+	for i := 0; i < len(result); i++ {
+		result[i] = mod(result[i]+mask[i], zk.q)
 	}
 
 	return result, nil
 
 }
 
-func (zk *LigeroZK) verify_conrrectness() {
+func (zk *LigeroZK) veify_opened_columns(open_cols []OpenedColumn, root []byte) (bool, error) {
+	if len(open_cols) == 0 || len(root) == 0 {
+		return false, fmt.Errorf("opened columns or root cannot be empty")
+	}
+
+	for _, col := range open_cols {
+		concatenated, err := ConvertColumnToString(col.List)
+		if err != nil {
+			return false, err
+		}
+
+		var proof merkletree.Proof
+		proof.Hashes = col.Authpath
+		proof.Index = uint64(col.Index)
+		verified, err := merkletree.VerifyProof([]byte(concatenated), &proof, root)
+		if err != nil {
+			return false, err
+		}
+
+		if !verified {
+			return false, fmt.Errorf("failed to verify the opened column")
+		}
+
+	}
+
+	return true, nil
 
 }
 
-func (zk *LigeroZK) verify_code_proof() {
+func (zk *LigeroZK) verify_code_proof(q_code []int, randomness []int, open_cols []OpenedColumn) (bool, error) {
+	//generate x coordicates
+	length := len(q_code)
+	x_sample := make([]int, length)
+	for i := 0; i < length; i++ {
+		x_sample[i] = i + 1
+	}
 
+	for _, col := range open_cols {
+		//fmt.Printf("col:%v\n", col.list)
+		//fmt.Printf("index:%d\n", col.col_index)
+		//fmt.Printf("randomness:%v\n", randomness)
+		x := col.Index + 1
+		result1, err := Interpolate_at_Point(x_sample, q_code, x, zk.q)
+		if err != nil {
+			return false, fmt.Errorf("code test failed: x_samples and y_samples length are different")
+		}
+
+		result2, err := MulList(randomness, col.List, zk.q)
+		if err != nil {
+			return false, fmt.Errorf("code test failed: inputs length are different so that multiplication cannot be done")
+		}
+		//fmt.Printf("mask:%d\n", col.code_mask)
+		//fmt.Printf("result2:%d\n", result2)
+		result2 = mod(result2+col.Code_mask, zk.q)
+
+		if result1 != result2 {
+			//fmt.Printf("result1:%d\n", result1)
+			//fmt.Printf("result2:%d\n", result2)
+
+			return false, fmt.Errorf("code test failed: failed to evaluate the opened column")
+		}
+	}
+	return true, nil
 }
 
-func (zk *LigeroZK) verify_quadratic_constraints() {
+func (zk *LigeroZK) verify_quadratic_constraints(q_quadra []int, randomness []int, open_cols []OpenedColumn) (bool, error) {
+	//generate x coordicates
+	x_sample := make([]int, len(q_quadra))
+	for i := 0; i < len(q_quadra); i++ {
+		x_sample[i] = i + 1
+	}
 
+	for j := 0; j < zk.l; j++ {
+		x := mod(-j-1, zk.q)
+		result, err := Interpolate_at_Point(x_sample, q_quadra, x, zk.q)
+		//fmt.Printf("x_sample:%v\n", x_sample)
+		//fmt.Printf("q_quadra:%v\n", q_quadra)
+		//fmt.Printf("x:%d\n", x)
+		//fmt.Printf("result:%d\n", result)
+		if err != nil {
+			return false, fmt.Errorf("quadratic test failed: failed to evaluat polynomial")
+		}
+		if result != 0 {
+			return false, fmt.Errorf("quadratic test failed: constraints are not surtisfied")
+		}
+	}
+
+	col_test := zk.check_quadra_with_opened_column(q_quadra, randomness, open_cols)
+
+	if !col_test {
+		return false, fmt.Errorf("quadratic test failed: failed to evaluate the opened column")
+	}
+
+	return true, nil
 }
 
-func (zk *LigeroZK) verify_linear_proof() {
+func (zk *LigeroZK) verify_linear_proof(q_linear []int, randomness []int, open_cols []OpenedColumn) (bool, error) {
+	// generate x coordicates
+	x_sample := make([]int, len(q_linear))
+	for i := 0; i < len(q_linear); i++ {
+		x_sample[i] = i + 1
+	}
 
+	for j := 0; j < zk.l; j++ {
+		x := mod(-j-1, zk.q)
+		result, err := Interpolate_at_Point(x_sample, q_linear, x, zk.q)
+		if err != nil {
+			return false, fmt.Errorf("linear test failed: failed to evaluat polynomial")
+		}
+		if result != 0 {
+			return false, fmt.Errorf(("linear test failed: shares are not generated correctly"))
+		}
+	}
+
+	col_test := zk.check_linear_with_opened_column(q_linear, randomness, open_cols)
+
+	if !col_test {
+		return false, fmt.Errorf("linear test failed: failed to evaluate the opened column")
+	}
+
+	return true, nil
+}
+
+func (zk *LigeroZK) check_quadra_with_opened_column(test_value []int, randomness []int, open_cols []OpenedColumn) bool {
+	//fmt.Printf("quadra_randomness: %v\n", randomness)
+	for _, col := range open_cols {
+		//fmt.Printf("col: %v\n", col.list)
+		result := 0
+		index := 0
+		for i := 0; i < len(col.List); i = i + zk.n_server + 1 {
+			//fmt.Printf("quadra_randomness: %v\n", randomness[index])
+			result += randomness[index] * col.List[i] * (1 - col.List[i])
+			index += 1
+		}
+		//fmt.Printf("result:%d\n", result)
+		result = mod(result+col.Quadra_mask, zk.q)
+		//fmt.Printf("index:%d\n", col.col_index)
+		//fmt.Printf("test_value:%d\n", test_value[col.col_index])
+		//fmt.Printf("mask:%d\n", col.quadra_mask)
+		//fmt.Printf("result:%d\n", result)
+
+		if test_value[col.Index] != result {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (zk *LigeroZK) check_linear_with_opened_column(test_value []int, randomness []int, open_cols []OpenedColumn) bool {
+	//generate lagrange constants
+	x_samples := make([]int, zk.n_server)
+	for i := 0; i < zk.n_server; i++ {
+		x_samples[i] = i + 1
+	}
+
+	constants := GenerateLagrangeConstants(x_samples, -1, zk.q)
+
+	//fmt.Printf("linear_randomness: %v\n", randomness)
+	for _, col := range open_cols {
+		//fmt.Printf("col: %v\n", col.list)
+		result := 0
+		index := 0
+
+		for row := 0; row < len(col.List); row = row + zk.n_server + 1 {
+			temp := col.List[row]
+			for j := 1; j < zk.n_server+1; j++ {
+				temp = temp - constants[j-1]*col.List[row+j]
+			}
+			result = result + temp*randomness[index]
+			index += 1
+		}
+
+		result = mod(result+col.Linear_mask, zk.q)
+
+		//fmt.Printf("index:%d\n", col.col_index)
+		//fmt.Printf("test_value:%d\n", test_value[col.col_index])
+		//fmt.Printf("result:%d\n", result)
+		//fmt.Printf("mask:%d\n", col.linear_mask)
+
+		if test_value[col.Index] != result {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (zk *LigeroZK) generate_mask(input []int) []int {

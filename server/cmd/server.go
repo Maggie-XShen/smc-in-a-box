@@ -10,6 +10,7 @@ import (
 	"os"
 	"time"
 
+	"example.com/SMC/pkg/ligero"
 	"example.com/SMC/pkg/packed"
 	"example.com/SMC/server/config"
 	"example.com/SMC/server/public/utils"
@@ -74,10 +75,26 @@ func (s *Server) HandleExpAndRegistry(path string) {
 
 func (s *Server) clientRequestHandler(rw http.ResponseWriter, req *http.Request) {
 	var request utils.ClientRequest
+	data := request.ReadJson(req)
+
+	zk, err := ligero.NewLigeroZK(s.cfg.K, s.cfg.M, s.cfg.N, s.cfg.T, s.cfg.Q, s.cfg.N_open)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	//check client's proof
+	verify, err := zk.Verify(data.Proof)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if !verify {
+		panic("failed verifification!")
+	}
+	fmt.Println("verification succeed!")
 
 	clientService := NewClientService(s.store)
 
-	err := clientService.CreateClient(request.ReadJson(req))
+	err = clientService.CreateClient(data)
 
 	if err != nil {
 		log.Printf("error: %s\n", err)

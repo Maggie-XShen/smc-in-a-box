@@ -4,6 +4,12 @@
     "Cert_path":"/path to cerfiticate",
     "Key_path":"/path to private key",
     "Port": "8081",
-    "Other_server_urls":["http://127.0.0.1:8082/serverDataSubmit/", "http://127.0.0.1:8083/serverDataSubmit/"],
-    "Share_Index": 1
+    "Other_server_urls":["http://127.0.0.1:8082/serverDataSubmit/", "http://127.0.0.1:8083/serverDataSubmit/", "http://127.0.0.1:8084/clientRequestSubmit/", "http://127.0.0.1:8085/clientRequestSubmit/", "http://127.0.0.1:8086/clientRequestSubmit/"],
+    "Share_Index": 1,
+    "N": 6,
+    "T": 1,
+    "K": 1,
+    "Q": 41,
+    "M": 1, 
+    "N_open":3
 }

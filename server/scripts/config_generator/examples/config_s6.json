@@ -1,17 +1,17 @@
 {
- "Server_ID": "s3",
- "Token": "stk3",
+ "Server_ID": "s6",
+ "Token": "stk6",
  "Cert_path": "/path to cerfiticate",
  "Key_path": "/path to private key",
- "Port": "8083",
+ "Port": "8086",
  "Other_server_urls": [
-  "http://127.0.0.1:8081/serverDataSubmit/",
   "http://127.0.0.1:8082/serverDataSubmit/",
+  "http://127.0.0.1:8083/serverDataSubmit/",
   "http://127.0.0.1:8084/serverDataSubmit/",
   "http://127.0.0.1:8085/serverDataSubmit/",
-  "http://127.0.0.1:8086/serverDataSubmit/"
+  "http://127.0.0.1:8081/serverDataSubmit/"
  ],
- "Share_Index": 3,
+ "Share_Index": 6,
  "N": 6,
  "T": 1,
  "K": 1,

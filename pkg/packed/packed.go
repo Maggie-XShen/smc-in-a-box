@@ -28,8 +28,8 @@ func NewPackedSecretSharing(N, T, K, Q int) (*PackedSecretSharing, error) {
 	}
 
 	//constrainrs on t and k
-	if T+K <= 2 {
-		return nil, fmt.Errorf("t+k must be at least 3")
+	if K < 1 {
+		return nil, fmt.Errorf("k must be at least 1")
 	}
 
 	//q has to be a prime number
@@ -49,6 +49,8 @@ func (p *PackedSecretSharing) Split(secrets []int) ([]Share, error) {
 	}
 
 	x_samples, y_samples, err := p.sample_packed_polynomial(secrets)
+	//fmt.Printf("%v\n", x_samples)
+	//fmt.Printf("%v\n", y_samples)
 
 	if err != nil {
 		return nil, err
