@@ -105,6 +105,16 @@ func (c *ClientRequest) ReadJson(req *http.Request) ClientRequest {
 		log.Fatalf("Cannot decode client request: %s", err)
 	}
 
+	/**
+	fmt.Printf("Size of Total: %d bytes\n", unsafe.Sizeof(t))
+	fmt.Printf("Size of Proof: %d bytes\n", unsafe.Sizeof(t.Proof))
+	fmt.Printf("Size of Proof: %d bytes\n", unsafe.Sizeof(t.Proof.MerkleRoot))
+	fmt.Printf("Size of q_code: %d bytes\n", unsafe.Sizeof(t.Proof.CodeTest))
+	fmt.Printf("Size of q_quadra: %d bytes\n", unsafe.Sizeof(t.Proof.QuadraTest))
+	fmt.Printf("Size of q_linear: %d bytes\n", unsafe.Sizeof(t.Proof.LinearTest))
+	fmt.Printf("Size of open columns: %d bytes\n", unsafe.Sizeof(t.Proof.ColumnTest))
+	**/
+
 	return t
 }
 

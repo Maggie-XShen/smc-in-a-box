@@ -18,6 +18,7 @@ type Server struct {
 	T                 int
 	K                 int
 	Q                 int
+	N_claims          int
 	M                 int
 	N_open            int
 }

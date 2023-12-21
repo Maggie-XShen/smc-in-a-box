@@ -10,7 +10,7 @@ import (
 	merkletree "github.com/wealdtech/go-merkletree"
 )
 
-// n_input: length of input vector
+// n_claim: number of claims
 // n_server: number of servers
 // m: rows number of rearranged input vecotr in the m*l matrix
 // l: columns number of rearranged input vector in the m*l matrix, where n_i = m*l
@@ -21,15 +21,19 @@ import (
 // n_open_col: number of opened columns
 
 type LigeroZK struct {
-	n_input, m, l, n_server, t, q, n_encode, n_open_col int
+	n_claim, m, l, n_server, t, q, n_encode, n_open_col int
+}
+
+type EncodedWitness struct {
+	matrix [][]int
 }
 
 type Proof struct {
 	MerkleRoot        []byte         `json:"MerkleRoot"`
-	ColumnCheck       []OpenedColumn `json:"ColumnCheck"`
-	Q_code            []int          `json:"Q_code"`
-	Q_quadra          []int          `json:"Q_quadra"`
-	Q_linear          []int          `json:"Q_linear"`
+	ColumnTest        []OpenedColumn `json:"ColumnTest"`
+	CodeTest          []int          `json:"CodeTest"`
+	QuadraTest        []int          `json:"QuadraTest"`
+	LinearTest        []int          `json:"LinearTest"`
 	Code_randomness   []int          `json:"Code_randomness"`
 	Quadra_randomness []int          `json:"Quadra_randomness"`
 	Linear_randomness []int          `json:"Linear_randomness"`
@@ -44,13 +48,18 @@ type OpenedColumn struct {
 	Authpath    [][]byte `json:"Authpath"`
 }
 
-func NewLigeroZK(N_input, M, N_server, T, Q, N_open int) (*LigeroZK, error) {
+type Claim struct {
+	Secrets []int
+	Shares  []int
+}
+
+func NewLigeroZK(N_claim, M, N_server, T, Q, N_open int) (*LigeroZK, error) {
 	// m has to larger than 0
 	if M <= 0 {
 		return nil, fmt.Errorf("m cannot be less than 1")
 	}
 
-	if M > N_input {
+	if M > N_claim {
 		return nil, fmt.Errorf("m cannot be larger than n_input")
 	}
 
@@ -63,14 +72,17 @@ func NewLigeroZK(N_input, M, N_server, T, Q, N_open int) (*LigeroZK, error) {
 	}
 
 	// Calculate l as the upper ceiling of len(slice) divided by m
-	L := int(math.Ceil(float64(N_input) / float64(M)))
+	L := int(math.Ceil(float64(N_claim) / float64(M)))
 
 	N_encode := 2*N_open + 2*L + 1
 
-	return &LigeroZK{n_input: N_input, m: M, l: L, n_server: N_server, t: T, q: Q, n_encode: N_encode, n_open_col: N_open}, nil
+	return &LigeroZK{n_claim: N_claim, m: M, l: L, n_server: N_server, t: T, q: Q, n_encode: N_encode, n_open_col: N_open}, nil
 }
 
-func (zk *LigeroZK) Generate(input []int) (*Proof, error) {
+func (zk *LigeroZK) Generate(claims []Claim) (*Proof, error) {
+	if len(claims) == 0 {
+		return nil, fmt.Errorf("Invalid input when generating proof: claims are empty")
+	}
 
 	/**
 	matrix, err := zk.rearrange_input(input, zk.m)
@@ -78,7 +90,7 @@ func (zk *LigeroZK) Generate(input []int) (*Proof, error) {
 		log.Fatal(err)
 	}**/
 
-	extended_witness, err := zk.prepare_extended_witness(input)
+	extended_witness, err := zk.prepare_extended_witness(claims)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -125,9 +137,13 @@ func (zk *LigeroZK) Generate(input []int) (*Proof, error) {
 
 	seed3 := make([]int, zk.l)
 	linear_mask := zk.generate_mask(seed3)
-	randomness3 := GenerateRandomness(zk.m, zk.q)
+	linear_rand := GenerateRandomness(zk.m+zk.m*(zk.n_server-zk.t-1), zk.q)
+	randomness3 := make([]int, zk.m)
+	for i := 0; i < zk.m; i++ {
+		randomness3[i] = linear_rand[i]
+	}
 
-	q_linear, err := zk.generate_linear_proof(encoded_witness, randomness3, linear_mask)
+	q_linear, err := zk.generate_linear_proof(encoded_witness, linear_rand, linear_mask)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -154,13 +170,33 @@ func (zk *LigeroZK) Generate(input []int) (*Proof, error) {
 	//fmt.Printf("opened columns index: %v\n", randomness0)
 	//fmt.Printf("column_check: %v\n\n\n", column_check)
 
-	return &Proof{MerkleRoot: root, ColumnCheck: column_check, Q_code: q_code, Q_quadra: q_quadra, Q_linear: q_linear, Code_randomness: randomness1, Quadra_randomness: randomness2, Linear_randomness: randomness3}, nil
+	return &Proof{MerkleRoot: root, ColumnTest: column_check, CodeTest: q_code, QuadraTest: q_quadra, LinearTest: q_linear, Code_randomness: randomness1, Quadra_randomness: randomness2, Linear_randomness: randomness3}, nil
+
+}
+
+func (zk *LigeroZK) GetOpenedRows(matrix [][]int, index int) ([][]int, error) {
+	if len(matrix) == 0 {
+		return nil, fmt.Errorf("Invalid input when getting opened rows: matrix is empty")
+	}
+
+	if index < 0 || index >= zk.n_server {
+		return nil, fmt.Errorf("Invalid input when getting opened rows: index is not valid")
+	}
+
+	result := make([][]int, zk.m)
+	pointer := 0
+	for i := index; i < len(matrix); i = i + zk.n_server + 1 {
+		result[pointer] = matrix[i]
+		pointer += 1
+	}
+
+	return result, nil
 
 }
 
 func (zk *LigeroZK) Verify(proof Proof) (bool, error) {
 	//verify opened columns are correct
-	openenColumnTest, err := zk.veify_opened_columns(proof.ColumnCheck, proof.MerkleRoot)
+	openenColumnTest, err := zk.veify_opened_columns(proof.ColumnTest, proof.MerkleRoot)
 	if err != nil {
 		return false, err
 	}
@@ -170,19 +206,19 @@ func (zk *LigeroZK) Verify(proof Proof) (bool, error) {
 	}
 
 	//verify code test proof
-	codeTest, err := zk.verify_code_proof(proof.Q_code, proof.Code_randomness, proof.ColumnCheck)
+	codeTest, err := zk.verify_code_proof(proof.CodeTest, proof.Code_randomness, proof.ColumnTest)
 	if !codeTest && err != nil {
 		return false, err
 	}
 
 	//verify quadratic test proof
-	quadraticTest, err := zk.verify_quadratic_constraints(proof.Q_quadra, proof.Quadra_randomness, proof.ColumnCheck)
+	quadraticTest, err := zk.verify_quadratic_constraints(proof.QuadraTest, proof.Quadra_randomness, proof.ColumnTest)
 	if !quadraticTest && err != nil {
 		return false, err
 	}
 
 	//verify linear test proof
-	linearTest, err := zk.verify_linear_proof(proof.Q_linear, proof.Linear_randomness, proof.ColumnCheck)
+	linearTest, err := zk.verify_linear_proof(proof.LinearTest, proof.Linear_randomness, proof.ColumnTest)
 	if !linearTest && err != nil {
 		return false, err
 	}
@@ -222,50 +258,45 @@ func (zk *LigeroZK) rearrange_input(input []int, m int) ([][]int, error) {
 
 // Generate shares of each value in the input vector, store them with input values in a matrix, which is called extended witness
 // parameter input: client's input vector
-func (zk *LigeroZK) prepare_extended_witness(input []int) ([][]int, error) {
-	if len(input) == 0 {
-		return nil, fmt.Errorf("Invalid input: Input is empty")
+func (zk *LigeroZK) prepare_extended_witness(claims []Claim) ([][]int, error) {
+	if len(claims) == 0 {
+		return nil, fmt.Errorf("Invalid claims: claims are empty")
 	}
 
-	if zk.m > len(input) {
-		return nil, fmt.Errorf("Invalid input: Number of elements in the input must equal or larger than m")
+	if len(claims[0].Shares) != zk.n_server {
+		return nil, fmt.Errorf("Invalid input: Number of shares of each claim must equal to n_server")
 	}
 
-	matrix1 := make([][]int, zk.m*(1+zk.n_server))
-	for i := range matrix1 {
-		matrix1[i] = make([]int, zk.l)
+	if zk.m > len(claims) {
+		return nil, fmt.Errorf("Invalid input: Number of claims must equal or larger than m")
 	}
 
-	npss, err := packed.NewPackedSecretSharing(zk.n_server, zk.t, 1, zk.q)
-
-	if err != nil {
-		log.Fatal(err)
+	secrets_num := len(claims[0].Secrets)
+	rows := zk.m * (secrets_num + zk.n_server)
+	matrix := make([][]int, rows)
+	for i := range matrix {
+		matrix[i] = make([]int, zk.l)
 	}
 
-	index1 := 0
-	for i := 0; i < zk.m*(1+zk.n_server); i = i + zk.n_server + 1 {
+	index := 0
+	for i := 0; i < rows; i = i + secrets_num + zk.n_server {
 		for j := 0; j < zk.l; j++ {
-			if index1 < len(input) {
-				matrix1[i][j] = input[index1]
-				index1++
-			}
 
-			//shamir-secret sharing each item in input
-			shares, err := npss.Split([]int{matrix1[i][j]})
-			if err != nil {
-				log.Fatal(err)
+			k := 0
+			for k < secrets_num {
+				matrix[i+k][j] = claims[index].Secrets[k]
+				k++
 			}
-
-			index2 := 0
-			for v := i + 1; v < i+1+zk.n_server; v++ {
-				matrix1[v][j] = shares[index2].Value
-				index2++
+			h := 0
+			for h < zk.n_server {
+				matrix[i+k+h][j] = claims[index].Shares[h]
+				h++
 			}
-
+			index++
 		}
 	}
 
-	return matrix1, nil
+	return matrix, nil
 
 }
 
@@ -422,6 +453,64 @@ func (zk *LigeroZK) generate_quadratic_proof(input [][]int, randomness []int, ma
 }
 
 // generate proof that is used to check shares of input values are correctly generated
+/**
+func (zk *LigeroZK) generate_linear_proof(input [][]int, randomness []int, mask []int) ([]int, error) {
+	if len(input) == 0 {
+		return nil, fmt.Errorf("Invalid input: Input is empty")
+	}
+
+	if len(input) != zk.m*(1+zk.n_server) || len(input[0]) != zk.n_encode {
+		return nil, fmt.Errorf("Invalid input")
+	}
+
+	//generate lagrange constants
+	x_samples := make([]int, zk.t+1)
+	for i := 0; i < zk.t+1; i++ {
+		x_samples[i] = i + 1
+	}
+
+	constants := GenerateLagrangeConstants(x_samples, -1, zk.q)
+
+	//generate q_linear
+	result := make([]int, zk.n_encode)
+
+	index := 0
+	for row := 0; row < len(input); row = row + zk.n_server + 1 {
+		for col := 0; col < len(input[0]); col++ {
+			temp := input[row][col]
+			for j := 1; j < zk.t+1; j++ {
+				temp = temp - constants[j-1]*input[row+j][col]
+			}
+			result[col] = result[col] + temp*randomness[index]
+		}
+		index += 1
+	}
+
+	for row := 0; row < len(input); row = row + zk.n_server + 1 {
+		for col := 0; col < len(input[0]); col++ {
+			rand_index := index
+			for sh_index := row + 1 + zk.t + 1; sh_index < row+zk.n_server+1; sh_index = sh_index + 1 {
+				cons := GenerateLagrangeConstants(x_samples, -sh_index, zk.q)
+				temp := input[sh_index][col]
+				for j := 1; j < zk.t+1; j++ {
+					temp = temp - cons[j-1]*input[row+j][col]
+				}
+				result[col] = result[col] + temp*randomness[rand_index]
+				rand_index += 1
+			}
+
+		}
+		index += 3
+	}
+
+	for i := 0; i < len(result); i++ {
+		result[i] = mod(result[i]+mask[i], zk.q)
+	}
+
+	return result, nil
+
+}**/
+
 func (zk *LigeroZK) generate_linear_proof(input [][]int, randomness []int, mask []int) ([]int, error) {
 	if len(input) == 0 {
 		return nil, fmt.Errorf("Invalid input: Input is empty")
@@ -613,12 +702,13 @@ func (zk *LigeroZK) check_quadra_with_opened_column(test_value []int, randomness
 }
 
 func (zk *LigeroZK) check_linear_with_opened_column(test_value []int, randomness []int, open_cols []OpenedColumn) bool {
-	//generate lagrange constants
+
 	x_samples := make([]int, zk.n_server)
 	for i := 0; i < zk.n_server; i++ {
 		x_samples[i] = i + 1
 	}
 
+	//generate lagrange constants
 	constants := GenerateLagrangeConstants(x_samples, -1, zk.q)
 
 	//fmt.Printf("linear_randomness: %v\n", randomness)

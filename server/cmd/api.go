@@ -4,6 +4,8 @@ import (
 	"errors"
 	"time"
 
+	"example.com/SMC/pkg/ligero"
+	"example.com/SMC/server/config"
 	"example.com/SMC/server/public/utils"
 	"example.com/SMC/server/sqlstore"
 )
@@ -32,7 +34,7 @@ func NewExperimentService(s *sqlstore.SqlStore) *ExperimentService {
 	return &ExperimentService{store: s}
 }
 
-func (c *ClientService) CreateClient(request utils.ClientRequest) error {
+func (c *ClientService) CreateClient(request utils.ClientRequest, cfg *config.Server) error {
 	// TODO : do some basic validations, e.g. missing exp_id, client_id, etc.
 	exp, err := c.store.GetExp(request.Exp_ID)
 	if err != nil {
@@ -56,6 +58,20 @@ func (c *ClientService) CreateClient(request utils.ClientRequest) error {
 	}
 	if *client != (sqlstore.ClientShare{}) {
 		return errors.New("client record already exists when server creates client share record")
+	}
+
+	zk, err := ligero.NewLigeroZK(cfg.N_claims, cfg.M, cfg.N, cfg.T, cfg.Q, cfg.N_open)
+	if err != nil {
+		return err
+	}
+
+	//check client's proof
+	verify, err := zk.Verify(request.Proof)
+	if err != nil {
+		return err
+	}
+	if !verify {
+		return errors.New("failed verification of proof!")
 	}
 
 	err = c.store.InsertClientShare(request)

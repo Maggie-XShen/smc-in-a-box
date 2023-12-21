@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 
@@ -23,6 +24,20 @@ type ClientRequest struct {
 type Input struct {
 	Exp_ID  string `json:"Exp_ID"`
 	Secrets []int  `json:"Secrets"`
+}
+
+func FormClaims(input []int, shares []packed.Share) ([]ligero.Claim, error) {
+	if len(input) == 0 || len(shares) == 0 {
+		return nil, fmt.Errorf("Invalid input when forming claims: Input is empty")
+	}
+
+	sh := make([]int, len(shares))
+	for i := 0; i < len(shares); i++ {
+		sh[i] = shares[i].Value
+	}
+	claims := []ligero.Claim{{Secrets: input, Shares: sh}}
+
+	return claims, nil
 }
 
 func (c *ClientRequest) ToJson() []byte {

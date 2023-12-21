@@ -17,6 +17,7 @@ require (
 )
 
 require (
+	gonum.org/v1/gonum v0.14.0
 	gorm.io/datatypes v1.2.0
 	gorm.io/driver/sqlite v1.5.1
 )
