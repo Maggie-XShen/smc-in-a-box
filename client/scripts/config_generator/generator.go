@@ -14,9 +14,8 @@ type Client struct {
 	URLs      []string //servers urls
 	N         int
 	T         int
-	K         int
 	Q         int
-	N_claims  int
+	N_secrets int
 	M         int
 	N_open    int
 }

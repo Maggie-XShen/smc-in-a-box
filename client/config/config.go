@@ -14,7 +14,7 @@ type Client struct {
 	T         int
 	K         int
 	Q         int
-	N_claims  int
+	N_secrets int
 	M         int
 	N_open    int
 }

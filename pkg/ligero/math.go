@@ -1,9 +1,7 @@
 package ligero
 
 import (
-	"crypto/rand"
 	"fmt"
-	"math/big"
 )
 
 func AddMatrix(matrix1 [][]int, matrix2 [][]int, q int) [][]int {
@@ -62,25 +60,6 @@ func MulList(list1 []int, list2 []int, q int) (int, error) {
 	}
 
 	return mod(result, q), nil
-}
-
-func GenerateRandomness(length int, q int) []int {
-	randomness := make([]int, length)
-	//rand.Seed(time.Now().UnixNano())
-	checkMap := map[int]bool{}
-	for i := 0; i < length; i++ {
-		for {
-			value, err := rand.Int(rand.Reader, big.NewInt(int64(q)))
-			if err == nil && !checkMap[int(value.Int64())] {
-				checkMap[int(value.Int64())] = true
-				randomness[i] = int(value.Int64())
-				break
-			}
-
-		}
-	}
-
-	return randomness
 }
 
 // interpolate_at_point takes points and returns

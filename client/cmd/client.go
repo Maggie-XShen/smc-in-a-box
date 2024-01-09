@@ -10,7 +10,6 @@ import (
 
 	"example.com/SMC/client/config"
 	"example.com/SMC/pkg/ligero"
-	"example.com/SMC/pkg/packed"
 )
 
 type Client struct {
@@ -21,28 +20,38 @@ func NewClient(conf *config.Client) *Client {
 	return &Client{cfg: conf}
 }
 
-func (c *Client) GenerateShares(secrets []int) ([]packed.Share, error) {
-	npss, err := packed.NewPackedSecretSharing(c.cfg.N, c.cfg.T, c.cfg.K, c.cfg.Q)
+/**
+func (c *Client) PrepareShares(secrets []int) ([][]int, [][]rss.Share, error) {
+	nrss, err := rss.NewReplicatedSecretSharing(c.cfg.N, c.cfg.T, c.cfg.Q)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	shares, err := npss.Split(secrets)
-	if err != nil {
-		return nil, err
+	size := len(secrets)
+	vals_per_secret := make([][]int, size)
+	shares_per_party := make([][]rss.Share, c.cfg.N)
+	for i := 0; i < size; i++ {
+		values, shares, err := nrss.Split(secrets[i])
+		if err != nil {
+			return nil, nil, err
+		}
+		vals_per_secret[i] = values
+		for j := 0; j < len(shares); j++ {
+			shares_per_party[j][i] = shares[j]
+		}
 	}
 
-	return shares, nil
+	return vals_per_secret, shares_per_party, nil
 }
 
-func (c *Client) GenerateZKP(secrets []int, shares []packed.Share) (*ligero.Proof, error) {
+func (c *Client) GenerateZKP(secrets []int, values [][]int) (*ligero.Proof, error) {
 	//NewLigeroZK(N_input, M, N_server, T, Q, N_open int)
 	zk, err := ligero.NewLigeroZK(c.cfg.N_claims, c.cfg.M, c.cfg.N, c.cfg.T, c.cfg.Q, c.cfg.N_open)
 	if err != nil {
 		return nil, err
 	}
 
-	claims, err := FormClaims(secrets, shares)
+	claims, err := FormClaims(secrets, values)
 	if err != nil {
 		return nil, err
 	}
@@ -53,26 +62,27 @@ func (c *Client) GenerateZKP(secrets []int, shares []packed.Share) (*ligero.Proo
 	}
 
 	return proof, nil
-}
+}**/
 
 func (c *Client) Run(inputpath string) {
 	inputs := ReadClientInput(inputpath)
 	urls := c.cfg.URLs
 
 	for _, input := range inputs {
-		shares, err := c.GenerateShares(input.Secrets)
+		zk, err := ligero.NewLigeroZK(c.cfg.N_secrets, c.cfg.M, c.cfg.N, c.cfg.T, c.cfg.Q, c.cfg.N_open)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("err: %v", err)
 		}
 
-		proof, err := c.GenerateZKP(input.Secrets, shares)
+		proof, err := zk.GenerateProof(input.Secrets)
+
 		if err != nil {
 			log.Fatal(err)
 		}
 
 		current_time := time.Now().Format("2006-01-02 15:04:05")
 		for i := 0; i < len(urls); i++ {
-			msg := ClientRequest{Exp_ID: input.Exp_ID, Client_ID: c.cfg.Client_ID, Token: c.cfg.Token, Secret_Share: shares[i], Proof: *proof, Timestamp: current_time}
+			msg := ClientRequest{Exp_ID: input.Exp_ID, Client_ID: c.cfg.Client_ID, Token: c.cfg.Token, Proof: *proof[i], Timestamp: current_time}
 
 			writer := &msg
 			c.Send(urls[i], writer.ToJson())

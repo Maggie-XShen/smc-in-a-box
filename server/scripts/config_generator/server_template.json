@@ -15,9 +15,8 @@
     "Share_Index": 1,
     "N": 6,
     "T": 1,
-    "K": 1,
     "Q": 41,
-    "N_claims":1,
+    "N_secrets":1,
     "M": 1, 
     "N_open":3
 }

@@ -2,6 +2,8 @@ package main
 
 import (
 	"errors"
+	"fmt"
+	"log"
 	"time"
 
 	"example.com/SMC/pkg/ligero"
@@ -60,19 +62,22 @@ func (c *ClientService) CreateClient(request utils.ClientRequest, cfg *config.Se
 		return errors.New("client record already exists when server creates client share record")
 	}
 
-	zk, err := ligero.NewLigeroZK(cfg.N_claims, cfg.M, cfg.N, cfg.T, cfg.Q, cfg.N_open)
+	zk, err := ligero.NewLigeroZK(cfg.N_secrets, cfg.M, cfg.N, cfg.T, cfg.Q, cfg.N_open)
 	if err != nil {
 		return err
 	}
 
 	//check client's proof
-	verify, err := zk.Verify(request.Proof)
+	verify, err := zk.VerifyProof(request.Proof)
 	if err != nil {
+		log.Printf("failed to verify proof from %s for %s data\n", request.Client_ID, request.Exp_ID)
 		return err
 	}
 	if !verify {
-		return errors.New("failed verification of proof!")
+		return fmt.Errorf("failed to verify proof from %s for %s data", request.Client_ID, request.Exp_ID)
 	}
+
+	log.Printf("succeed to verify proof from %s for %s data\n", request.Client_ID, request.Exp_ID)
 
 	err = c.store.InsertClientShare(request)
 	if err != nil {

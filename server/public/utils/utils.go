@@ -11,12 +11,11 @@ import (
 )
 
 type ClientRequest struct {
-	Exp_ID       string       `json:"Exp_ID"`
-	Client_ID    string       `json:"Client_ID"`
-	Token        string       `json:"Token"`
-	Secret_Share packed.Share `json:"Secret_Share"`
-	Proof        ligero.Proof `json:"Proof"`
-	Timestamp    string       `json:"Timestamp"`
+	Exp_ID    string       `json:"Exp_ID"`
+	Client_ID string       `json:"Client_ID"`
+	Token     string       `json:"Token"`
+	Proof     ligero.Proof `json:"Proof"`
+	Timestamp string       `json:"Timestamp"`
 	//Proof       string       `json:"Proof"`
 	//Hash_proof  string       `json:"HashProof"`
 	//Signature   string       `json:"Signature"`

@@ -1,9 +1,9 @@
 package packed
 
 import (
-	"crypto/rand"
 	"fmt"
 	"math/big"
+	"math/rand"
 )
 
 // n: the number of shares that a vector of secrets are split into
@@ -43,12 +43,12 @@ func NewPackedSecretSharing(N, T, K, Q int) (*PackedSecretSharing, error) {
 
 // Split takes k secrets and generates n shares.
 // Each returned share was attached a tag used to reconstruct the secrets.
-func (p *PackedSecretSharing) Split(secrets []int) ([]Share, error) {
+func (p *PackedSecretSharing) Split(secrets []int, seed int) ([]Share, error) {
 	if len(secrets) == 0 {
 		return nil, fmt.Errorf("cannot split an empty secret")
 	}
 
-	x_samples, y_samples, err := p.sample_packed_polynomial(secrets)
+	x_samples, y_samples, err := p.sample_packed_polynomial(secrets, seed)
 	//fmt.Printf("%v\n", x_samples)
 	//fmt.Printf("%v\n", y_samples)
 
@@ -95,21 +95,21 @@ func (p *PackedSecretSharing) Reconstruct(parts []Share) ([]int, error) {
 }
 
 // sample_packed_polynomial constructs a random polynomial of t+k-1 degree
-func (p *PackedSecretSharing) sample_packed_polynomial(secrets []int) ([]int, []int, error) {
+func (p *PackedSecretSharing) sample_packed_polynomial(secrets []int, seed int) ([]int, []int, error) {
 	x_samples := make([]int, p.k+p.t)
 	for i := 0; i < p.k+p.t; i++ {
 		x_samples[i] = mod(-i-1, p.q)
 	}
 
 	randomness_values := make([]int, p.t)
-	//rand.Seed(time.Now().UnixNano())
+	r := rand.New(rand.NewSource(int64(seed)))
 	checkMap := map[int]bool{}
 	for i := 0; i < p.t; i++ {
 		for {
-			value, err := rand.Int(rand.Reader, big.NewInt(int64(p.q)))
-			if err == nil && !checkMap[int(value.Int64())] {
-				checkMap[int(value.Int64())] = true
-				randomness_values[i] = int(value.Int64())
+			value := r.Intn(p.q)
+			if !checkMap[int(value)] {
+				checkMap[int(value)] = true
+				randomness_values[i] = int(value)
 				break
 			}
 

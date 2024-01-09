@@ -47,7 +47,8 @@ func TestSplit(t *testing.T) {
 		t.Fatalf("bad: %v", npss.q)
 	}
 
-	shares, err := npss.Split(secret)
+	seed := 99
+	shares, err := npss.Split(secret, seed)
 	if err != nil {
 		t.Fatalf("Split(%v) failed with error %s", secret, err)
 	}
@@ -66,7 +67,8 @@ func TestReconstruct(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	shares, err := npss.Split(secrets)
+	seed := 99
+	shares, err := npss.Split(secrets, seed)
 	if err != nil {
 		t.Fatalf("Split(%v) failed with error %s", secrets, err)
 	}

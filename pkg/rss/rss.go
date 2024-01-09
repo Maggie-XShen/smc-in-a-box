@@ -12,12 +12,12 @@ type ReplicatedSecretSharing struct {
 	n, t, q int
 }
 
-type Share struct {
-	PartyIndex int     `json:"PartyIndex"`
-	Values     []Value `json:"Values"`
+type Party struct {
+	Index  int     `json:"Index"`
+	Shares []Share `json:"Shares"`
 }
 
-type Value struct {
+type Share struct {
 	Index int `json:"Index"`
 	Value int `json:"Value"`
 }
@@ -36,52 +36,52 @@ func NewReplicatedSecretSharing(N, T, Q int) (*ReplicatedSecretSharing, error) {
 
 }
 
-func (rss *ReplicatedSecretSharing) Split(secret int) ([]Share, error) {
-	//compute total number of values a secret splits to
-	n_values := combin.Binomial(rss.n, rss.t)
+func (rss *ReplicatedSecretSharing) Split(secret int) ([]Share, []Party, error) {
+	//compute total number of shares a secret splits to
+	n_sh := combin.Binomial(rss.n, rss.t)
 
-	//compute total number of values stored by each party
-	p_values := combin.Binomial(rss.n-1, rss.t)
+	//compute total number of shares stored by each party
+	p_sh := combin.Binomial(rss.n-1, rss.t)
 
-	//generate all values
-	values := make([]int, n_values)
-	values[n_values-1] = secret
-	for i := 0; i < n_values-1; i++ {
-		value, err := rand.Int(rand.Reader, big.NewInt(int64(rss.q)))
+	//generate all shares
+	shares := make([]Share, n_sh)
+	shares[n_sh-1] = Share{Index: n_sh - 1, Value: secret}
+	for i := 0; i < n_sh-1; i++ {
+		val, err := rand.Int(rand.Reader, big.NewInt(int64(rss.q)))
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		values[i] = int(value.Int64())
-		values[n_values-1] -= values[i]
+		shares[i] = Share{Index: i, Value: int(val.Int64())}
+		temp := shares[n_sh-1].Value
+		shares[n_sh-1].Value = temp - shares[i].Value
 	}
-	values[n_values-1] = mod(values[n_values-1], rss.q)
+	shares[n_sh-1].Value = mod(shares[n_sh-1].Value, rss.q)
 
-	//generate share for each party
-	list := combin.Combinations(n_values, p_values)
-	result := make([]Share, rss.n)
+	//generate shares for each party
+	list := combin.Combinations(n_sh, p_sh)
+	result := make([]Party, rss.n)
 	for i := 0; i < rss.n; i++ {
-		vals_party := make([]Value, p_values)
+		p_sh := make([]Share, p_sh)
 		for j := 0; j < len(list[i]); j++ {
-			x := Value{Index: list[i][j], Value: values[list[i][j]]}
-			vals_party[j] = x
+			p_sh[j] = shares[list[i][j]]
 		}
 
-		result[i] = Share{PartyIndex: i + 1, Values: vals_party}
+		result[i] = Party{Index: i, Shares: p_sh}
 
 	}
 
-	return result, nil
+	return shares, result, nil
 
 }
 
-func (rss *ReplicatedSecretSharing) Reconstruct(shares []Share) (int, error) {
+func (rss *ReplicatedSecretSharing) Reconstruct(parties []Party) (int, error) {
 	//generate a map
-	//key: index of the values the srecret splits to
+	//key: index of the shares the srecret splits to
 	//value:a list values associated to the key
 	mapping := make(map[int][]int)
-	for _, sh := range shares {
-		for _, val := range sh.Values {
-			mapping[val.Index] = append(mapping[val.Index], val.Value)
+	for _, party := range parties {
+		for _, sh := range party.Shares {
+			mapping[sh.Index] = append(mapping[sh.Index], sh.Value)
 		}
 
 	}
