@@ -42,7 +42,7 @@ If confpath option is not provided, the program will read output party configura
 If registrypath option is not provided, the program will read the experiments information from outputparty/cmd/experiments.json
 
 ## Note
+The third version of development moves to use replicated secret-sharing as building block compared to the second version of development using shamir secret-sharing. ZK proof protocol is changed to non-interactive version using fiat shamir transformation.
   
 ## To Do
-+ Client consistently sends input.
-+ Database migration
++ Database needs to change per confirguration
