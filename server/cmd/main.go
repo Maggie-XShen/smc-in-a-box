@@ -16,12 +16,13 @@ func main() {
 
 	s := NewServer(conf)
 
-	s.HandleExpAndRegistry(*registrypath)
+	s.HandleExp(*registrypath)
 
 	// set up ticker
 	ticker := time.NewTicker(1 * time.Second)
 	go s.WaitForEndOfExperiment(ticker)
-	go s.WaitForEndOfServersRound(ticker)
+	go s.WaitForEndOfComplaintBroadcast(ticker)
+	go s.WaitForEndOfShareBroadcast(ticker)
 
 	s.Start()
 

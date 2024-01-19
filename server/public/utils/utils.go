@@ -6,8 +6,7 @@ import (
 	"net/http"
 
 	"example.com/SMC/pkg/ligero"
-	"example.com/SMC/pkg/packed"
-	"gorm.io/datatypes"
+	"example.com/SMC/pkg/rss"
 )
 
 type ClientRequest struct {
@@ -21,75 +20,98 @@ type ClientRequest struct {
 	//Signature   string       `json:"Signature"`
 }
 
+/**
 type ClientRegistry struct {
 	Exp_ID    string `json:"Exp_ID"`
 	Client_ID string `json:"Client_ID"`
 	Token     string `json:"Token"`
+}**/
+
+type ComplaintRequest struct {
+	Exp_ID     string      `json:"Exp_ID"`
+	Server_ID  string      `json:"Server_ID"`
+	Complaints []Complaint `json:"Complaints"`
 }
 
-type ClientSet struct {
-	Exp_ID    string
-	Server_ID string
-	Clients   datatypes.JSON
+type Complaint struct {
+	Client_ID string `json:"Client_ID"`
+	Complain  bool   `json:"Complain"`
+	Root      []byte `json:"Root"`
 }
 
-type ServerRequest struct {
-	Exp_ID     string       `json:"Exp_ID "`
-	Server_ID  string       `json:"Server_ID"`
-	Sum_Shares packed.Share `json:"Sum_Shares"`
-	Timestamp  string       `json:"Timestamp"`
+type MaskedShareRequest struct {
+	Exp_ID       string        `json:"Exp_ID"`
+	Server_ID    string        `json:"Server_ID"`
+	MaskedShares []MaskedShare `json:"MaskedShares"`
+}
+
+type MaskedShare struct {
+	Client_ID   string `json:"Client_ID"`
+	Input_Index int    `json:"Input_Index"`
+	Index       int    `json:"Index"`
+	Value       int    `json:"Value"`
+}
+
+type AggregatedShareRequest struct {
+	Exp_ID           string      `json:"Exp_ID "`
+	Server_ID        string      `json:"Server_ID"`
+	AggregatedShares []rss.Share `json:"SumShare"`
+	Timestamp        string      `json:"Timestamp"`
 }
 
 type OutputPartyRequest struct {
-	Exp_ID string `json:"Exp_ID"`
-	Due    string `json:"Due"`
-	Owner  string `json:"Owner"`
+	Exp_ID         string `json:"Exp_ID"`
+	ClientShareDue string `json:"ClientShareDue"`
+	Owner          string `json:"Owner"`
 }
 
 type Reader interface {
 	ReadJson(req *http.Request)
 }
 
-func GenerateClientSetRecord(exp_id string, server_id string, clients []string) ClientSet {
-	clientsJSON, err := json.Marshal(clients)
-	if err != nil {
-		log.Fatalf("failed to marshal client set to JSON")
-	}
-	request := ClientSet{
-		Exp_ID:    exp_id,
-		Server_ID: server_id,
-		Clients:   clientsJSON,
-	}
-	return request
-}
-
-func (c *ClientSet) ToJson() []byte {
-	msg := &ClientSet{
-		Exp_ID:    c.Exp_ID,
-		Server_ID: c.Server_ID,
-		Clients:   c.Clients,
+func (cr *ComplaintRequest) ToJson() []byte {
+	msg := &ComplaintRequest{
+		Exp_ID:     cr.Exp_ID,
+		Server_ID:  cr.Server_ID,
+		Complaints: cr.Complaints,
 	}
 
 	message, err := json.Marshal(msg)
 
 	if err != nil {
-		log.Fatalf("Cannot marshall client space: %s", err)
+		log.Fatalf("Cannot marshall complaints request: %s", err)
 	}
 
 	return message
 }
 
-func (s *ServerRequest) ToJson() []byte {
-	msg := &ServerRequest{
-		Exp_ID:     s.Exp_ID,
-		Server_ID:  s.Server_ID,
-		Sum_Shares: s.Sum_Shares,
-		Timestamp:  s.Timestamp,
+func (r *MaskedShareRequest) ToJson() []byte {
+	msg := &MaskedShareRequest{
+		Exp_ID:       r.Exp_ID,
+		Server_ID:    r.Server_ID,
+		MaskedShares: r.MaskedShares,
+	}
+
+	message, err := json.Marshal(msg)
+
+	if err != nil {
+		log.Fatalf("Cannot marshall masked share request: %s", err)
+	}
+
+	return message
+}
+
+func (s *AggregatedShareRequest) ToJson() []byte {
+	msg := &AggregatedShareRequest{
+		Exp_ID:           s.Exp_ID,
+		Server_ID:        s.Server_ID,
+		AggregatedShares: s.AggregatedShares,
+		Timestamp:        s.Timestamp,
 	}
 	message, err := json.Marshal(msg)
 
 	if err != nil {
-		log.Fatalf("Cannot marshall server request: %s", err)
+		log.Fatalf("Cannot marshall aggregated share request: %s", err)
 	}
 
 	return message
@@ -104,35 +126,35 @@ func (c *ClientRequest) ReadJson(req *http.Request) ClientRequest {
 		log.Fatalf("Cannot decode client request: %s", err)
 	}
 
-	/**
-	fmt.Printf("Size of Total: %d bytes\n", unsafe.Sizeof(t))
-	fmt.Printf("Size of Proof: %d bytes\n", unsafe.Sizeof(t.Proof))
-	fmt.Printf("Size of Proof: %d bytes\n", unsafe.Sizeof(t.Proof.MerkleRoot))
-	fmt.Printf("Size of q_code: %d bytes\n", unsafe.Sizeof(t.Proof.CodeTest))
-	fmt.Printf("Size of q_quadra: %d bytes\n", unsafe.Sizeof(t.Proof.QuadraTest))
-	fmt.Printf("Size of q_linear: %d bytes\n", unsafe.Sizeof(t.Proof.LinearTest))
-	fmt.Printf("Size of open columns: %d bytes\n", unsafe.Sizeof(t.Proof.ColumnTest))
-	**/
-
 	return t
 }
 
-func (c *ClientSet) ReadJson(req *http.Request) ClientSet {
+func (c *ComplaintRequest) ReadJson(req *http.Request) ComplaintRequest {
 	decoder := json.NewDecoder(req.Body)
-	var t ClientSet
+	var t ComplaintRequest
 	err := decoder.Decode(&t)
 	if err != nil {
-		log.Fatalf("Cannot decode client space: %s", err)
+		log.Fatalf("Cannot decode server complaint: %s", err)
 	}
 	return t
 }
 
-func (s *ServerRequest) ReadJson(req *http.Request) ServerRequest {
+func (m *MaskedShareRequest) ReadJson(req *http.Request) MaskedShareRequest {
 	decoder := json.NewDecoder(req.Body)
-	var t ServerRequest
+	var t MaskedShareRequest
 	err := decoder.Decode(&t)
 	if err != nil {
-		log.Fatalf("Cannot decode server request: %s", err)
+		log.Fatalf("Cannot decode masked shares request: %s", err)
+	}
+	return t
+}
+
+func (s *AggregatedShareRequest) ReadJson(req *http.Request) AggregatedShareRequest {
+	decoder := json.NewDecoder(req.Body)
+	var t AggregatedShareRequest
+	err := decoder.Decode(&t)
+	if err != nil {
+		log.Fatalf("Cannot decode aggregated share request: %s", err)
 	}
 	return t
 }

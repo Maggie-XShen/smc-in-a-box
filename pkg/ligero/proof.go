@@ -46,12 +46,9 @@ func newProof(root []byte, column_check []OpenedColumn, q_code []int, q_quadra [
 
 func (zk *LigeroZK) VerifyProof(proof Proof) (bool, error) {
 	//verify fst auth path
-	fstAuthPathTest, err := zk.veify_fst_authpath(proof.PartyShares, proof.Seeds, proof.FST_authpath, proof.FST_root)
-	if err != nil {
-		return false, err
-	}
+	fstAuthPathTest, err := zk.verify_fst_authpath(proof.PartyShares, proof.Seeds, proof.FST_authpath, proof.FST_root)
 	if !fstAuthPathTest {
-		return false, fmt.Errorf("fstAuthPathTest failed")
+		return false, err
 	}
 
 	h1 := zk.generate_hash([][]byte{proof.MerkleRoot})
@@ -59,13 +56,9 @@ func (zk *LigeroZK) VerifyProof(proof Proof) (bool, error) {
 	//r4 := zk.generate_random_vector(h2, zk.n_open_col, zk.n_encode)
 
 	//verify opened columns are correct
-	openenColumnTest, err := zk.veify_opened_columns(proof.ColumnTest, proof.MerkleRoot)
-	if err != nil {
-		return false, err
-	}
-
+	openenColumnTest, err := zk.verify_opened_columns(proof.ColumnTest, proof.MerkleRoot)
 	if !openenColumnTest {
-		return false, fmt.Errorf("openenColumnTest failed")
+		return false, err
 	}
 
 	len1 := zk.m * (1 + zk.n_server)
@@ -77,28 +70,28 @@ func (zk *LigeroZK) VerifyProof(proof Proof) (bool, error) {
 	//verify code test proof
 	r1 := random_vector[:len1]
 	codeTest, err := zk.verify_code_proof(proof.CodeTest, r1, proof.ColumnTest)
-	if !codeTest && err != nil {
+	if !codeTest {
 		return false, err
 	}
 
 	//verify quadratic test proof
 	r2 := random_vector[len1 : len1+len2]
 	quadraticTest, err := zk.verify_quadratic_constraints(proof.QuadraTest, r2, proof.ColumnTest)
-	if !quadraticTest && err != nil {
+	if !quadraticTest {
 		return false, err
 	}
 
 	//verify linear test proof
 	r3 := random_vector[len1+len2 : len1+len2+zk.m]
 	linearTest, err := zk.verify_linear_proof(proof.PartyShares, proof.Seeds, proof.LinearTest, r3, proof.ColumnTest)
-	if !linearTest && err != nil {
+	if !linearTest {
 		return false, err
 	}
 
 	return true, nil
 }
 
-func (zk *LigeroZK) veify_fst_authpath(party_sh []rss.Party, seeds []int, authpath [][]byte, root []byte) (bool, error) {
+func (zk *LigeroZK) verify_fst_authpath(party_sh []rss.Party, seeds []int, authpath [][]byte, root []byte) (bool, error) {
 	if len(authpath) == 0 || len(root) == 0 {
 		return false, fmt.Errorf("fst authpaty or root cannot be empty")
 	}
@@ -138,7 +131,7 @@ func (zk *LigeroZK) veify_fst_authpath(party_sh []rss.Party, seeds []int, authpa
 
 }
 
-func (zk *LigeroZK) veify_opened_columns(open_cols []OpenedColumn, root []byte) (bool, error) {
+func (zk *LigeroZK) verify_opened_columns(open_cols []OpenedColumn, root []byte) (bool, error) {
 	if len(open_cols) == 0 || len(root) == 0 {
 		return false, fmt.Errorf("opened columns or root cannot be empty")
 	}
