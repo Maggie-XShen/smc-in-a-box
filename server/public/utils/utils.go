@@ -2,6 +2,7 @@ package utils
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -20,12 +21,11 @@ type ClientRequest struct {
 	//Signature   string       `json:"Signature"`
 }
 
-/**
 type ClientRegistry struct {
 	Exp_ID    string `json:"Exp_ID"`
 	Client_ID string `json:"Client_ID"`
 	Token     string `json:"Token"`
-}**/
+}
 
 type ComplaintRequest struct {
 	Exp_ID     string      `json:"Exp_ID"`
@@ -53,10 +53,10 @@ type MaskedShare struct {
 }
 
 type AggregatedShareRequest struct {
-	Exp_ID           string      `json:"Exp_ID "`
-	Server_ID        string      `json:"Server_ID"`
-	AggregatedShares []rss.Share `json:"SumShare"`
-	Timestamp        string      `json:"Timestamp"`
+	Exp_ID    string      `json:"Exp_ID "`
+	Server_ID string      `json:"Server_ID"`
+	Shares    []rss.Share `json:"SumShare"`
+	Timestamp string      `json:"Timestamp"`
 }
 
 type OutputPartyRequest struct {
@@ -103,10 +103,10 @@ func (r *MaskedShareRequest) ToJson() []byte {
 
 func (s *AggregatedShareRequest) ToJson() []byte {
 	msg := &AggregatedShareRequest{
-		Exp_ID:           s.Exp_ID,
-		Server_ID:        s.Server_ID,
-		AggregatedShares: s.AggregatedShares,
-		Timestamp:        s.Timestamp,
+		Exp_ID:    s.Exp_ID,
+		Server_ID: s.Server_ID,
+		Shares:    s.Shares,
+		Timestamp: s.Timestamp,
 	}
 	message, err := json.Marshal(msg)
 
@@ -167,4 +167,34 @@ func (op *OutputPartyRequest) ReadJson(req *http.Request) OutputPartyRequest {
 		log.Fatalf("Cannot decode experiment request: %s", err)
 	}
 	return t
+}
+
+func FindMajority(list []int) (int, error) {
+	maxCount := 0
+	index := -1
+	n := len(list)
+	for i := 0; i < n; i++ {
+		count := 0
+		for j := 0; j < n; j++ {
+			if list[i] == list[j] {
+				count++
+			}
+
+		}
+
+		// update maxCount if count of
+		// current element is greater
+		if count > maxCount {
+			maxCount = count
+			index = i
+		}
+	}
+
+	// if maxCount is greater than n/2
+	// return the corresponding element
+	if maxCount > n/2 {
+		return list[index], nil
+	}
+
+	return 0, fmt.Errorf("reconstruct failed: no majority element")
 }

@@ -3,29 +3,28 @@ package sqlstore
 import (
 	"fmt"
 	"log"
+	"os"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
-type SqlStore struct {
+type DB struct {
 	db *gorm.DB
 }
 
-func New(id string) *SqlStore {
+func NewDB(id string) *DB {
 	db, err := SetupDatabase(id)
 	if err != nil {
 		log.Fatalf("Cannot set up database: %s", err)
 	}
-	return &SqlStore{db: db}
+	return &DB{db: db}
 
 }
 
 func SetupDatabase(sid string) (*gorm.DB, error) {
 	db_path := fmt.Sprintf("%s.db", sid)
-
-	// remove old database
-	//os.Remove(db_name)
 
 	// open a database
 	db, err := gorm.Open(sqlite.Open(db_path), &gorm.Config{})
@@ -51,33 +50,28 @@ func SetupDatabase(sid string) (*gorm.DB, error) {
 	return db, nil
 }
 
+func DeleteDB(db_name string) {
+	// remove old database
+	os.Remove(db_name)
+}
+
 // create client table
-func (store *SqlStore) InsertClient(exp_id, client_id string) error {
+func (db *DB) InsertClient(exp_id, client_id string) error {
 	c := Client{
 		Exp_ID:    exp_id,
 		Client_ID: client_id,
 	}
-	result := store.db.Create(&c)
+	result := db.db.Clauses(clause.Insert{Modifier: "OR IGNORE"}).Create(&c)
 	if result.Error != nil {
 		return result.Error
 	}
 	return nil
 }
 
-// get client record
-func (store *SqlStore) GetClient(exp_id, client_id string) (*Client, error) {
-	var client Client
-	r := store.db.Find(&client, "exp_id = ? and client_id = ?", exp_id, client_id)
-	if r.Error != nil {
-		return nil, r.Error
-	}
-	return &client, nil
-}
-
 // get all clients per experiments
-func (store *SqlStore) GetAllClients(exp_id string) ([]Client, error) {
+func (db *DB) GetClientsPerExperiment(exp_id string) ([]Client, error) {
 	var client []Client
-	r := store.db.Find(&client, "exp_id = ?", exp_id)
+	r := db.db.Find(&client, "exp_id = ?", exp_id)
 	if r.Error != nil {
 		return nil, r.Error
 	}
@@ -85,15 +79,15 @@ func (store *SqlStore) GetAllClients(exp_id string) ([]Client, error) {
 }
 
 // create client share record
-func (store *SqlStore) InsertClientShare(exp_id, client_id string, input_index, sh_index, sh_value int) error {
+func (db *DB) InsertClientShare(exp_id, client_id string, input_index, index, value int) error {
 	c := ClientShare{
 		Exp_ID:      exp_id,
 		Client_ID:   client_id,
 		Input_Index: input_index,
-		Share_Index: sh_index,
-		Share_Value: sh_value,
+		Index:       index,
+		Value:       value,
 	}
-	result := store.db.Create(&c)
+	result := db.db.Clauses(clause.Insert{Modifier: "OR IGNORE"}).Create(&c)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -101,9 +95,9 @@ func (store *SqlStore) InsertClientShare(exp_id, client_id string, input_index, 
 }
 
 // get client share record
-func (store *SqlStore) GetClientShares(exp_id string, client_id string) ([]ClientShare, error) {
+func (db *DB) GetClientShares(exp_id string, client_id string) ([]ClientShare, error) {
 	var client []ClientShare
-	r := store.db.Find(&client, "exp_id = ? and client_id = ?", exp_id, client_id)
+	r := db.db.Find(&client, "exp_id = ? and client_id = ?", exp_id, client_id)
 	if r.Error != nil {
 		return nil, r.Error
 	}
@@ -111,28 +105,55 @@ func (store *SqlStore) GetClientShares(exp_id string, client_id string) ([]Clien
 }
 
 // get clients' share records of an experiment
-func (store *SqlStore) GetAllClientsShares(exp_id string) ([]ClientShare, error) {
+func (db *DB) GetClientsSharesPerExperiment(exp_id string) ([]ClientShare, error) {
 	var clients []ClientShare
-	r := store.db.Find(&clients, "exp_id = ?", exp_id)
+	r := db.db.Find(&clients, "exp_id = ?", exp_id)
 	if r.Error != nil {
 		return nil, r.Error
 	}
 	return clients, nil
 }
 
-// get clients' share records of an experiment
-func (store *SqlStore) GetValidClientShares(exp_id string) ([]ClientShare, error) {
+// update client's share
+func (db *DB) UpdateClientShare(exp_id, client_id string, input_index, index, value int) error {
+	/**
+	r := db.db.Model(&ClientShare{}).Where("exp_id = ? and client_id = ? and input_index = ? and index = ?", exp_id, client_id, input_index, index).Update("value", value)
+	if r.Error != nil {
+		return r.Error
+	}**/
+	db.db.Save(&ClientShare{Exp_ID: exp_id, Client_ID: client_id, Input_Index: input_index, Index: index, Value: value})
+	return nil
+}
+
+// get valid client's share
+func (db *DB) GetValidClientShares(exp_id string) ([]ClientShare, error) {
 	var clients []ClientShare
-	r := store.db.Table("validclient").Joins("INNER JOIN clientshare ON validclient.exp_id = clientshare.exp_id and validclient.client_id = clientshare.client_id").
-		Select("clientshare.exp_id, clientshare.client_id, clientshare.input_index, clientshare.share_index, clientshare.share_value").Where("validclient.exp_id = ?", exp_id).
+
+	/**
+	r := db.db.Model(&ValidClient{}).Joins("INNER JOIN client_shares ON validclient.exp_id = clientshare.exp_id and validclient.client_id = clientshare.client_id").
+		Select("clientshare.exp_id, clientshare.client_id, clientshare.input_index, clientshare.index, clientshare.value").Where("validclient.exp_id = ?", exp_id).
 		Find(&clients)
 	if r.Error != nil {
 		return nil, r.Error
+	}**/
+	valid_clients, err := db.GetValidClientsPerExperiment(exp_id)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, vc := range valid_clients {
+		shares, err := db.GetClientShares(exp_id, vc.Client_ID)
+		if err != nil {
+			return nil, err
+		}
+
+		clients = append(clients, shares...)
+
 	}
 	return clients, nil
 }
 
-func (store *SqlStore) InsertComplaint(exp_id, server_id, client_id string, isComplain bool, mkt_root []byte) error {
+func (db *DB) InsertComplaint(exp_id, server_id, client_id string, isComplain bool, mkt_root []byte) error {
 	comp := Complaint{
 		Exp_ID:    exp_id,
 		Server_ID: server_id,
@@ -140,7 +161,7 @@ func (store *SqlStore) InsertComplaint(exp_id, server_id, client_id string, isCo
 		Complain:  isComplain,
 		Root:      mkt_root,
 	}
-	result := store.db.Create(&comp)
+	result := db.db.Clauses(clause.Insert{Modifier: "OR IGNORE"}).Create(&comp)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -148,19 +169,49 @@ func (store *SqlStore) InsertComplaint(exp_id, server_id, client_id string, isCo
 }
 
 // get a complaint record
-func (store *SqlStore) GetComplaint(exp_id, server_id, client_id string) (*Complaint, error) {
+func (db *DB) GetComplaint(exp_id, server_id, client_id string) (*Complaint, error) {
 	var comp Complaint
-	r := store.db.Find(&comp, "exp_id = ? and server_id = ? and client_id", exp_id, server_id, client_id)
+	r := db.db.Find(&comp, "exp_id = ? and server_id = ? and client_id", exp_id, server_id, client_id)
 	if r.Error != nil {
 		return nil, r.Error
 	}
 	return &comp, nil
 }
 
-// get complaint records per exp_id, server_id
-func (store *SqlStore) GetAllComplaintsPerServer(exp_id, server_id string) ([]Complaint, error) {
+// get complaint record where complaint is false
+func (db *DB) GetNoComplain(exp_id, client_id string) ([]Complaint, error) {
 	var comp []Complaint
-	r := store.db.Find(&comp, "exp_id = ? and server_id = ?", exp_id, server_id)
+	r := db.db.Find(&comp, "exp_id = ? and client_id = ? and complain=?", exp_id, client_id, false)
+	if r.Error != nil {
+		return nil, r.Error
+	}
+	return comp, nil
+}
+
+// get clients in complaint table but not in client table
+func (db *DB) GetDropoutClient(exp_id string) ([]string, error) {
+	var client []struct {
+		Client_ID string
+	}
+	sub := db.db.Model(&Client{}).Select("client_id").Where("exp_id = ?", exp_id)
+
+	r := db.db.Model(&Complaint{}).Select("client_id").Where("client_id NOT IN (?)", sub).Group("client_id").Find(&client)
+	if r.Error != nil {
+		return nil, r.Error
+	}
+
+	var result []string
+	for _, c := range client {
+		result = append(result, c.Client_ID)
+	}
+
+	return result, nil
+}
+
+// get complaint records per exp_id, server_id
+func (db *DB) GetComplaintsPerServer(exp_id, server_id string) ([]Complaint, error) {
+	var comp []Complaint
+	r := db.db.Find(&comp, "exp_id = ? and server_id = ?", exp_id, server_id)
 	if r.Error != nil {
 		return nil, r.Error
 	}
@@ -168,48 +219,47 @@ func (store *SqlStore) GetAllComplaintsPerServer(exp_id, server_id string) ([]Co
 }
 
 // get complaint records per exp_id, client_id
-func (store *SqlStore) GetAllComplaintsPerClient(exp_id, client_id string) ([]Complaint, error) {
+func (db *DB) GetComplaintsPerClient(exp_id, client_id string) ([]Complaint, error) {
 	var comp []Complaint
-	r := store.db.Find(&comp, "exp_id = ? and client_id = ?", exp_id, client_id)
+	r := db.db.Find(&comp, "exp_id = ? and client_id = ?", exp_id, client_id)
 	if r.Error != nil {
 		return nil, r.Error
 	}
 	return comp, nil
 }
 
-func (store *SqlStore) InsertValidClient(exp_id, client_id string) error {
+func (db *DB) InsertValidClient(exp_id, client_id string) error {
 	vc := ValidClient{
 		Exp_ID:    exp_id,
 		Client_ID: client_id,
 	}
-	result := store.db.Create(&vc)
+	result := db.db.Clauses(clause.Insert{Modifier: "OR IGNORE"}).Create(&vc)
 	if result.Error != nil {
 		return result.Error
 	}
 	return nil
 }
 
-// get valid client
-func (store *SqlStore) GetValidClient(exp_id, client_id string) (*ValidClient, error) {
-	var vc ValidClient
-	r := store.db.Find(&vc, "exp_id = ? and client_id = ?", exp_id, client_id)
-	if r.Error != nil {
-		return nil, r.Error
-	}
-	return &vc, nil
-}
-
 // get all valid clients
-func (store *SqlStore) GetAllValidClients(exp_id string) ([]ValidClient, error) {
+func (db *DB) GetValidClientsPerExperiment(exp_id string) ([]ValidClient, error) {
 	var vc []ValidClient
-	r := store.db.Find(&vc, "exp_id = ?", exp_id)
+	r := db.db.Find(&vc, "exp_id = ?", exp_id)
 	if r.Error != nil {
 		return nil, r.Error
 	}
 	return vc, nil
 }
 
-func (store *SqlStore) InsertMask(exp_id, client_id string, input_index, index, value int) error {
+// delete a client from valid client table
+func (db *DB) DeleteValidClient(exp_id, client_id string) error {
+	r := db.db.Delete(&ValidClient{Exp_ID: exp_id, Client_ID: client_id})
+	if r.Error != nil {
+		return r.Error
+	}
+	return nil
+}
+
+func (db *DB) InsertMask(exp_id, client_id string, input_index, index, value int) error {
 	vss := Mask{
 		Exp_ID:      exp_id,
 		Client_ID:   client_id,
@@ -217,23 +267,23 @@ func (store *SqlStore) InsertMask(exp_id, client_id string, input_index, index, 
 		Index:       index,
 		Value:       value,
 	}
-	result := store.db.Create(&vss)
+	result := db.db.Clauses(clause.Insert{Modifier: "OR IGNORE"}).Create(&vss)
 	if result.Error != nil {
 		return result.Error
 	}
 	return nil
 }
 
-func (store *SqlStore) GetMask(exp_id, client_id string, input_index int) ([]Mask, error) {
-	var vss []Mask
-	r := store.db.Find(&vss, "exp_id = ? and client_id = ? and input_index", exp_id, client_id, input_index)
+func (db *DB) GetMask(exp_id, client_id string, input_index, index int) (*Mask, error) {
+	var vss Mask
+	r := db.db.Find(&vss, "exp_id = ? and client_id = ? and input_index =? and index=?", exp_id, client_id, input_index, index)
 	if r.Error != nil {
 		return nil, r.Error
 	}
-	return vss, nil
+	return &vss, nil
 }
 
-func (store *SqlStore) InsertMaskedShare(exp_id, server_id, client_id string, input_index, index, value int) error {
+func (db *DB) InsertMaskedShare(exp_id, server_id, client_id string, input_index, index, value int) error {
 	mask_share := MaskedShare{
 		Exp_ID:      exp_id,
 		Server_ID:   server_id,
@@ -242,34 +292,34 @@ func (store *SqlStore) InsertMaskedShare(exp_id, server_id, client_id string, in
 		Index:       index,
 		Value:       value,
 	}
-	result := store.db.Create(&mask_share)
+	result := db.db.Create(&mask_share)
 	if result.Error != nil {
 		return result.Error
 	}
 	return nil
 }
 
-func (store *SqlStore) GetMaskedShares(exp_id, server_id, client_id string) ([]MaskedShare, error) {
+func (db *DB) GetMaskedShares(exp_id, server_id, client_id string) ([]MaskedShare, error) {
 	var masked_shares []MaskedShare
-	r := store.db.Find(&masked_shares, "exp_id = ? and server_id = ? and client_id = ?", exp_id, server_id, client_id)
+	r := db.db.Find(&masked_shares, "exp_id = ? and server_id = ? and client_id = ?", exp_id, server_id, client_id)
 	if r.Error != nil {
 		return nil, r.Error
 	}
 	return masked_shares, nil
 }
 
-func (store *SqlStore) GetMaskedSharesPerServer(exp_id, server_id string) ([]MaskedShare, error) {
+func (db *DB) GetMaskedSharesPerServer(exp_id, server_id string) ([]MaskedShare, error) {
 	var masked_shares []MaskedShare
-	r := store.db.Find(&masked_shares, "exp_id = ? and server_id = ?", exp_id, server_id)
+	r := db.db.Find(&masked_shares, "exp_id = ? and server_id = ?", exp_id, server_id)
 	if r.Error != nil {
 		return nil, r.Error
 	}
 	return masked_shares, nil
 }
 
-func (store *SqlStore) GetMaskedSharesPerExp(exp_id string) ([]MaskedShare, error) {
+func (db *DB) GetMaskedSharesPerExperiment(exp_id string) ([]MaskedShare, error) {
 	var masked_shares []MaskedShare
-	r := store.db.Find(&masked_shares, "exp_id = ? ", exp_id)
+	r := db.db.Find(&masked_shares, "exp_id = ? ", exp_id)
 	if r.Error != nil {
 		return nil, r.Error
 	}
@@ -277,7 +327,7 @@ func (store *SqlStore) GetMaskedSharesPerExp(exp_id string) ([]MaskedShare, erro
 }
 
 // create experiment record in the experiment tables
-func (store *SqlStore) InsertExp(exp_id, due1, due2, due3, owner string) error {
+func (db *DB) InsertExperiment(exp_id, due1, due2, due3, owner string) error {
 	exp := &Experiment{
 		Exp_ID:            exp_id,
 		ClientShareDue:    due1,
@@ -288,7 +338,7 @@ func (store *SqlStore) InsertExp(exp_id, due1, due2, due3, owner string) error {
 		Round2_Completed:  false,
 		Round3_Completed:  false,
 	}
-	result := store.db.Create(&exp)
+	result := db.db.Clauses(clause.Insert{Modifier: "OR IGNORE"}).Create(&exp)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -297,19 +347,19 @@ func (store *SqlStore) InsertExp(exp_id, due1, due2, due3, owner string) error {
 }
 
 // get experiment record
-func (store *SqlStore) GetExp(exp_id string) (*Experiment, error) {
+func (db *DB) GetExperiment(exp_id string) (*Experiment, error) {
 	var exp Experiment
-	r := store.db.Find(&exp, "exp_id = ?", exp_id)
+	r := db.db.Find(&exp, "exp_id = ?", exp_id)
 	if r.Error != nil {
 		return nil, r.Error
 	}
 	return &exp, nil
 }
 
-// get all experiments records that server round is not completed
-func (store *SqlStore) GetAllExps() ([]Experiment, error) {
+// get all experiments not pass client share submission due
+func (db *DB) GetAllExperiments() ([]Experiment, error) {
 	var experiments []Experiment
-	r := store.db.Find(&experiments, "server_round_completed = ? and completed=?", false, false)
+	r := db.db.Find(&experiments, "Round1_Completed = ?", false)
 	if r.Error != nil {
 		return nil, r.Error
 	}
@@ -317,10 +367,10 @@ func (store *SqlStore) GetAllExps() ([]Experiment, error) {
 	return experiments, nil
 }
 
-// get all experiments records that round1 is completed
-func (store *SqlStore) GetExpsWithSRound1Completed() ([]Experiment, error) {
+// get all experiments that round1 is completed
+func (db *DB) GetExpsWithRound1Completed() ([]Experiment, error) {
 	var experiments []Experiment
-	r := store.db.Find(&experiments, "round1_completed = ? and round2_completed=? and round3_completed=?", true, false, false)
+	r := db.db.Find(&experiments, "round1_completed = ? and round2_completed=? and round3_completed=?", true, false, false)
 	if r.Error != nil {
 		return nil, r.Error
 	}
@@ -329,9 +379,9 @@ func (store *SqlStore) GetExpsWithSRound1Completed() ([]Experiment, error) {
 }
 
 // get all experiments records that round2 is completed
-func (store *SqlStore) GetExpsWithSRound2Completed() ([]Experiment, error) {
+func (db *DB) GetExpsWithRound2Completed() ([]Experiment, error) {
 	var experiments []Experiment
-	r := store.db.Find(&experiments, "round1_completed = ? and round2_completed=? and round3_completed=?", true, true, false)
+	r := db.db.Find(&experiments, "round1_completed = ? and round2_completed=? and round3_completed=?", true, true, false)
 	if r.Error != nil {
 		return nil, r.Error
 	}
@@ -340,9 +390,8 @@ func (store *SqlStore) GetExpsWithSRound2Completed() ([]Experiment, error) {
 }
 
 // set client share submission round to completed
-func (store *SqlStore) UpdateRound1Completed(exp_id string) error {
-	var exp Experiment
-	r := store.db.Model(&exp).Where("exp_ID = ?", exp_id).Update("Round1_Completed", true)
+func (db *DB) UpdateRound1Completed(exp_id string) error {
+	r := db.db.Model(&Experiment{}).Where("exp_ID = ?", exp_id).Update("Round1_Completed", true)
 	if r.Error != nil {
 		return r.Error
 	}
@@ -350,9 +399,8 @@ func (store *SqlStore) UpdateRound1Completed(exp_id string) error {
 }
 
 // set complant broadcast round to completed
-func (store *SqlStore) UpdateRound2Completed(exp_id string) error {
-	var exp Experiment
-	r := store.db.Model(&exp).Where("exp_ID = ?", exp_id).Update("Round2_Completed", true)
+func (db *DB) UpdateRound2Completed(exp_id string) error {
+	r := db.db.Model(&Experiment{}).Where("exp_ID = ?", exp_id).Update("Round2_Completed", true)
 	if r.Error != nil {
 		return r.Error
 	}
@@ -360,9 +408,8 @@ func (store *SqlStore) UpdateRound2Completed(exp_id string) error {
 }
 
 // set experiment status to completed
-func (store *SqlStore) UpdateRound3Completed(exp_id string) error {
-	var exp Experiment
-	r := store.db.Model(&exp).Where("exp_ID = ?", exp_id).Update("Round3_Completed", true)
+func (db *DB) UpdateRound3Completed(exp_id string) error {
+	r := db.db.Model(&Experiment{}).Where("exp_ID = ?", exp_id).Update("Round3_Completed", true)
 	if r.Error != nil {
 		return r.Error
 	}
@@ -370,8 +417,8 @@ func (store *SqlStore) UpdateRound3Completed(exp_id string) error {
 }
 
 // delete experiment record from experiment table
-func (store *SqlStore) DeleteExperiment(exp_id string) error {
-	r := store.db.Delete(&Experiment{Exp_ID: exp_id})
+func (db *DB) DeleteExperiment(exp_id string) error {
+	r := db.db.Delete(&Experiment{Exp_ID: exp_id})
 	if r.Error != nil {
 		return r.Error
 	}
@@ -379,8 +426,8 @@ func (store *SqlStore) DeleteExperiment(exp_id string) error {
 }
 
 // delete client record from client table
-func (store *SqlStore) DeleteClient(exp_id string) error {
-	r := store.db.Delete(&ClientShare{Exp_ID: exp_id})
+func (db *DB) DeleteClient(exp_id string) error {
+	r := db.db.Delete(&ClientShare{Exp_ID: exp_id})
 	if r.Error != nil {
 		return r.Error
 	}
@@ -388,35 +435,18 @@ func (store *SqlStore) DeleteClient(exp_id string) error {
 }
 
 // create client registration record in the client registration table
-/**
-func (store *SqlStore) InsertClientRegistry(reg utils.ClientRegistry) error {
+func (db *DB) InsertClientRegistry(exp_id, client_id, token string) error {
 	cr := ClientRegistry{
-		Exp_ID:    reg.Exp_ID,
-		Client_ID: reg.Client_ID,
-		Token:     reg.Token,
+		Exp_ID:    exp_id,
+		Client_ID: client_id,
+		Token:     token,
 	}
-	result := store.db.Create(&cr)
+	result := db.db.Clauses(clause.Insert{Modifier: "OR IGNORE"}).Create(&cr)
 	if result.Error != nil {
 		return result.Error
 	}
 	return nil
-}**/
-
-// create server sumShare record in the server table
-/**
-func (store *SqlStore) InsertServerComputation(server utils.ServerRequest) error {
-	s := ServerComputation{
-		Exp_ID:         server.Exp_ID,
-		Server_ID:      server.Server_ID,
-		SumShare_Value: server.Sum_Shares.Value,
-		SumShare_Index: server.Sum_Shares.Index,
-	}
-	result := store.db.Create(&s)
-	if result.Error != nil {
-		return result.Error
-	}
-	return nil
-}**/
+}
 
 // get client registration record
 /**
@@ -429,17 +459,6 @@ func (store *SqlStore) GetClientRegistry(exp_id string, client_id string) (*Clie
 	return &cr, nil
 }**/
 
-// get server sumShare record
-/**
-func (store *SqlStore) GetServerComputation(exp_id string, server_id string) (*ServerComputation, error) {
-	var server ServerComputation
-	r := store.db.Find(&server, "exp_id = ? and server_id = ?", exp_id, server_id)
-	if r.Error != nil {
-		return nil, r.Error
-	}
-	return &server, nil
-}**/
-
 // get clients' registration records of an experiment
 /**
 func (store *SqlStore) GetRegisteredClient(exp_id string) ([]ClientRegistry, error) {
@@ -449,18 +468,6 @@ func (store *SqlStore) GetRegisteredClient(exp_id string) ([]ClientRegistry, err
 		return nil, r.Error
 	}
 	return registrations, nil
-}**/
-
-// get servers' sumShare records of an experiment
-/**
-func (store *SqlStore) GetAllServers(exp_id string) ([]ServerComputation, error) {
-	var servers []ServerComputation
-	r := store.db.Find(&servers, "exp_id = ?", exp_id)
-	if r.Error != nil {
-		return nil, r.Error
-	}
-
-	return servers, nil
 }**/
 
 // delete server record from server table

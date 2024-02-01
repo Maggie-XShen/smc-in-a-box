@@ -6,14 +6,14 @@ import (
 	"net/http"
 	"os"
 
-	"example.com/SMC/pkg/packed"
+	"example.com/SMC/pkg/rss"
 )
 
 type ServerRequest struct {
-	Exp_ID     string       `json:"Exp_ID "`
-	Server_ID  string       `json:"Server_ID"`
-	Sum_Shares packed.Share `json:"Sum_Shares"`
-	Timestamp  string       `json:"Timestamp"`
+	Exp_ID    string      `json:"Exp_ID "`
+	Server_ID string      `json:"Server_ID"`
+	Shares    []rss.Share `json:"Sum_Shares"`
+	Timestamp string      `json:"Timestamp"`
 }
 
 type OutputPartyRequest struct {
@@ -24,7 +24,7 @@ type OutputPartyRequest struct {
 
 type ExpResult struct {
 	Exp_ID string `json:"Exp_ID"`
-	Result []int  `json:"Result"`
+	Result int    `json:"Result"`
 }
 
 func (op *OutputPartyRequest) ToJson() []byte {
@@ -87,7 +87,7 @@ func appendDataToFile(filename string, data []ExpResult) error {
 }
 
 // write reconstructed result to the file
-func WriteResult(id string, result []int) {
+func WriteResult(id string, result int) {
 	expResult := ExpResult{
 		Exp_ID: id,
 		Result: result,

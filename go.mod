@@ -2,7 +2,7 @@ module example.com/SMC
 
 go 1.20
 
-require gorm.io/gorm v1.25.0
+require gorm.io/gorm v1.25.6
 
 require (
 	github.com/cbergoon/merkletree v0.2.0 // indirect

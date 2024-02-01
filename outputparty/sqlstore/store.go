@@ -4,27 +4,21 @@ import (
 	"fmt"
 	"log"
 
-	"example.com/SMC/outputparty/public/utils"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
-type SqlStore struct {
-	db     *gorm.DB
-	stores SqlStoreStores
+type DB struct {
+	db *gorm.DB
 }
 
-type SqlStoreStores struct {
-	serverComputationStore ServerComputation
-	experimentStatusStore  Experiment
-}
-
-func New(id string) *SqlStore {
+func NewDB(id string) *DB {
 	db, err := SetupDatabase(id)
 	if err != nil {
 		log.Fatalf("Cannot set up database: %s", err)
 	}
-	return &SqlStore{db: db}
+	return &DB{db: db}
 
 }
 
@@ -43,46 +37,56 @@ func SetupDatabase(sid string) (*gorm.DB, error) {
 
 	db.AutoMigrate(&Experiment{})
 
-	db.AutoMigrate(&ServerComputation{})
+	db.AutoMigrate(&ServerShare{})
 
 	return db, nil
 }
 
-/**
-func (storage *Storage) Migrate() {
-	storage.db.AutoMigrate(&Experiment{})
-
-	storage.db.AutoMigrate(&Client{})
-
-	storage.db.AutoMigrate(&ClientRegistry{})
-
-	storage.db.AutoMigrate(&Server{})
-}**/
-
 // create server sumShare record in the server table
-func (store *SqlStore) InsertServerComputation(server utils.ServerRequest) error {
-	s := ServerComputation{
-		Exp_ID:         server.Exp_ID,
-		Server_ID:      server.Server_ID,
-		SumShare_Value: server.Sum_Shares.Value,
-		SumShare_Index: server.Sum_Shares.Index,
+func (db *DB) InsertServerShare(exp_id, server_id string, index, value int) error {
+	s := ServerShare{
+		Exp_ID:    exp_id,
+		Server_ID: server_id,
+		Index:     index,
+		Value:     value,
 	}
-	result := store.db.Create(&s)
+	result := db.db.Clauses(clause.Insert{Modifier: "OR IGNORE"}).Create(&s)
 	if result.Error != nil {
 		return result.Error
 	}
 	return nil
 }
 
+// get server's aggregated share
+func (db *DB) GetSharesPerServer(exp_id, server_id string) ([]ServerShare, error) {
+	var shares []ServerShare
+	r := db.db.Find(&shares, "exp_id = ? and server_id = ?", exp_id, server_id)
+	if r.Error != nil {
+		return nil, r.Error
+	}
+	return shares, nil
+}
+
+// get all shares of an experiment
+func (db *DB) GetSharesPerExperiment(exp_id string) ([]ServerShare, error) {
+	var shares []ServerShare
+	r := db.db.Find(&shares, "exp_id = ?", exp_id)
+	if r.Error != nil {
+		return nil, r.Error
+	}
+
+	return shares, nil
+}
+
 // create experiment record in the experiment tables
-func (store *SqlStore) InsertExp(experiment utils.OutputPartyRequest) error {
+func (db *DB) InsertExperiment(exp_id, due, owner string) error {
 	exp := &Experiment{
-		Exp_ID:    experiment.Exp_ID,
-		Due:       experiment.Due,
-		Owner:     experiment.Owner,
+		Exp_ID:    exp_id,
+		Due:       due,
+		Owner:     owner,
 		Completed: false,
 	}
-	result := store.db.Create(&exp)
+	result := db.db.Clauses(clause.Insert{Modifier: "OR IGNORE"}).Create(&exp)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -91,29 +95,19 @@ func (store *SqlStore) InsertExp(experiment utils.OutputPartyRequest) error {
 }
 
 // get experiment record
-func (store *SqlStore) GetExp(exp_id string) (*Experiment, error) {
+func (db *DB) GetExperiment(exp_id string) (*Experiment, error) {
 	var exp Experiment
-	r := store.db.Find(&exp, "exp_id = ?", exp_id)
+	r := db.db.Find(&exp, "exp_id = ?", exp_id)
 	if r.Error != nil {
 		return nil, r.Error
 	}
 	return &exp, nil
 }
 
-// get server sumShare record
-func (store *SqlStore) GetServerComputation(exp_id string, server_id string) (*ServerComputation, error) {
-	var server ServerComputation
-	r := store.db.Find(&server, "exp_id = ? and server_id = ?", exp_id, server_id)
-	if r.Error != nil {
-		return nil, r.Error
-	}
-	return &server, nil
-}
-
 // get all experiments records that server round is not completed
-func (store *SqlStore) GetAllExps() ([]Experiment, error) {
+func (db *DB) GetAllExperiments() ([]Experiment, error) {
 	var experiments []Experiment
-	r := store.db.Find(&experiments, "server_round_completed = ? and completed=?", false, false)
+	r := db.db.Find(&experiments, "server_round_completed = ? and completed=?", false, false)
 	if r.Error != nil {
 		return nil, r.Error
 	}
@@ -122,6 +116,7 @@ func (store *SqlStore) GetAllExps() ([]Experiment, error) {
 }
 
 // get all experiments records that server round is completed but sum share is not completed
+/**
 func (store *SqlStore) GetAllExpsWithServerRoundCompleted() ([]Experiment, error) {
 	var experiments []Experiment
 	r := store.db.Find(&experiments, "server_round_completed = ? and completed=?", true, false)
@@ -130,20 +125,10 @@ func (store *SqlStore) GetAllExpsWithServerRoundCompleted() ([]Experiment, error
 	}
 
 	return experiments, nil
-}
-
-// get servers' sumShare records of an experiment
-func (store *SqlStore) GetAllServers(exp_id string) ([]ServerComputation, error) {
-	var servers []ServerComputation
-	r := store.db.Find(&servers, "exp_id = ?", exp_id)
-	if r.Error != nil {
-		return nil, r.Error
-	}
-
-	return servers, nil
-}
+}**/
 
 // set experiment's server round to completed
+/**
 func (store *SqlStore) UpdateHalfCompletedExperiment(exp_id string) error {
 	var exp Experiment
 	r := store.db.Model(&exp).Where("exp_ID = ?", exp_id).Update("Server_Round_Completed", true)
@@ -151,12 +136,12 @@ func (store *SqlStore) UpdateHalfCompletedExperiment(exp_id string) error {
 		return r.Error
 	}
 	return nil
-}
+}**/
 
 // set experiment status to completed
-func (store *SqlStore) UpdateCompletedExperiment(exp_id string) error {
+func (db *DB) UpdateCompletedExperiment(exp_id string) error {
 	var exp Experiment
-	r := store.db.Model(&exp).Where("exp_ID = ?", exp_id).Update("Completed", true)
+	r := db.db.Model(&exp).Where("exp_ID = ?", exp_id).Update("Completed", true)
 	if r.Error != nil {
 		return r.Error
 	}
@@ -164,17 +149,8 @@ func (store *SqlStore) UpdateCompletedExperiment(exp_id string) error {
 }
 
 // delete experiment record from experiment table
-func (store *SqlStore) DeleteExperiment(exp_id string) error {
-	r := store.db.Delete(&Experiment{Exp_ID: exp_id})
-	if r.Error != nil {
-		return r.Error
-	}
-	return nil
-}
-
-// delete server record from server table
-func (store *SqlStore) DeleteServer(exp_id string) error {
-	r := store.db.Delete(&ServerComputation{Exp_ID: exp_id})
+func (db *DB) DeleteExperiment(exp_id string) error {
+	r := db.db.Delete(&Experiment{Exp_ID: exp_id})
 	if r.Error != nil {
 		return r.Error
 	}

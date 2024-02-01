@@ -13,16 +13,16 @@ import (
 	"example.com/SMC/outputparty/config"
 	"example.com/SMC/outputparty/public/utils"
 	"example.com/SMC/outputparty/sqlstore"
-	"example.com/SMC/pkg/packed"
+	"example.com/SMC/pkg/rss"
 )
 
 type OutputParty struct {
 	cfg   *config.OutputParty
-	store *sqlstore.SqlStore
+	store *sqlstore.DB
 }
 
 func NewOutputParty(conf *config.OutputParty) *OutputParty {
-	return &OutputParty{cfg: conf, store: sqlstore.New(conf.OutputParty_ID)}
+	return &OutputParty{cfg: conf, store: sqlstore.NewDB(conf.OutputParty_ID)}
 }
 
 func (op *OutputParty) HandelExp(path string) {
@@ -51,7 +51,7 @@ func (op *OutputParty) HandelExp(path string) {
 	expService := NewExperimentService(op.store)
 	for _, exp := range tables.Experiments {
 		exp.Due = time.Now().Add(time.Hour * 10).Format("2006-01-02 15:04:05")
-		err := expService.CreateExp(exp)
+		err := expService.CreateExperiment(exp)
 		if err != nil {
 			log.Println("error:", err)
 		}
@@ -90,14 +90,13 @@ func (op *OutputParty) send(address string, data []byte) {
 
 }
 
-func (op *OutputParty) reveal(shares []packed.Share) ([]int, error) {
-	//read parameters for packed secret sharing from file
-	npss, err := packed.NewPackedSecretSharing(op.cfg.N, op.cfg.T, op.cfg.K, op.cfg.Q)
+func (op *OutputParty) reveal(parties []rss.Party) (int, error) {
+	nrss, err := rss.NewReplicatedSecretSharing(op.cfg.N, op.cfg.T, op.cfg.Q)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	results, err := npss.Reconstruct(shares)
+	results, err := nrss.Reconstruct(parties)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -109,7 +108,7 @@ func (op *OutputParty) WaitForEndOfExperiment(ticker *time.Ticker) {
 
 	for range ticker.C {
 		// this gets called every second
-		experiments, err := op.store.GetAllExps()
+		experiments, err := op.store.GetAllExperiments()
 		if err != nil {
 			log.Println("cannot retreive non-completed experiments - error:", err)
 		}
@@ -122,29 +121,35 @@ func (op *OutputParty) WaitForEndOfExperiment(ticker *time.Ticker) {
 
 			// check current time is pased due
 			if currentTime.After(due) {
-				servers, err := op.store.GetAllServers(exp.Exp_ID)
+				records, err := op.store.GetSharesPerExperiment(exp.Exp_ID)
 				if err != nil {
 					log.Println("cannot retreive servers records - error:", err)
 					continue
 				}
-				// check if output party receives all servers' shares
-				if len(servers) < op.cfg.N {
-					// TODO: send message "did not get enough servers" to output party
-					//log.Println("did not get enough servers")
-					continue
+
+				serverShare := make(map[string][]rss.Share)
+				for _, r := range records {
+					v1, check1 := serverShare[r.Server_ID]
+					if check1 {
+						serverShare[r.Server_ID] = append(v1, rss.Share{Index: r.Index, Value: r.Value})
+					} else {
+						serverShare[r.Server_ID] = []rss.Share{{Index: r.Index, Value: r.Value}}
+					}
 				}
 
 				// reconstruct sum of secrets
-				var shares []packed.Share
-				for _, server := range servers {
-					shares = append(shares, packed.Share{Value: server.SumShare_Value, Index: server.SumShare_Index})
+				var parties []rss.Party
+				for _, server := range serverShare {
+					parties = append(parties, rss.Party{Index: 0, Shares: server})
 				}
 
-				fmt.Printf("output party receives: %+v\n", shares)
+				result, err := op.reveal(parties)
+				if err != nil {
+					log.Fatal(err)
+				}
 
-				result, _ := op.reveal(shares)
-				fmt.Printf("sum of secrets for %s : %v\n", exp.Exp_ID, result[0])
-				//TODO: write result to file
+				fmt.Printf("sum of secrets for %s : %v\n", exp.Exp_ID, result)
+
 				utils.WriteResult(exp.Exp_ID, result)
 
 				//set experiments to completed
@@ -165,7 +170,7 @@ func (op *OutputParty) serverRequestHandler(rw http.ResponseWriter, req *http.Re
 	var request utils.ServerRequest
 
 	serverService := NewServerService(op.store)
-	err := serverService.CreateServer(request.ReadJson(req))
+	err := serverService.CreateServerShare(request.ReadJson(req))
 
 	if err != nil {
 		log.Printf("error: %s\n", err)

@@ -1,17 +1,17 @@
 package sqlstore
 
 type Experiment struct {
-	Exp_ID                 string
+	Exp_ID                 string `gorm:"primaryKey"`
 	Due                    string
 	Owner                  string
 	Server_Round_Completed bool
 	Completed              bool
 }
 
-type AggregatedShare struct {
-	Exp_ID    string
-	Server_ID string
-	Index     int
+type ServerShare struct {
+	Exp_ID    string `gorm:"primaryKey"`
+	Server_ID string `gorm:"primaryKey"`
+	Index     int    `gorm:"primaryKey"`
 	Value     int
 }
 
