@@ -12,8 +12,8 @@ type Server struct {
 	Cert_path         string
 	Key_path          string
 	Port              string
-	Other_server_urls []string
-	Share_Index       int
+	Complaint_urls    []string
+	Masked_share_urls []string
 	N                 int
 	T                 int
 	Q                 int

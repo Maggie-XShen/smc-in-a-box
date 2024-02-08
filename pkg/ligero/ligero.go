@@ -2,12 +2,11 @@ package ligero
 
 import (
 	crypto_rand "crypto/rand"
-	"encoding/binary"
 	"fmt"
 	"log"
 	"math"
 	"math/big"
-	math_rand "math/rand"
+
 	"strings"
 
 	"example.com/SMC/pkg/packed"
@@ -79,7 +78,7 @@ func (zk *LigeroZK) GenerateProof(secrets []int) ([]*Proof, error) {
 	}
 	//fmt.Printf("extended_witness: %v\n", extended_witness)
 
-	seed0 := zk.generate_seeds(zk.n_shares+1, zk.q)
+	seed0 := generate_seeds(zk.n_shares+1, zk.q)
 	encoded_witness, err := zk.encode_extended_witness(extended_witness, seed0)
 	if err != nil {
 		log.Fatal(err)
@@ -102,10 +101,10 @@ func (zk *LigeroZK) GenerateProof(secrets []int) ([]*Proof, error) {
 	len2 := zk.m
 	len3 := zk.m + zk.m*(zk.n_server-zk.t-1)
 	h1 := zk.generate_hash([][]byte{root})
-	random_vector := zk.generate_random_vector(h1, len1+len2+len3, zk.q)
+	random_vector := RandVector(h1, len1+len2+len3, zk.q)
 
 	//generate code test
-	seed1 := zk.generate_seeds(zk.l, zk.q)
+	seed1 := generate_seeds(zk.l, zk.q)
 	code_mask := zk.generate_mask(seed1)
 	r1 := random_vector[:len1]
 
@@ -148,7 +147,7 @@ func (zk *LigeroZK) GenerateProof(secrets []int) ([]*Proof, error) {
 		h2 := zk.generate_hash([][]byte{h1, fst_root, ConvertToByteArray(q_code), ConvertToByteArray(q_quadra), ConvertToByteArray(q_linear)})
 
 		//generate column check
-		r4 := zk.generate_random_vector(h2, zk.n_open_col, len(leaves)) //TODO: need to verify the third parameter
+		r4 := RandVector(h2, zk.n_open_col, len(leaves)) //TODO: need to verify the third parameter
 		column_check, err := zk.generate_column_check(tree, leaves, r4, code_mask, quadra_mask, linear_mask, encoded_witeness_columnwise)
 		if err != nil {
 			log.Fatal(err)
@@ -262,12 +261,14 @@ func (zk *LigeroZK) encode_extended_witness(input [][]int, key []int) ([][]int, 
 		log.Fatal(err)
 	}
 
+	crs := NewCryptoRandSource()
 	//shamir-secret sharing each row in input
 	for i := 0; i < len(input); i++ {
-		//TODO: need to check if pseudo-random generator is correct
 		nonce := i / (1 + zk.n_shares)
-		seed := nonce + key[i%(1+zk.n_shares)]
-		shares, err := npss.Split(input[i], seed)
+
+		crs.Seed(key[i%(1+zk.n_shares)], nonce)
+
+		shares, err := npss.Split(input[i], int(crs.Int63(int64(zk.q))))
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -489,43 +490,6 @@ func (zk *LigeroZK) generate_mask(seeds []int) []int {
 	return mask
 }
 
-func (zk *LigeroZK) generate_seeds(size int, q int) []int {
-	seeds := make([]int, size)
-	//rand.Seed(time.Now().UnixNano())
-	checkMap := map[int]bool{}
-	for i := 0; i < size; i++ {
-		for {
-			value, err := crypto_rand.Int(crypto_rand.Reader, big.NewInt(int64(q)))
-			if err == nil && !checkMap[int(value.Int64())] {
-				checkMap[int(value.Int64())] = true
-				seeds[i] = int(value.Int64())
-				break
-			}
-
-		}
-	}
-
-	return seeds
-}
-
-func (zk *LigeroZK) generate_random_vector(seed []byte, length int, q int) []int {
-	random_vector := make([]int, length)
-	r := math_rand.New(math_rand.NewSource(int64(binary.LittleEndian.Uint64(seed[:]))))
-	checkMap := map[int]bool{}
-	for i := 0; i < length; i++ {
-		for {
-			value := r.Intn(q)
-			if !checkMap[int(value)] {
-				checkMap[int(value)] = true
-				random_vector[i] = int(value)
-				break
-			}
-
-		}
-	}
-	return random_vector
-}
-
 func (zk *LigeroZK) generate_hash(input [][]byte) []byte {
 	if len(input) == 0 {
 		log.Fatal("input of hash function could not be empty")
@@ -543,4 +507,23 @@ func (zk *LigeroZK) generate_hash(input [][]byte) []byte {
 	hash := sha3.Sum256(concat)
 
 	return hash[:]
+}
+
+func generate_seeds(size int, q int) []int {
+	seeds := make([]int, size)
+	//rand.Seed(time.Now().UnixNano())
+	checkMap := map[int]bool{}
+	for i := 0; i < size; i++ {
+		for {
+			value, err := crypto_rand.Int(crypto_rand.Reader, big.NewInt(int64(q)))
+			if err == nil && !checkMap[int(value.Int64())] {
+				checkMap[int(value.Int64())] = true
+				seeds[i] = int(value.Int64())
+				break
+			}
+
+		}
+	}
+
+	return seeds
 }

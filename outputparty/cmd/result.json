@@ -1,14 +1,10 @@
 [
   {
     "Exp_ID": "exp1",
-    "Result": [
-      0
-    ]
+    "Result": 0
   },
   {
     "Exp_ID": "exp2",
-    "Result": [
-      1
-    ]
+    "Result": 1
   }
 ]

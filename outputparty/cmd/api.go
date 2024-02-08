@@ -3,29 +3,27 @@ package main
 import (
 	"errors"
 
-	"example.com/SMC/outputparty/public/utils"
 	"example.com/SMC/outputparty/sqlstore"
 )
 
 type ServerService struct {
-	store *sqlstore.SqlStore
+	store *sqlstore.DB
 }
 
 type ExperimentService struct {
-	store *sqlstore.SqlStore
+	store *sqlstore.DB
 }
 
-func NewServerService(s *sqlstore.SqlStore) *ServerService {
+func NewServerService(s *sqlstore.DB) *ServerService {
 	return &ServerService{store: s}
 }
 
-func NewExperimentService(s *sqlstore.SqlStore) *ExperimentService {
+func NewExperimentService(s *sqlstore.DB) *ExperimentService {
 	return &ExperimentService{store: s}
 }
 
-func (ss *ServerService) CreateServerShare(request utils.ServerRequest) error {
+func (ss *ServerService) CreateServerShare(request AggregatedShareRequest) error {
 	//Todo: check validity of server request
-
 	exp, err := ss.store.GetExperiment(request.Exp_ID)
 	if err != nil {
 		return err
@@ -46,8 +44,8 @@ func (ss *ServerService) CreateServerShare(request utils.ServerRequest) error {
 
 }
 
-func (e *ExperimentService) CreateExperiment(request utils.OutputPartyRequest) error {
-	err := e.store.InsertExperiment(request.Exp_ID, request.Due, request.Owner)
+func (e *ExperimentService) CreateExperiment(exp Experiment) error {
+	err := e.store.InsertExperiment(exp.Exp_ID, exp.ClientShareDue, exp.ServerShareDue)
 	if err != nil {
 		return err
 	}

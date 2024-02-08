@@ -36,7 +36,7 @@ func (c *ClientRequest) ToJson() []byte {
 		log.Fatalf("Cannot marshall client request: %s", err)
 	}
 
-	log.Printf("client %s is sending data of %s to server%d ...\n", msg.Client_ID, msg.Exp_ID, msg.Proof.PartyShares[0].Index)
+	log.Printf("client %s is sending data of %s to server%d ...\n", msg.Client_ID, msg.Exp_ID, msg.Proof.PartyShares[0].Index+1)
 
 	return message
 }

@@ -1,0 +1,28 @@
+{
+ "Server_ID": "s6",
+ "Token": "stk6",
+ "Cert_path": "/path to cerfiticate",
+ "Key_path": "/path to private key",
+ "Port": "50006",
+ "Complaint_urls": [
+  "http://127.0.0.1:50002/complaint/",
+  "http://127.0.0.1:50003/complaint/",
+  "http://127.0.0.1:50004/complaint/",
+  "http://127.0.0.1:50005/complaint/",
+  "http://127.0.0.1:50001/complaint/"
+ ],
+ "Masked_share_urls": [
+  "http://127.0.0.1:50002/maskedShare/",
+  "http://127.0.0.1:50003/maskedShare/",
+  "http://127.0.0.1:50004/maskedShare/",
+  "http://127.0.0.1:50005/maskedShare/",
+  "http://127.0.0.1:50001/maskedShare/"
+ ],
+ "Share_Index": 6,
+ "N": 6,
+ "T": 1,
+ "Q": 10631,
+ "N_secrets": 1,
+ "M": 1,
+ "N_open": 3
+}

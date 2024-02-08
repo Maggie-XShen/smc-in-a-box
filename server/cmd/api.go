@@ -8,7 +8,6 @@ import (
 
 	"example.com/SMC/pkg/ligero"
 	"example.com/SMC/server/config"
-	"example.com/SMC/server/public/utils"
 	"example.com/SMC/server/sqlstore"
 )
 
@@ -36,7 +35,7 @@ func NewExperimentService(db *sqlstore.DB) *ExperimentService {
 	return &ExperimentService{db: db}
 }
 
-func (c *ClientService) CreateClientShare(request utils.ClientRequest, cfg *config.Server) error {
+func (c *ClientService) CreateClientShare(request ClientRequest, cfg *config.Server) error {
 	// TODO : do some basic validations, e.g. missing exp_id, client_id, etc.
 	exp, err := c.db.GetExperiment(request.Exp_ID)
 	if err != nil {
@@ -44,13 +43,16 @@ func (c *ClientService) CreateClientShare(request utils.ClientRequest, cfg *conf
 	}
 
 	if *exp == (sqlstore.Experiment{}) {
-		return errors.New("experiment does not exist when server creates client share record")
+		return errors.New("experiment does not exist when server creates client share")
 	}
 
-	timestamp, _ := time.Parse("2006-01-02 15:04:05", request.Timestamp)
-	due, _ := time.Parse("2006-01-02 15:04:05", exp.ClientShareDue)
+	//timestamp, _ := time.Parse("2006-01-02 15:04:05", request.Timestamp)
+	//due, _ := time.Parse("2006-01-02 15:04:05", exp.ClientShareDue)
+	timestamp := time.Now().UTC()
+	due := timestamp.Add(1 * time.Minute)
+
 	if timestamp.After(due) {
-		return errors.New("client share submission passed due when server creates client shares record")
+		return errors.New("client submitted share after due")
 	}
 
 	//insert experiment id and client id to client table
@@ -78,19 +80,19 @@ func (c *ClientService) CreateClientShare(request utils.ClientRequest, cfg *conf
 
 	//creat complaint record based on proof verification result
 	if !verify {
-		log.Printf("failed to verify proof from %s for %s data\n", request.Client_ID, request.Exp_ID)
+		log.Printf("failed to verify %s proof for %s\n", request.Client_ID, request.Exp_ID)
 		fmt.Println(err)
 
 		err = c.db.InsertComplaint(request.Exp_ID, cfg.Server_ID, request.Client_ID, true, request.Proof.MerkleRoot)
 		if err != nil {
-			log.Fatal(err)
+			panic(err)
 		}
 	} else {
-		log.Printf("succeed to verify proof from %s for %s data\n", request.Client_ID, request.Exp_ID)
+		log.Printf("succeed to verify %s proof for %s\n", request.Client_ID, request.Exp_ID)
 
 		err = c.db.InsertComplaint(request.Exp_ID, cfg.Server_ID, request.Client_ID, false, request.Proof.MerkleRoot)
 		if err != nil {
-			log.Fatal(err)
+			panic(err)
 		}
 
 	}
@@ -98,13 +100,13 @@ func (c *ClientService) CreateClientShare(request utils.ClientRequest, cfg *conf
 	return nil
 }
 
-func (s *ServerService) CreateComplaint(request utils.ComplaintRequest) error {
+func (s *ServerService) CreateComplaint(request ComplaintRequest) error {
 	exp, err := s.db.GetExperiment(request.Exp_ID)
 	if err != nil {
 		return err
 	}
 	if *exp == (sqlstore.Experiment{}) {
-		return errors.New("experiment does not exist when create server's complaint record")
+		return errors.New("experiment does not exist when create server's complaint")
 	}
 
 	for _, comp := range request.Complaints {
@@ -118,13 +120,13 @@ func (s *ServerService) CreateComplaint(request utils.ComplaintRequest) error {
 
 }
 
-func (s *ServerService) CreateMaskedShares(request utils.MaskedShareRequest) error {
+func (s *ServerService) CreateMaskedShares(request MaskedShareRequest) error {
 	exp, err := s.db.GetExperiment(request.Exp_ID)
 	if err != nil {
 		return err
 	}
 	if *exp == (sqlstore.Experiment{}) {
-		return errors.New("experiment does not exist when create server's masked shares")
+		return errors.New("experiment does not exist when create other servers' masked shares")
 	}
 
 	for _, masked_sh := range request.MaskedShares {
@@ -145,7 +147,7 @@ func (s *ServerService) CreateValidClient(exp_id, client_id string) error {
 		return err
 	}
 	if *exp == (sqlstore.Experiment{}) {
-		return errors.New("experiment does not exist when create valid client record")
+		return errors.New("experiment does not exist when create valid client")
 	}
 
 	err = s.db.InsertValidClient(exp_id, client_id)
@@ -157,7 +159,7 @@ func (s *ServerService) CreateValidClient(exp_id, client_id string) error {
 
 }
 
-func (e *ExperimentService) CreateExperiment(request utils.OutputPartyRequest) error {
+func (e *ExperimentService) CreateExperiment(request OutputPartyRequest) error {
 	//TODO: need to remove and use due in the file
 	complaint_due := time.Now().UTC().Add(time.Duration(4) * time.Minute).Format("2006-01-02 15:04:05")
 	share_broadcast_due := time.Now().UTC().Add(time.Duration(7) * time.Minute).Format("2006-01-02 15:04:05")
@@ -171,13 +173,13 @@ func (e *ExperimentService) CreateExperiment(request utils.OutputPartyRequest) e
 	return nil
 }
 
-func (c *ClientService) CreateClientRegistry(request utils.ClientRegistry) error {
+func (c *ClientService) CreateClientRegistry(request ClientRegistry) error {
 	exp, err := c.db.GetExperiment(request.Exp_ID)
 	if err != nil {
 		return err
 	}
 	if *exp == (sqlstore.Experiment{}) {
-		return errors.New("experiment does not exist when create client registry record")
+		return errors.New("experiment does not exist when create client registry")
 	}
 
 	err = c.db.InsertClientRegistry(request.Exp_ID, request.Client_ID, request.Token)

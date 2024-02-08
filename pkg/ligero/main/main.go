@@ -8,7 +8,8 @@ import (
 )
 
 func main() {
-	zk, err := ligero.NewLigeroZK(3, 1, 6, 1, 41, 3)
+
+	zk, err := ligero.NewLigeroZK(3, 1, 6, 1, 10631, 3)
 	if err != nil {
 		log.Fatalf("err: %v", err)
 	}
@@ -25,13 +26,13 @@ func main() {
 
 		verify, err := zk.VerifyProof(*proof[i])
 		if err != nil {
-			fmt.Printf("verification failed for party %d\n", *&proof[i].PartyShares[0].Index)
+			fmt.Printf("verification failed for party %d\n", proof[i].PartyShares[0].Index)
 			log.Fatal(err)
 		}
 		if !verify {
-			fmt.Printf("verification failed for party %d\n", *&proof[i].PartyShares[0].Index)
+			fmt.Printf("verification failed for party %d\n", proof[i].PartyShares[0].Index)
 		}
-		fmt.Printf("verification succeed for party %d\n", *&proof[i].PartyShares[0].Index)
+		fmt.Printf("verification succeed for party %d\n", proof[i].PartyShares[0].Index)
 	}
 
 }

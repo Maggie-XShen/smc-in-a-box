@@ -1,11 +1,10 @@
 package sqlstore
 
 type Experiment struct {
-	Exp_ID                 string `gorm:"primaryKey"`
-	Due                    string
-	Owner                  string
-	Server_Round_Completed bool
-	Completed              bool
+	Exp_ID         string `gorm:"primaryKey"`
+	ClientShareDue string
+	ServerShareDue string
+	Completed      bool
 }
 
 type ServerShare struct {

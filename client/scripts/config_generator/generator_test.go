@@ -7,5 +7,5 @@ import (
 )
 
 func TestGenerateGonfig(t *testing.T) {
-	config_generator.GenerateClientConfig(6, "client_template.json", "examples/")
+	config_generator.GenerateClientConfig(6, "client_template.json", "../../config/examples/")
 }

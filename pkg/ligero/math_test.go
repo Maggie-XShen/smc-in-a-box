@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func Test_MulMatrix(t *testing.T) {
+func TestMulMatrix(t *testing.T) {
 	tests := []struct {
 		matrix1  [][]int
 		matrix2  [][]int
@@ -41,7 +41,7 @@ func Test_MulMatrix(t *testing.T) {
 	}
 }
 
-func Test_Interpolate_at_Point(t *testing.T) {
+func TestInterpolateAtPoint(t *testing.T) {
 	tests := []struct {
 		x_sample  []int
 		y_samples []int

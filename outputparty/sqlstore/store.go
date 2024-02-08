@@ -79,12 +79,12 @@ func (db *DB) GetSharesPerExperiment(exp_id string) ([]ServerShare, error) {
 }
 
 // create experiment record in the experiment tables
-func (db *DB) InsertExperiment(exp_id, due, owner string) error {
+func (db *DB) InsertExperiment(exp_id, due1, due2 string) error {
 	exp := &Experiment{
-		Exp_ID:    exp_id,
-		Due:       due,
-		Owner:     owner,
-		Completed: false,
+		Exp_ID:         exp_id,
+		ClientShareDue: due1,
+		ServerShareDue: due2,
+		Completed:      false,
 	}
 	result := db.db.Clauses(clause.Insert{Modifier: "OR IGNORE"}).Create(&exp)
 	if result.Error != nil {
@@ -107,36 +107,13 @@ func (db *DB) GetExperiment(exp_id string) (*Experiment, error) {
 // get all experiments records that server round is not completed
 func (db *DB) GetAllExperiments() ([]Experiment, error) {
 	var experiments []Experiment
-	r := db.db.Find(&experiments, "server_round_completed = ? and completed=?", false, false)
+	r := db.db.Find(&experiments, "completed=?", false)
 	if r.Error != nil {
 		return nil, r.Error
 	}
 
 	return experiments, nil
 }
-
-// get all experiments records that server round is completed but sum share is not completed
-/**
-func (store *SqlStore) GetAllExpsWithServerRoundCompleted() ([]Experiment, error) {
-	var experiments []Experiment
-	r := store.db.Find(&experiments, "server_round_completed = ? and completed=?", true, false)
-	if r.Error != nil {
-		return nil, r.Error
-	}
-
-	return experiments, nil
-}**/
-
-// set experiment's server round to completed
-/**
-func (store *SqlStore) UpdateHalfCompletedExperiment(exp_id string) error {
-	var exp Experiment
-	r := store.db.Model(&exp).Where("exp_ID = ?", exp_id).Update("Server_Round_Completed", true)
-	if r.Error != nil {
-		return r.Error
-	}
-	return nil
-}**/
 
 // set experiment status to completed
 func (db *DB) UpdateCompletedExperiment(exp_id string) error {

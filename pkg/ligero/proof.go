@@ -65,7 +65,7 @@ func (zk *LigeroZK) VerifyProof(proof Proof) (bool, error) {
 	len2 := zk.m
 	len3 := zk.m + zk.m*(zk.n_server-zk.t-1)
 
-	random_vector := zk.generate_random_vector(h1, len1+len2+len3, zk.q)
+	random_vector := RandVector(h1, len1+len2+len3, zk.q)
 
 	//verify code test proof
 	r1 := random_vector[:len1]

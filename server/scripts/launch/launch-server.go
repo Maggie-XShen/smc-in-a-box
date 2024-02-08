@@ -11,7 +11,7 @@ import (
 
 func main() {
 
-	n_s := flag.Int("n", 1, "number of servers")
+	n_s := flag.Int("n", 6, "number of servers")
 	flag.Parse()
 
 	// Configure servers
@@ -27,7 +27,7 @@ func main() {
 	// Start the servers
 	var processes []*exec.Cmd
 	for i := 1; i <= *n_s; i++ {
-		conf_path := fmt.Sprintf("-confpath=../config_generator/examples/config_s%s.json", strconv.Itoa(i))
+		conf_path := fmt.Sprintf("-confpath=../../config/examples/config_s%s.json", strconv.Itoa(i))
 		server := startServer("../cmd/server", conf_path)
 		processes = append(processes, server)
 	}

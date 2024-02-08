@@ -3,9 +3,9 @@
     "Cert_path":"/path to certificate",
     "Key_path":"/path to private key",
     "Port": "8090",
-    "N": 3,
-    "T": 2,
+    "N": 6,
+    "T": 1,
     "K": 1,
-    "Q": 41,
-    "URLs": ["http://127.0.0.1:8081/outputPartyRequestSubmit/", "http://127.0.0.1:8082/outputPartyRequestSubmit/", "http://127.0.0.1:8083/outputPartyRequestSubmit/"]
+    "Q": 10631,
+    "URLs": ["http://127.0.0.1:8091/experiment/", "http://127.0.0.1:8092/experiment/", "http://127.0.0.1:8093/experiment/", "http://127.0.0.1:8094/experiment/", "http://127.0.0.1:8095/experiment/", "http://127.0.0.1:8096/experiment/"]
 }

@@ -156,7 +156,7 @@ func TestGenerate_MerkleTree(t *testing.T) {
 }
 
 func TestGenerate(t *testing.T) {
-	zk, err := NewLigeroZK(3, 1, 6, 1, 41, 3)
+	zk, err := NewLigeroZK(3, 1, 6, 1, 10631, 3)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -175,9 +175,9 @@ func TestGenerate(t *testing.T) {
 			log.Fatal(err)
 		}
 		if !verify {
-			fmt.Printf("Verification failed for party %d!\n", *&proof[i].PartyShares[0].Index)
+			fmt.Printf("Verification failed for party %d!\n", proof[i].PartyShares[0].Index)
 		}
-		fmt.Printf("Verification succeed for party %d!\n", *&proof[i].PartyShares[0].Index)
+		fmt.Printf("Verification succeed for party %d!\n", proof[i].PartyShares[0].Index)
 	}
 
 }
