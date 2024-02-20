@@ -22,12 +22,13 @@ type Proof struct {
 }
 
 type OpenedColumn struct {
-	List        []int    `json:"List"`
-	Index       int      `json:"Col_index"`
-	Code_mask   int      `json:"Code_mask"`
-	Linear_mask int      `json:"Linear_mask"`
-	Quadra_mask int      `json:"Quadra_mask"`
-	Authpath    [][]byte `json:"Authpath"`
+	List         []int    `json:"List"`
+	Index        int      `json:"Col_index"`
+	Merkle_nonce int      `json:"Merkle_nonce"`
+	Code_mask    int      `json:"Code_mask"`
+	Linear_mask  int      `json:"Linear_mask"`
+	Quadra_mask  int      `json:"Quadra_mask"`
+	Authpath     [][]byte `json:"Authpath"`
 }
 
 func newProof(root []byte, column_check []OpenedColumn, q_code []int, q_quadra []int, q_linear []int, party_sh []rss.Party, seeds []int, fst_root []byte, fst_authpath [][]byte) *Proof {
@@ -137,7 +138,11 @@ func (zk *LigeroZK) verify_opened_columns(open_cols []OpenedColumn, root []byte)
 	}
 
 	for _, col := range open_cols {
-		concatenated, err := ConvertColumnToString(col.List)
+		list := make([]int, len(col.List)+1)
+		list = append(list, col.List...)
+		list = append(list, col.Merkle_nonce)
+		concatenated, err := ConvertColumnToString(list)
+
 		if err != nil {
 			return false, err
 		}

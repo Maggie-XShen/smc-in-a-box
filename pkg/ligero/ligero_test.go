@@ -129,7 +129,7 @@ func TestGenerate_MerkleTree(t *testing.T) {
 	}
 
 	//commit to the Extended Witness via Merkle Tree
-	tree, leaves, err := zk.generate_merkletree(encoded_witeness_columnwise)
+	tree, leaves, _, err := zk.generate_merkletree(encoded_witeness_columnwise)
 	if err != nil {
 		log.Fatal(err)
 	}

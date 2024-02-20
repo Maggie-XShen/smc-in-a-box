@@ -90,7 +90,7 @@ func (zk *LigeroZK) GenerateProof(secrets []int) ([]*Proof, error) {
 	}
 
 	//commit to the Extended Witness via Merkle Tree
-	tree, leaves, err := zk.generate_merkletree(encoded_witeness_columnwise)
+	tree, leaves, nonces, err := zk.generate_merkletree(encoded_witeness_columnwise)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -144,7 +144,7 @@ func (zk *LigeroZK) GenerateProof(secrets []int) ([]*Proof, error) {
 
 	//generate column check
 	r4 := RandVector(h2, zk.n_open_col, len(leaves)) //TODO: need to verify the third parameter
-	column_check, err := zk.generate_column_check(tree, leaves, r4, code_mask, quadra_mask, linear_mask, encoded_witeness_columnwise)
+	column_check, err := zk.generate_column_check(tree, leaves, r4, nonces, code_mask, quadra_mask, linear_mask, encoded_witeness_columnwise)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -287,19 +287,29 @@ func (zk *LigeroZK) encode_extended_witness(input [][]int, key []int) ([][]int, 
 
 // commit encoded extended witness via Merkle Tree
 // parameter input:columnwise encoded extended witness,
-// each row of the input is a column of eacoded extended witness
-func (zk *LigeroZK) generate_merkletree(input [][]int) (*merkletree.MerkleTree, [][]byte, error) {
+// each row of the input is a column of encoded extended witness
+func (zk *LigeroZK) generate_merkletree(input [][]int) (*merkletree.MerkleTree, [][]byte, []int, error) {
+	length := len(input)
+	if length == 0 {
+		return nil, nil, nil, fmt.Errorf("Invalid input: Input is empty")
+	}
 
-	// hash each opened column
-	leaves := make([][]byte, len(input))
+	// generate a list of nonces
+	nonces := generate_seeds(length, zk.q)
 
-	for i := 0; i < len(input); i++ {
-		col := make([]string, len(input))
-		for j := 0; j < len(input[0]); j++ {
-			col[j] = fmt.Sprintf("%064b", input[i][j])
+	// hash each column
+	leaves := make([][]byte, length)
+
+	for i := 0; i < length; i++ {
+		list := make([]int, len(input[0])+1)
+		list = append(list, input[i]...)
+		list = append(list, nonces[i])
+		concatenated, err := ConvertColumnToString(list)
+
+		if err != nil {
+			panic(err)
 		}
-		//concatenate values in the column to a string
-		concatenated := strings.Join(col, "")
+
 		leaves[i] = []byte(concatenated)
 
 	}
@@ -307,15 +317,15 @@ func (zk *LigeroZK) generate_merkletree(input [][]int) (*merkletree.MerkleTree, 
 	//Create a new Merkle Tree from hashed columns
 	tree, err := merkletree.New(leaves)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
-	return tree, leaves, nil
+	return tree, leaves, nonces, nil
 
 }
 
 func (zk *LigeroZK) generate_fst_merkletree(party_sh [][]rss.Party, seeds []int) (*merkletree.MerkleTree, [][]byte, error) {
-	// generate and hash each leaf
+	// generate and hash each party's shares
 	l1 := len(party_sh)
 	l2 := len(party_sh[0])
 	l3 := len(party_sh[0][0].Shares)
@@ -342,7 +352,7 @@ func (zk *LigeroZK) generate_fst_merkletree(party_sh [][]rss.Party, seeds []int)
 		leaves[i] = []byte(concat)
 	}
 
-	//Create a new Merkle Tree from hashed columns
+	//Create a new Merkle Tree
 	tree, err := merkletree.New(leaves)
 	if err != nil {
 		return nil, nil, err
@@ -353,7 +363,7 @@ func (zk *LigeroZK) generate_fst_merkletree(party_sh [][]rss.Party, seeds []int)
 }
 
 // randomly choose t' columns and get their authentication paths
-func (zk *LigeroZK) generate_column_check(tree *merkletree.MerkleTree, leaves [][]byte, cols []int, c_mask []int, q_mask []int, l_mask []int, input [][]int) ([]OpenedColumn, error) {
+func (zk *LigeroZK) generate_column_check(tree *merkletree.MerkleTree, leaves [][]byte, cols []int, m_nonce []int, c_mask []int, q_mask []int, l_mask []int, input [][]int) ([]OpenedColumn, error) {
 	column_check := make([]OpenedColumn, len(cols))
 
 	for i := range cols {
@@ -362,7 +372,7 @@ func (zk *LigeroZK) generate_column_check(tree *merkletree.MerkleTree, leaves []
 		if err != nil {
 			return nil, err
 		}
-		column_check[i] = OpenedColumn{List: input[index], Index: index, Code_mask: c_mask[index], Quadra_mask: q_mask[index], Linear_mask: l_mask[index], Authpath: proof.Hashes}
+		column_check[i] = OpenedColumn{List: input[index], Index: index, Merkle_nonce: m_nonce[index], Code_mask: c_mask[index], Quadra_mask: q_mask[index], Linear_mask: l_mask[index], Authpath: proof.Hashes}
 
 	}
 
