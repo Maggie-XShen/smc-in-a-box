@@ -140,18 +140,18 @@ func (zk *LigeroZK) GenerateProof(secrets []int) ([]*Proof, error) {
 	}
 	fst_root := fst_tree.Root()
 
+	h2 := zk.generate_hash([][]byte{h1, fst_root, ConvertToByteArray(q_code), ConvertToByteArray(q_quadra), ConvertToByteArray(q_linear)})
+
+	//generate column check
+	r4 := RandVector(h2, zk.n_open_col, len(leaves)) //TODO: need to verify the third parameter
+	column_check, err := zk.generate_column_check(tree, leaves, r4, code_mask, quadra_mask, linear_mask, encoded_witeness_columnwise)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	//generate proof for each party
 	proofs := make([]*Proof, zk.n_server)
 	for i := 0; i < zk.n_server; i++ {
-
-		h2 := zk.generate_hash([][]byte{h1, fst_root, ConvertToByteArray(q_code), ConvertToByteArray(q_quadra), ConvertToByteArray(q_linear)})
-
-		//generate column check
-		r4 := RandVector(h2, zk.n_open_col, len(leaves)) //TODO: need to verify the third parameter
-		column_check, err := zk.generate_column_check(tree, leaves, r4, code_mask, quadra_mask, linear_mask, encoded_witeness_columnwise)
-		if err != nil {
-			log.Fatal(err)
-		}
 
 		fst_proof, err := fst_tree.GenerateProof(fst_leaves[i])
 		if err != nil {

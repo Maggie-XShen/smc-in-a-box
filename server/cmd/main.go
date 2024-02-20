@@ -20,8 +20,8 @@ func main() {
 
 	// set up ticker
 	ticker := time.NewTicker(1 * time.Second)
-	//go s.WaitForEndOfExperiment(ticker)
-	//go s.WaitForEndOfComplaintBroadcast(ticker)
+	go s.WaitForEndOfExperiment(ticker)
+	go s.WaitForEndOfComplaintBroadcast(ticker)
 	go s.WaitForEndOfShareBroadcast(ticker)
 
 	s.Start()

@@ -114,11 +114,8 @@ func (op *OutputParty) WaitForEndOfExperiment(ticker *time.Ticker) {
 
 			due, _ := time.Parse("2006-01-02 15:04:05", exp.ServerShareDue)
 			currentTime := time.Now().UTC()
-			//due := time.Now()
-			//currentTime := due.Add(1 * time.Minute)
 
 			if currentTime.After(due) {
-				fmt.Printf("%s pass %s\n", currentTime, due)
 				records, err := op.store.GetSharesPerExperiment(exp.Exp_ID)
 				if err != nil {
 					//log.Println("cannot retrieve servers records - error:", err)

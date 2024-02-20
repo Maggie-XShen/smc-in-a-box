@@ -1,4 +1,4 @@
-// Reference: add source of code
+// TODO: add reference
 package ligero
 
 import (

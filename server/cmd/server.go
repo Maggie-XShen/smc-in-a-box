@@ -162,6 +162,7 @@ func count(complaints []sqlstore.Complaint) (int, int, int) {
 	return num_isNotComplain, len(rootCount), maxCount
 }
 
+/**
 func generateMaskedShareMap(input []sqlstore.MaskedShare) (map[int]map[string][]rss.Share, error) {
 	if len(input) <= 0 {
 		return nil, fmt.Errorf("masked shares get from table is empty")
@@ -183,7 +184,7 @@ func generateMaskedShareMap(input []sqlstore.MaskedShare) (map[int]map[string][]
 	}
 
 	return inputMaskedShares, nil
-}
+}**/
 
 func computeMajority(input map[string][]rss.Share) ([]rss.Share, error) {
 	if len(input) <= 0 {
@@ -234,7 +235,6 @@ func (s *Server) WaitForEndOfExperiment(ticker *time.Ticker) {
 			//currentTime := due.Add(1 * time.Minute)
 
 			if currentTime.After(due) {
-				fmt.Printf("%s pass %s\n", currentTime, due)
 				complaints, err := s.store.GetComplaintsPerServer(exp.Exp_ID, s.cfg.Server_ID)
 				if err != nil {
 					//log.Println("cannot retreive complaints records- error:", err)
@@ -253,8 +253,6 @@ func (s *Server) WaitForEndOfExperiment(ticker *time.Ticker) {
 					Complaints: set,
 				}
 
-				//TODO: need to remove
-				//time.Sleep(time.Minute)
 				for _, address := range s.cfg.Complaint_urls {
 					fmt.Printf("server %s sends complaints: %+v\n", s.cfg.Server_ID, message)
 					writer := &message
@@ -289,8 +287,6 @@ func (s *Server) WaitForEndOfComplaintBroadcast(ticker *time.Ticker) {
 
 			due, _ := time.Parse("2006-01-02 15:04:05", exp.ComplaintDue)
 			currentTime := time.Now().UTC()
-			//due := time.Now().UTC().Add(2 * time.Minute)
-			//currentTime := due.Add(1 * time.Minute)
 
 			if currentTime.After(due) {
 				//find dropout clients for the server
@@ -346,7 +342,8 @@ func (s *Server) WaitForEndOfComplaintBroadcast(ticker *time.Ticker) {
 						if num_isNotComplain < s.cfg.N || rootCount > 1 {
 							clientShares, err := s.store.GetClientShares(exp.Exp_ID, c.Client_ID)
 							if err != nil {
-								log.Fatal("cannot get client shares record - error:", err)
+								//log.Fatal("cannot get client shares record - error:", err)
+								panic(err)
 							}
 
 							for _, cs := range clientShares {
@@ -375,7 +372,7 @@ func (s *Server) WaitForEndOfComplaintBroadcast(ticker *time.Ticker) {
 
 				}
 
-				maskedShares, err := s.store.GetMaskedSharesPerExperiment(exp.Exp_ID)
+				maskedShares, err := s.store.GetMaskedSharesPerServer(exp.Exp_ID, s.cfg.Server_ID)
 				if err != nil {
 					//log.Fatal("cannot retreive masked shares record - error:", err)
 					panic(err)
@@ -393,16 +390,13 @@ func (s *Server) WaitForEndOfComplaintBroadcast(ticker *time.Ticker) {
 					MaskedShares: set,
 				}
 
-				//TODO: need to remove
-				//time.Sleep(time.Minute)
 				for _, address := range s.cfg.Masked_share_urls {
-					fmt.Printf("server %s sends: %+v\n", s.cfg.Server_ID, message)
+					log.Printf("server %s is sending to %s: %+v\n", s.cfg.Server_ID, address, message)
 					writer := &message
 					send(address, writer.ToJson())
 				}
 
 				//set round2 to completed
-
 				err = s.store.UpdateRound2Completed(exp.Exp_ID)
 				if err != nil {
 					//log.Println("cannot set round2 to completed - error:", err)
@@ -429,8 +423,6 @@ func (s *Server) WaitForEndOfShareBroadcast(ticker *time.Ticker) {
 
 			due, _ := time.Parse("2006-01-02 15:04:05", exp.ShareBroadcastDue)
 			currentTime := time.Now().UTC()
-			//due := time.Now().UTC().Add(4 * time.Minute)
-			//currentTime := due.Add(1 * time.Minute)
 
 			if currentTime.After(due) {
 
@@ -451,12 +443,23 @@ func (s *Server) WaitForEndOfShareBroadcast(ticker *time.Ticker) {
 					if len(notComplain) < s.cfg.N {
 						//build input shares map for each client
 						inputMaskedShares := make(map[int]map[string][]rss.Share)
-						for _, record := range notComplain {
-							masked_shares, _ := s.store.GetMaskedShares(exp.Exp_ID, record.Server_ID, record.Client_ID)
-							inputMaskedShares, err = generateMaskedShareMap(masked_shares)
-							if err != nil {
-								panic(err)
+						for _, entry := range notComplain {
+							masked_shares, _ := s.store.GetMaskedShares(exp.Exp_ID, entry.Server_ID, entry.Client_ID)
+							for _, record := range masked_shares {
+								v1, check1 := inputMaskedShares[record.Input_Index]
+								if check1 {
+									v2, check2 := v1[record.Server_ID]
+									if check2 {
+										inputMaskedShares[record.Input_Index][record.Server_ID] = append(v2, rss.Share{Index: record.Index, Value: record.Value})
+									} else {
+										inputMaskedShares[record.Input_Index][record.Server_ID] = []rss.Share{{Index: record.Index, Value: record.Value}}
+									}
+								} else {
+									inputMaskedShares[record.Input_Index] = make(map[string][]rss.Share)
+									inputMaskedShares[record.Input_Index][record.Server_ID] = []rss.Share{{Index: record.Index, Value: record.Value}}
+								}
 							}
+
 						}
 
 						//remove invalid client from valid set
@@ -467,9 +470,10 @@ func (s *Server) WaitForEndOfShareBroadcast(ticker *time.Ticker) {
 								parties = append(parties, rss.Party{Index: 0, Shares: party})
 							}
 							nrss, _ := rss.NewReplicatedSecretSharing(s.cfg.N, s.cfg.T, s.cfg.Q)
+
 							_, err := nrss.Reconstruct(parties)
 							if err != nil {
-								log.Println("reconstruct fail, need to remove client from valid set - error:")
+								log.Printf("reconstruct fail, need to remove client from valid set - error:%s", err)
 								err = s.store.DeleteValidClient(exp.Exp_ID, vc.Client_ID)
 								isRemoved = true
 								if err != nil {
@@ -532,6 +536,12 @@ func (s *Server) WaitForEndOfShareBroadcast(ticker *time.Ticker) {
 					panic(err)
 				}
 
+				/**
+				//test s6 change aggregated share to invalid value
+				if s.cfg.Server_ID == "s6" {
+					aggreShares = []rss.Share{{Index: 0, Value: 27597}, {Index: 2, Value: 28090}, {Index: 3, Value: 35626}, {Index: 4, Value: 36324}, {Index: 5, Value: 38150}}
+				}**/
+
 				msg := AggregatedShareRequest{Exp_ID: exp.Exp_ID, Server_ID: s.cfg.Server_ID, Shares: aggreShares, Timestamp: time.Now().Format("2006-01-02 15:04:05")}
 				fmt.Printf("server %s sends: %+v\n", s.cfg.Server_ID, msg)
 				writer := &msg
@@ -554,7 +564,7 @@ func (s *Server) WaitForEndOfShareBroadcast(ticker *time.Ticker) {
 
 func aggregateShares(clientShares []sqlstore.ClientShare) ([]rss.Share, error) {
 	if len(clientShares) == 0 {
-		return nil, fmt.Errorf("client shares are empty")
+		return nil, fmt.Errorf("client shares are empty: no valid client exists")
 	}
 
 	var result []rss.Share
@@ -585,15 +595,16 @@ func send(address string, data []byte) {
 	client := &http.Client{}
 	res, err := client.Do(req)
 	if err != nil {
-		log.Fatalf("impossible to send http request: %s", err)
-	}
+		log.Printf("impossible to send http request: %s", err)
+	} else {
+		log.Printf("response Status:%s", res.Status)
 
-	log.Printf("response Status:%s", res.Status)
+		defer res.Body.Close()
+		body, _ := io.ReadAll(res.Body)
+		if len(body) > 0 {
+			fmt.Println("response Body:", string(body))
+		}
 
-	defer res.Body.Close()
-	body, _ := io.ReadAll(res.Body)
-	if len(body) > 0 {
-		fmt.Println("response Body:", string(body))
 	}
 
 }

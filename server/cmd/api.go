@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"time"
 
@@ -80,8 +79,18 @@ func (c *ClientService) CreateClientShare(request ClientRequest, cfg *config.Ser
 
 	//creat complaint record based on proof verification result
 	if !verify {
-		log.Printf("failed to verify %s proof for %s\n", request.Client_ID, request.Exp_ID)
-		fmt.Println(err)
+		log.Printf("failed to verify %s proof for %s -- %s\n", request.Client_ID, request.Exp_ID, err)
+
+		/**
+		//test s6 should complaint but not complaint
+		if cfg.Server_ID == "s6"{
+			_ = c.db.InsertComplaint(request.Exp_ID, cfg.Server_ID, request.Client_ID, false, request.Proof.MerkleRoot)
+		} else {
+			err = c.db.InsertComplaint(request.Exp_ID, cfg.Server_ID, request.Client_ID, true, request.Proof.MerkleRoot)
+			if err != nil {
+				panic(err)
+			}
+		}**/
 
 		err = c.db.InsertComplaint(request.Exp_ID, cfg.Server_ID, request.Client_ID, true, request.Proof.MerkleRoot)
 		if err != nil {
@@ -89,6 +98,17 @@ func (c *ClientService) CreateClientShare(request ClientRequest, cfg *config.Ser
 		}
 	} else {
 		log.Printf("succeed to verify %s proof for %s\n", request.Client_ID, request.Exp_ID)
+
+		/**
+		//test s6 should not complaint but complaint
+		if cfg.Server_ID == "s6" && request.Client_ID == "c1" {
+			_ = c.db.InsertComplaint(request.Exp_ID, cfg.Server_ID, request.Client_ID, true, request.Proof.MerkleRoot)
+		} else {
+			err = c.db.InsertComplaint(request.Exp_ID, cfg.Server_ID, request.Client_ID, false, request.Proof.MerkleRoot)
+			if err != nil {
+				panic(err)
+			}
+		}**/
 
 		err = c.db.InsertComplaint(request.Exp_ID, cfg.Server_ID, request.Client_ID, false, request.Proof.MerkleRoot)
 		if err != nil {
@@ -129,10 +149,11 @@ func (s *ServerService) CreateMaskedShares(request MaskedShareRequest) error {
 		return errors.New("experiment does not exist when create other servers' masked shares")
 	}
 
+	log.Printf("server received masked shares from %s: %+v\n", request.Server_ID, request)
 	for _, masked_sh := range request.MaskedShares {
 		err = s.db.InsertMaskedShare(request.Exp_ID, request.Server_ID, masked_sh.Client_ID, masked_sh.Input_Index, masked_sh.Index, masked_sh.Value)
 		if err != nil {
-			return err
+			panic(err)
 		}
 
 	}

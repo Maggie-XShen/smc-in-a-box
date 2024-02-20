@@ -7,8 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
-
-	"example.com/SMC/client/scripts/config_generator"
 )
 
 func main() {
@@ -19,13 +17,13 @@ func main() {
 	fmt.Printf("%d\n", *n_c)
 
 	// Configure clients
-	config_generator.GenerateClientConfig(*n_c, "../config_generator/client_template.json", "../config_generator/examples/")
+	//config_generator.GenerateClientConfig(*n_c, "../config_generator/client_template.json", "../../config/examples/")
 
 	// Start the clients
 	var processes []*exec.Cmd
 	input_path := "-inputpath=../../cmd/input.json"
 	for i := 1; i <= *n_c; i++ {
-		conf_path := fmt.Sprintf("-confpath=../config_generator/examples/config_c%s.json", strconv.Itoa(i))
+		conf_path := fmt.Sprintf("-confpath=../../config/examples/config_c%s.json", strconv.Itoa(i))
 
 		client := startClient("../../cmd/cmd", conf_path, input_path)
 		processes = append(processes, client)

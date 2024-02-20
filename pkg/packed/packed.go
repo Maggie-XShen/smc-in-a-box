@@ -49,8 +49,6 @@ func (p *PackedSecretSharing) Split(secrets []int, seed int) ([]Share, error) {
 	}
 
 	x_samples, y_samples, err := p.sample_packed_polynomial(secrets, seed)
-	//fmt.Printf("%v\n", x_samples)
-	//fmt.Printf("%v\n", y_samples)
 
 	if err != nil {
 		return nil, err
@@ -102,6 +100,15 @@ func (p *PackedSecretSharing) sample_packed_polynomial(secrets []int, seed int) 
 	}
 
 	randomness_values := make([]int, p.t)
+	seedValue := int64(seed)
+	MainCSRNG = rand.New(NewCryptoRandSource())
+	MainCSRNG.Seed(seedValue)
+	for i := 0; i < p.t; i++ {
+		randomNumber := MainCSRNG.Int63()
+		randomness_values[i] = int(randomNumber % int64(p.q))
+	}
+
+	/**
 	r := rand.New(rand.NewSource(int64(seed)))
 	checkMap := map[int]bool{}
 	for i := 0; i < p.t; i++ {
@@ -114,7 +121,7 @@ func (p *PackedSecretSharing) sample_packed_polynomial(secrets []int, seed int) 
 			}
 
 		}
-	}
+	}**/
 
 	y_samples := append(secrets, randomness_values...)
 
