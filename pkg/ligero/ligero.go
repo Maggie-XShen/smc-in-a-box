@@ -2,6 +2,7 @@ package ligero
 
 import (
 	crypto_rand "crypto/rand"
+	"crypto/sha256"
 	"fmt"
 	"log"
 	"math"
@@ -12,7 +13,6 @@ import (
 	"example.com/SMC/pkg/packed"
 	"example.com/SMC/pkg/rss"
 	merkletree "github.com/wealdtech/go-merkletree"
-	"golang.org/x/crypto/sha3"
 	"gonum.org/v1/gonum/stat/combin"
 )
 
@@ -514,7 +514,7 @@ func (zk *LigeroZK) generate_hash(input [][]byte) []byte {
 		i += copy(concat[i:], d)
 	}
 
-	hash := sha3.Sum256(concat)
+	hash := sha256.Sum256(concat)
 
 	return hash[:]
 }
