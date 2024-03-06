@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"example.com/SMC/pkg/ligero"
 	"example.com/SMC/pkg/rss"
@@ -59,10 +60,12 @@ type AggregatedShareRequest struct {
 	Timestamp string      `json:"Timestamp"`
 }
 
-type OutputPartyRequest struct {
-	Exp_ID         string `json:"Exp_ID"`
-	ClientShareDue string `json:"ClientShareDue"`
-	Owner          string `json:"Owner"`
+type Experiment struct {
+	Exp_ID            string `json:"Exp_ID"`
+	ClientShareDue    string `json:"ClientShareDue"`
+	ComplaintDue      string `json:"ComplaintDue"`
+	ShareBroadcastDue string `json:"ShareBroadcastDue"`
+	Owner             string `json:"Owner"`
 }
 
 type Reader interface {
@@ -159,16 +162,6 @@ func (s *AggregatedShareRequest) ReadJson(req *http.Request) AggregatedShareRequ
 	return t
 }
 
-func (op *OutputPartyRequest) ReadJson(req *http.Request) OutputPartyRequest {
-	decoder := json.NewDecoder(req.Body)
-	var t OutputPartyRequest
-	err := decoder.Decode(&t)
-	if err != nil {
-		log.Fatalf("Cannot decode experiment request: %s", err)
-	}
-	return t
-}
-
 func FindMajority(list []int) (int, error) {
 	maxCount := 0
 	index := -1
@@ -197,4 +190,21 @@ func FindMajority(list []int) (int, error) {
 	}
 
 	return 0, fmt.Errorf("reconstruct failed: no majority element")
+}
+
+func ReadServerInput(path string) []Experiment {
+	jsonData, err := os.ReadFile(path)
+	if err != nil {
+		log.Fatalf("%s", err)
+		return nil
+	}
+
+	var items []Experiment
+	err = json.Unmarshal(jsonData, &items)
+	if err != nil {
+		log.Fatalf("%s", err)
+		return nil
+	}
+	return items
+
 }

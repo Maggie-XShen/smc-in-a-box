@@ -1,13 +1,9 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
-	"os"
 	"time"
 
 	"example.com/SMC/outputparty/config"
@@ -25,44 +21,19 @@ func NewOutputParty(conf *config.OutputParty) *OutputParty {
 }
 
 func (op *OutputParty) HandelExp(path string) {
-	type Tables struct {
-		Experiments []Experiment
-	}
-
-	file, err := os.Open(path)
-	if err != nil {
-		log.Fatalf("%s", err)
-		return
-	}
-	defer file.Close()
-
-	decoder := json.NewDecoder(file)
-
-	tables := Tables{}
-	err = decoder.Decode(&tables)
-	if err != nil {
-		log.Fatalf("unable to read from tables file: %s", err)
-		return
-	}
+	experiments := ReadOutputPartyInput(path)
 
 	expService := NewExperimentService(op.store)
-	for _, exp := range tables.Experiments {
+	for _, exp := range experiments {
 		err := expService.CreateExperiment(exp)
 		if err != nil {
 			panic(err)
 		}
-
-		/**
-		msg := utils.OutputPartyRequest{Exp_ID: exp.Exp_ID, Due: exp.Due}
-		fmt.Printf("%+v\n", msg)
-		writer := &msg
-		for _, url := range op.cfg.URLs {
-			op.send(url, writer.WriteJson())
-		}**/
 	}
 
 }
 
+/**
 func (op *OutputParty) send(address string, data []byte) {
 	req, err := http.NewRequest("POST", address, bytes.NewBuffer(data))
 	if err != nil {
@@ -84,7 +55,7 @@ func (op *OutputParty) send(address string, data []byte) {
 		fmt.Println("response Body:", string(body))
 	}
 
-}
+}**/
 
 func (op *OutputParty) reveal(parties []rss.Party) (int, error) {
 	nrss, err := rss.NewReplicatedSecretSharing(op.cfg.N, op.cfg.T, op.cfg.Q)
@@ -116,6 +87,7 @@ func (op *OutputParty) WaitForEndOfExperiment(ticker *time.Ticker) {
 			currentTime := time.Now().UTC()
 
 			if currentTime.After(due) {
+
 				records, err := op.store.GetSharesPerExperiment(exp.Exp_ID)
 				if err != nil {
 					//log.Println("cannot retrieve servers records - error:", err)

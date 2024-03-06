@@ -21,10 +21,10 @@ func main() {
 
 	// Start the clients
 	var processes []*exec.Cmd
-	input_path := "-inputpath=../../cmd/input.json"
-	for i := 1; i <= *n_c; i++ {
-		conf_path := fmt.Sprintf("-confpath=../../config/examples/config_c%s.json", strconv.Itoa(i))
 
+	for i := 1; i <= *n_c; i++ {
+		conf_path := fmt.Sprintf("-confpath=../generator/config/config_c%s.json", strconv.Itoa(i))
+		input_path := fmt.Sprintf("-inputpath=../generator/input/input_c%s.json", strconv.Itoa(i))
 		client := startClient("../../cmd/cmd", conf_path, input_path)
 		processes = append(processes, client)
 	}

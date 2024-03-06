@@ -10,7 +10,7 @@ import (
 func main() {
 	//read configuration
 	confpath := flag.String("confpath", "../config/outputparty.json", "config file path")
-	exppath := flag.String("exppath", "experiments.json", "experiments infor path")
+	inputpath := flag.String("inputpath", "experiments.json", "experiments infor path")
 	flag.Parse()
 
 	conf := config.Load(*confpath)
@@ -18,7 +18,7 @@ func main() {
 	op := NewOutputParty(conf)
 
 	//read experiment information from file to database
-	op.HandelExp(*exppath)
+	op.HandelExp(*inputpath)
 
 	// set up ticker
 	ticker := time.NewTicker(1 * time.Second)

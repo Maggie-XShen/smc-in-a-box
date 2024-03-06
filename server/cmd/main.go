@@ -10,13 +10,13 @@ import (
 func main() {
 	//read configuration
 	confpath := flag.String("confpath", "../config/server.json", "config file path")
-	registrypath := flag.String("registrypath", "registry.json", "client registry path")
+	inputpath := flag.String("inputpath", "experiments.json", "experiments file path")
 	flag.Parse()
 	conf := config.Load(*confpath)
 
 	s := NewServer(conf)
 
-	s.HandleExp(*registrypath)
+	s.HandleExp(*inputpath)
 
 	// set up ticker
 	ticker := time.NewTicker(1 * time.Second)

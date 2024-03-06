@@ -2,12 +2,10 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
-	"os"
 	"time"
 
 	"example.com/SMC/pkg/rss"
@@ -25,35 +23,16 @@ func NewServer(conf *config.Server) *Server {
 }
 
 /*
-*Set up experiments table and client registries table before
+*Set up experiments table before
 client, server and outputparty start communicating
 *
 */
 func (s *Server) HandleExp(path string) {
-	type Table struct {
-		Experiments []OutputPartyRequest
-		//Client_registries []utils.ClientRegistry
-	}
-
-	file, err := os.Open(path)
-	if err != nil {
-		log.Fatalf("%s", err)
-		return
-	}
-	defer file.Close()
-
-	decoder := json.NewDecoder(file)
-
-	table := Table{}
-	err = decoder.Decode(&table)
-	if err != nil {
-		log.Fatalf("unable to read experiments: %s", err)
-		return
-	}
+	experiments := ReadServerInput(path)
 
 	expService := NewExperimentService(s.store)
 
-	for _, exp := range table.Experiments {
+	for _, exp := range experiments {
 		//exp.ClientShareDue = time.Now().UTC().Add(time.Duration(1) * time.Minute).Format("2006-01-02 15:04:05")
 		err := expService.CreateExperiment(exp)
 		if err != nil {

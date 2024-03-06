@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"strconv"
 
-	"example.com/SMC/outputparty/scripts/config_generator"
+	"example.com/SMC/outputparty/scripts/generator"
 )
 
 func main() {
@@ -17,14 +17,14 @@ func main() {
 	flag.Parse()
 
 	// Configure output party
-	config_generator.GenerateOPConfig(*n_op, "../config_generator/outputparty_template.json", "generator/examples/")
+	generator.GenerateOPConfig(*n_op, "../generator/outputparty_template.json", "../generator/config")
 
 	// Start the output party
 	var processes []*exec.Cmd
 	for i := 1; i <= *n_op; i++ {
-		conf_path := fmt.Sprintf("-confpath=../config_generator/examples/config_op%s.json", strconv.Itoa(i))
-		exp_path := "-exppath=../experiments_data.json"
-		outputparty := startOP("../outputparty", conf_path, exp_path)
+		conf_path := fmt.Sprintf("-confpath=../generator/config/config_op%s.json", strconv.Itoa(i))
+		exp_path := "-exppath=../generator/input/experiments.json"
+		outputparty := startOP("../../cmd/cmd", conf_path, exp_path)
 		processes = append(processes, outputparty)
 	}
 

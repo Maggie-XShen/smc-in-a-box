@@ -6,6 +6,5 @@
     "N": 6,
     "T": 1,
     "K": 1,
-    "Q": 10631,
-    "URLs": ["http://127.0.0.1:50001/experiment/", "http://127.0.0.1:50002/experiment/", "http://127.0.0.1:50003/experiment/", "http://127.0.0.1:50004/experiment/", "http://127.0.0.1:50005/experiment/", "http://127.0.0.1:50006/experiment/"]
+    "Q": 10631
 }

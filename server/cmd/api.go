@@ -180,12 +180,12 @@ func (s *ServerService) CreateValidClient(exp_id, client_id string) error {
 
 }
 
-func (e *ExperimentService) CreateExperiment(request OutputPartyRequest) error {
+func (e *ExperimentService) CreateExperiment(request Experiment) error {
 	//TODO: need to remove and use due in the file
-	complaint_due := time.Now().UTC().Add(time.Duration(4) * time.Minute).Format("2006-01-02 15:04:05")
-	share_broadcast_due := time.Now().UTC().Add(time.Duration(7) * time.Minute).Format("2006-01-02 15:04:05")
+	//complaint_due := time.Now().UTC().Add(time.Duration(4) * time.Minute).Format("2006-01-02 15:04:05")
+	//share_broadcast_due := time.Now().UTC().Add(time.Duration(7) * time.Minute).Format("2006-01-02 15:04:05")
 
-	err := e.db.InsertExperiment(request.Exp_ID, request.ClientShareDue, complaint_due, share_broadcast_due, request.Owner)
+	err := e.db.InsertExperiment(request.Exp_ID, request.ClientShareDue, request.ComplaintDue, request.ShareBroadcastDue, request.Owner)
 
 	if err != nil {
 		return err
@@ -194,6 +194,7 @@ func (e *ExperimentService) CreateExperiment(request OutputPartyRequest) error {
 	return nil
 }
 
+/**
 func (c *ClientService) CreateClientRegistry(request ClientRegistry) error {
 	exp, err := c.db.GetExperiment(request.Exp_ID)
 	if err != nil {
@@ -210,4 +211,4 @@ func (c *ClientService) CreateClientRegistry(request ClientRegistry) error {
 
 	return nil
 
-}
+}**/

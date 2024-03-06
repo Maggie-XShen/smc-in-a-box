@@ -115,3 +115,20 @@ func WriteResult(id string, result int) {
 	}
 
 }
+
+func ReadOutputPartyInput(path string) []Experiment {
+	jsonData, err := os.ReadFile(path)
+	if err != nil {
+		log.Fatalf("%s", err)
+		return nil
+	}
+
+	var items []Experiment
+	err = json.Unmarshal(jsonData, &items)
+	if err != nil {
+		log.Fatalf("%s", err)
+		return nil
+	}
+	return items
+
+}
