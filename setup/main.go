@@ -25,7 +25,7 @@ func main() {
 	n_outputparty := 1
 	op_port := []string{"60000"}
 
-	clientShareDue := "2024-03-14 03:55:00"
+	clientShareDue := "2024-03-14 12:09:00"
 	t1 := 2 // ComplaintDue = ClientShareDue + t1
 	t2 := 5 // MaskedShareDue = ClientShareDue + t2
 	t3 := 8 // ServerShareDue = MaskedShareDue + t3
@@ -51,17 +51,19 @@ func run(n_server, n_outputparty, n_client int) {
 	l1 := n_server + n_outputparty
 	firstGroup := make([][]string, l1)
 	for i := 0; i < n_server; i++ {
-		firstGroup[i] = make([]string, 3)
+		firstGroup[i] = make([]string, 4)
 		firstGroup[i][0] = "../server/cmd/cmd"
 		firstGroup[i][1] = fmt.Sprintf("-confpath=./server_config/config_s%s.json", strconv.Itoa(i+1))
 		firstGroup[i][2] = "-inputpath=./server_input/experiments.json"
+		firstGroup[i][3] = "-mode=http"
 	}
 
 	for i := n_server; i < l1; i++ {
-		firstGroup[i] = make([]string, 3)
+		firstGroup[i] = make([]string, 4)
 		firstGroup[i][0] = "../outputparty/cmd/cmd"
 		firstGroup[i][1] = fmt.Sprintf("-confpath=./op_config/config_op%s.json", strconv.Itoa(i-n_server+1))
 		firstGroup[i][2] = "-inputpath=./op_input/experiments.json"
+		firstGroup[i][3] = "-mode=http"
 	}
 
 	secondGroup := make([][]string, n_client)
@@ -77,21 +79,34 @@ func run(n_server, n_outputparty, n_client int) {
 	// Execute the first group of processes in parallel
 	for _, cmd := range firstGroup {
 		wg.Add(1)
-		go executeCommand(cmd[0], cmd[1], cmd[2], &wg)
+		go executeFirstGroup(cmd[0], cmd[1], cmd[2], cmd[3], &wg)
 	}
 
 	time.Sleep(30 * time.Second)
 
 	for _, cmd := range secondGroup {
 		wg.Add(1)
-		go executeCommand(cmd[0], cmd[1], cmd[2], &wg)
+		go executeSecondGroup(cmd[0], cmd[1], cmd[2], &wg)
 	}
 
 	// Wait for all commands to finish
 	wg.Wait()
 }
 
-func executeCommand(command string, conf_path string, input_path string, wg *sync.WaitGroup) {
+func executeFirstGroup(command, conf_path, input_path, mode string, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	cmd := exec.Command(command, conf_path, input_path, mode)
+
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Start(); err != nil {
+		fmt.Printf("Error executing command %s with %s: %v\n", command, conf_path, err)
+		return
+	}
+}
+
+func executeSecondGroup(command string, conf_path string, input_path string, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	cmd := exec.Command(command, conf_path, input_path)

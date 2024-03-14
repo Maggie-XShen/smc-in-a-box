@@ -221,6 +221,11 @@ func (s *Server) WaitForEndOfExperiment(ticker *time.Ticker) {
 					panic(err)
 				}
 
+				if len(complaints) == 0 {
+					log.Println("error: complaints table is empty")
+					continue
+				}
+
 				var set []Complaint
 				for _, comp := range complaints {
 					set = append(set, Complaint{Client_ID: comp.Client_ID, Complain: comp.Complain, Root: comp.Root})
@@ -306,9 +311,6 @@ func (s *Server) WaitForEndOfComplaintBroadcast(ticker *time.Ticker) {
 					}
 
 					num_isNotComplain, rootCount, maxCount := count(complaints)
-					//fmt.Printf("number of servers not complain:%d\n", num_isNotComplain)
-					//fmt.Printf("number of different merkle tree root:%d\n", rootCount)
-					//fmt.Printf("max number of servers having same merkle tree root:%d\n", maxCount)
 
 					if num_isNotComplain >= s.cfg.N-s.cfg.T && maxCount >= s.cfg.N-s.cfg.T {
 						err = s.store.InsertValidClient(exp.Exp_ID, c.Client_ID)
@@ -358,21 +360,24 @@ func (s *Server) WaitForEndOfComplaintBroadcast(ticker *time.Ticker) {
 
 				}
 
-				var set []MaskedShare
-				for _, mask_sh := range maskedShares {
-					set = append(set, MaskedShare{Client_ID: mask_sh.Client_ID, Input_Index: mask_sh.Input_Index, Index: mask_sh.Index, Value: mask_sh.Value})
-				}
+				if len(maskedShares) > 0 {
+					var set []MaskedShare
+					for _, mask_sh := range maskedShares {
+						set = append(set, MaskedShare{Client_ID: mask_sh.Client_ID, Input_Index: mask_sh.Input_Index, Index: mask_sh.Index, Value: mask_sh.Value})
+					}
 
-				message := MaskedShareRequest{
-					Exp_ID:       exp.Exp_ID,
-					Server_ID:    s.cfg.Server_ID,
-					MaskedShares: set,
-				}
+					message := MaskedShareRequest{
+						Exp_ID:       exp.Exp_ID,
+						Server_ID:    s.cfg.Server_ID,
+						MaskedShares: set,
+					}
 
-				for _, address := range s.cfg.Masked_share_urls {
-					log.Printf("server %s is sending to %s: %+v\n", s.cfg.Server_ID, address, message)
-					writer := &message
-					send(address, writer.ToJson())
+					for _, address := range s.cfg.Masked_share_urls {
+						log.Printf("server %s is sending to %s: %+v\n", s.cfg.Server_ID, address, message)
+						writer := &message
+						send(address, writer.ToJson())
+					}
+
 				}
 
 				//set round2 to completed
@@ -599,12 +604,11 @@ func (s *Server) Start() {
 
 }
 
-/**
-func (s *Server) Start(certFile string, keyFile string) {
+func (s *Server) StartTLS(certFile string, keyFile string) {
 
-	http.HandleFunc("/clientRequestSubmit/", s.clientRequestHandler)
-	http.HandleFunc("/outputPartyRequestSubmit/", s.expInforHandler)
+	http.HandleFunc("/client/", s.clientRequestHandler)
+	//http.HandleFunc("/outputParty", s.expInforHandler)
 
 	log.Fatal(http.ListenAndServeTLS(":"+s.cfg.Port, certFile, keyFile, nil))
 
-}**/
+}

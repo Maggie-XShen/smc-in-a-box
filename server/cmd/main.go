@@ -11,6 +11,7 @@ func main() {
 	//read configuration
 	confpath := flag.String("confpath", "../config/server.json", "config file path")
 	inputpath := flag.String("inputpath", "experiments.json", "experiments file path")
+	mode := flag.String("mode", "tls", "use tls")
 	flag.Parse()
 	conf := config.Load(*confpath)
 
@@ -24,8 +25,10 @@ func main() {
 	go s.WaitForEndOfComplaintBroadcast(ticker)
 	go s.WaitForEndOfShareBroadcast(ticker)
 
-	s.Start()
-
-	//s.Start(conf.Cert_path, conf.Key_path)
+	if *mode == "tls" {
+		s.StartTLS(conf.Cert_path, conf.Key_path)
+	} else {
+		s.Start()
+	}
 
 }

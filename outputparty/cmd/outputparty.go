@@ -163,10 +163,9 @@ func (op *OutputParty) Start() {
 
 }
 
-/**
-func (op *OutputParty) Start(certFile string, keyFile string) {
-	http.HandleFunc("/serverRequestSubmit/", op.serverRequestHandler)
+func (op *OutputParty) StartTLS(certFile string, keyFile string) {
+	http.HandleFunc("/serverShare/", op.serverRequestHandler)
 
 	log.Fatal(http.ListenAndServeTLS(":"+op.cfg.Port, certFile, keyFile, nil))
 
-}**/
+}
