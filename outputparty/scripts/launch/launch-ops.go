@@ -17,7 +17,7 @@ func main() {
 	flag.Parse()
 
 	// Configure output party
-	generator.GenerateOPConfig(*n_op, "../generator/outputparty_template.json", "../generator/config")
+	generator.GenerateOPConfig(*n_op, []string{"60000"}, "../generator/outputparty_template.json", "../generator/config")
 
 	// Start the output party
 	var processes []*exec.Cmd

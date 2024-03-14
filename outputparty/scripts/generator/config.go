@@ -20,7 +20,7 @@ type OutputParty struct {
 	Q              int
 }
 
-func GenerateOPConfig(n_op int, src string, des string) {
+func GenerateOPConfig(n_op int, ports []string, src string, des string) {
 	// Ensure the folder exists
 	err := os.MkdirAll(des, os.ModePerm)
 	if err != nil {
@@ -45,8 +45,9 @@ func GenerateOPConfig(n_op int, src string, des string) {
 		return
 	}
 
-	for i := 1; i <= n_op; i++ {
-		config.OutputParty_ID = "op" + strconv.Itoa(i)
+	for i := 0; i < n_op; i++ {
+		config.OutputParty_ID = "op" + strconv.Itoa(i+1)
+		config.Port = ports[i]
 
 		file, _ := json.MarshalIndent(config, "", " ")
 		fileName := fmt.Sprintf("config_%s.json", config.OutputParty_ID)

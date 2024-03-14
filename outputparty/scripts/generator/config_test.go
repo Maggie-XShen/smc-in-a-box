@@ -7,5 +7,5 @@ import (
 )
 
 func TestGenerateGonfig(t *testing.T) {
-	generator.GenerateOPConfig(1, "outputparty_template.json", "./config")
+	generator.GenerateOPConfig(1, []string{"60000"}, "outputparty_template.json", "./config")
 }

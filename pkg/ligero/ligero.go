@@ -59,7 +59,7 @@ func NewLigeroZK(N_secret, M, N_server, T, Q, N_open int) (*LigeroZK, error) {
 	// Calculate l as the upper ceiling of len(slice) divided by m
 	L := int(math.Ceil(float64(N_secret) / float64(M)))
 
-	N_encode := 2*N_open + 2*L + 1
+	N_encode := 6*N_open + 6*L + 1
 
 	return &LigeroZK{n_secret: N_secret, n_shares: N_shares, m: M, l: L, n_server: N_server, t: T, q: Q, n_encode: N_encode, n_open_col: N_open}, nil
 }
