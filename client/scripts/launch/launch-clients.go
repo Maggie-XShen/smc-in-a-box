@@ -12,20 +12,17 @@ import (
 func main() {
 
 	n_c := flag.Int("n", 1, "number of clients")
+	confpath := flag.String("confpath", "", "config file path")
+	inputpath := flag.String("inputpath", "", "experiments file path")
 	flag.Parse()
-
-	fmt.Printf("%d\n", *n_c)
-
-	// Configure clients
-	//config_generator.GenerateClientConfig(*n_c, "../config_generator/client_template.json", "../../config/examples/")
 
 	// Start the clients
 	var processes []*exec.Cmd
 
 	for i := 1; i <= *n_c; i++ {
-		conf_path := fmt.Sprintf("-confpath=../generator/config/config_c%s.json", strconv.Itoa(i))
-		input_path := fmt.Sprintf("-inputpath=../generator/input/input_c%s.json", strconv.Itoa(i))
-		client := startClient("../../cmd/cmd", conf_path, input_path)
+		arg1 := fmt.Sprintf("-confpath="+*confpath+"config_c%s.json", strconv.Itoa(i))
+		arg2 := fmt.Sprintf("-inputpath"+*inputpath+"input_c%s.json", strconv.Itoa(i))
+		client := startClient("../../cmd/cmd", arg1, arg2)
 		processes = append(processes, client)
 	}
 
