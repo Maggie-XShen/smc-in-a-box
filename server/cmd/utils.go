@@ -40,6 +40,18 @@ type Complaint struct {
 	Root      []byte `json:"Root"`
 }
 
+type DolevComplaintRequest struct {
+	Round_ID   int              `json:"Round_ID"`
+	Server_ID  string           `json:"Server_ID"`
+	Msg        ComplaintRequest `json:"Msg"`
+	Signatures []Signature      `json:"Signatures"`
+}
+
+type Signature struct {
+	Sig       []byte `json:"Sig"`
+	Server_ID string `json:"Server_ID"`
+}
+
 type MaskedShareRequest struct {
 	Exp_ID       string        `json:"Exp_ID"`
 	Server_ID    string        `json:"Server_ID"`
@@ -51,6 +63,13 @@ type MaskedShare struct {
 	Input_Index int    `json:"Input_Index"`
 	Index       int    `json:"Index"`
 	Value       int    `json:"Value"`
+}
+
+type DolevMaskedShareRequest struct {
+	Round_ID   int                `json:"Round_ID"`
+	Server_ID  string             `json:"Server_ID"`
+	Msg        MaskedShareRequest `json:"Msg"`
+	Signatures []Signature        `json:"Signatures"`
 }
 
 type AggregatedShareRequest struct {
@@ -88,6 +107,23 @@ func (cr *ComplaintRequest) ToJson() []byte {
 	return message
 }
 
+func (dcr *DolevComplaintRequest) ToJson() []byte {
+	msg := &DolevComplaintRequest{
+		Round_ID:   dcr.Round_ID,
+		Server_ID:  dcr.Server_ID,
+		Msg:        dcr.Msg,
+		Signatures: dcr.Signatures,
+	}
+
+	message, err := json.Marshal(msg)
+
+	if err != nil {
+		log.Fatalf("Cannot marshall delov complaints request: %s", err)
+	}
+
+	return message
+}
+
 func (r *MaskedShareRequest) ToJson() []byte {
 	msg := &MaskedShareRequest{
 		Exp_ID:       r.Exp_ID,
@@ -99,6 +135,23 @@ func (r *MaskedShareRequest) ToJson() []byte {
 
 	if err != nil {
 		log.Fatalf("Cannot marshall masked share request: %s", err)
+	}
+
+	return message
+}
+
+func (dr *DolevMaskedShareRequest) ToJson() []byte {
+	msg := &DolevMaskedShareRequest{
+		Round_ID:   dr.Round_ID,
+		Server_ID:  dr.Server_ID,
+		Msg:        dr.Msg,
+		Signatures: dr.Signatures,
+	}
+
+	message, err := json.Marshal(msg)
+
+	if err != nil {
+		log.Fatalf("Cannot marshall delov complaints request: %s", err)
 	}
 
 	return message
@@ -142,12 +195,32 @@ func (c *ComplaintRequest) ReadJson(req *http.Request) ComplaintRequest {
 	return t
 }
 
+func (dc *DolevComplaintRequest) ReadJson(req *http.Request) DolevComplaintRequest {
+	decoder := json.NewDecoder(req.Body)
+	var t DolevComplaintRequest
+	err := decoder.Decode(&t)
+	if err != nil {
+		log.Fatalf("Cannot decode server delov complaint: %s", err)
+	}
+	return t
+}
+
 func (m *MaskedShareRequest) ReadJson(req *http.Request) MaskedShareRequest {
 	decoder := json.NewDecoder(req.Body)
 	var t MaskedShareRequest
 	err := decoder.Decode(&t)
 	if err != nil {
 		log.Fatalf("Cannot decode masked shares request: %s", err)
+	}
+	return t
+}
+
+func (dm *DolevMaskedShareRequest) ReadJson(req *http.Request) DolevMaskedShareRequest {
+	decoder := json.NewDecoder(req.Body)
+	var t DolevMaskedShareRequest
+	err := decoder.Decode(&t)
+	if err != nil {
+		log.Fatalf("Cannot decode server delov masked share: %s", err)
 	}
 	return t
 }

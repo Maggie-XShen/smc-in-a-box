@@ -2,10 +2,18 @@ package main
 
 import (
 	"bytes"
+	"crypto"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/sha256"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"time"
 
 	"example.com/SMC/pkg/rss"
@@ -60,24 +68,6 @@ func (s *Server) clientRequestHandler(rw http.ResponseWriter, req *http.Request)
 
 }
 
-/**
-func (s *Server) expInforHandler(rw http.ResponseWriter, req *http.Request) {
-	var exp utils.OutputPartyRequest
-
-	expService := NewExperimentService(s.store)
-
-	err := expService.CreateExperiment(exp.ReadJson(req))
-
-	if err != nil {
-		log.Printf("error: %s\n", err)
-		rw.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintln(rw, err)
-		return
-	}
-
-	rw.WriteHeader(http.StatusOK)
-}**/
-
 func (s *Server) serverComplaintHandler(rw http.ResponseWriter, req *http.Request) {
 	var request ComplaintRequest
 
@@ -110,6 +100,57 @@ func (s *Server) serverMaskedSharesHandler(rw http.ResponseWriter, req *http.Req
 	}
 
 	rw.WriteHeader(http.StatusOK)
+}
+
+func (s *Server) dolevComplaintHandler(rw http.ResponseWriter, req *http.Request) {
+	var request DolevComplaintRequest
+	data := request.ReadJson(req)
+	if data.Round_ID <= s.cfg.T+1 {
+		if data.Round_ID == len(data.Signatures) {
+			complaints := fmt.Sprintf("%+v", data.Msg.Complaints)
+			set, _ := s.store.GetEchoComplaint(data.Msg.Server_ID, data.Msg.Exp_ID, complaints)
+			//check if message already exist
+			str := fmt.Sprintf("%+v", data.Msg)
+			if len(set) == 0 && s.checkSigChain(str, data.Signatures) {
+				s.store.InsertEchoComplaint(data.Msg.Server_ID, data.Msg.Exp_ID, complaints)
+				s.dolevComplaintBroadcast(data.Round_ID+1, data.Msg, data.Signatures)
+			}
+		}
+
+	}
+
+}
+
+func (s *Server) checkSigChain(msg string, sig_chain []Signature) bool {
+	hashed := sha256.Sum256([]byte(fmt.Sprintf("%+v", msg)))
+	for _, sig := range sig_chain {
+		fileName := fmt.Sprintf("cert_+%s.pem", sig.Server_ID)
+		cert_path := filepath.Join("rsa/", fileName)
+		err := rsa.VerifyPKCS1v15(loadPublicKey(cert_path), crypto.SHA256, hashed[:], sig.Sig)
+		if err != nil {
+			fmt.Println("Signature verification failed:", err)
+			return false
+		}
+	}
+	return true
+}
+
+func (s *Server) dolevMaskedSharesHandler(rw http.ResponseWriter, req *http.Request) {
+	var request DolevMaskedShareRequest
+	data := request.ReadJson(req)
+	if data.Round_ID <= s.cfg.T+1 {
+		if data.Round_ID == len(data.Signatures) {
+			mask_shares := fmt.Sprintf("%+v", data.Msg.MaskedShares)
+			set, _ := s.store.GetEchoMaskedShare(data.Msg.Server_ID, data.Msg.Exp_ID, mask_shares)
+			//check if message already exist
+			str := fmt.Sprintf("%+v", data.Msg)
+			if len(set) == 0 && s.checkSigChain(str, data.Signatures) {
+				s.store.InsertEchoMaskedShare(data.Msg.Server_ID, data.Msg.Exp_ID, mask_shares)
+				s.dolevMaskedShareBroadcast(data.Round_ID+1, data.Msg, data.Signatures)
+			}
+		}
+
+	}
 }
 
 func count(complaints []sqlstore.Complaint) (int, int, int) {
@@ -250,6 +291,9 @@ func (s *Server) WaitForEndOfExperiment(ticker *time.Ticker) {
 					panic(err)
 				}
 
+				//TODO: dolev strong broadcast
+				//s.dolevComplaintBroadcast(1, message, []Signature{})
+
 			}
 
 		}
@@ -377,6 +421,9 @@ func (s *Server) WaitForEndOfComplaintBroadcast(ticker *time.Ticker) {
 						writer := &message
 						send(address, writer.ToJson())
 					}
+
+					//TODO:dolev strong broadcast
+					//s.dolevMaskedShareBroadcast(1, message, []Signature{})
 
 				}
 
@@ -593,22 +640,122 @@ func send(address string, data []byte) {
 
 }
 
+func (s *Server) dolevComplaintBroadcast(round int, msg ComplaintRequest, sig_chain []Signature) {
+	// Hash the message using SHA-256
+	hashed := sha256.Sum256([]byte(fmt.Sprintf("%+v", msg)))
+
+	// Sign the hashed message using RSA private key
+	sig, err := rsa.SignPKCS1v15(rand.Reader, s.loadPrivateKey(), crypto.SHA256, hashed[:])
+	if err != nil {
+		panic(err)
+	}
+
+	sig_chain = append(sig_chain, Signature{Sig: sig, Server_ID: s.cfg.Server_ID})
+
+	ds_message := DolevComplaintRequest{
+		Round_ID:   round,
+		Server_ID:  s.cfg.Server_ID,
+		Msg:        msg,
+		Signatures: sig_chain,
+	}
+
+	for _, address := range s.cfg.Dolev_complaint_urls {
+		fmt.Printf("server %s Dolev-Strong broadcast: %+v\n", s.cfg.Server_ID, msg)
+		writer := &ds_message
+		send(address, writer.ToJson())
+	}
+}
+
+func (s *Server) dolevMaskedShareBroadcast(round int, msg MaskedShareRequest, sig_chain []Signature) {
+	// Hash the message using SHA-256
+	hashed := sha256.Sum256([]byte(fmt.Sprintf("%+v", msg)))
+
+	// Sign the hashed message using RSA private key
+	sig, err := rsa.SignPKCS1v15(rand.Reader, s.loadPrivateKey(), crypto.SHA256, hashed[:])
+	if err != nil {
+		panic(err)
+	}
+
+	sig_chain = append(sig_chain, Signature{Sig: sig, Server_ID: s.cfg.Server_ID})
+
+	ds_message := DolevMaskedShareRequest{
+		Round_ID:   round,
+		Server_ID:  s.cfg.Server_ID,
+		Msg:        msg,
+		Signatures: sig_chain,
+	}
+
+	for _, address := range s.cfg.Dolev_masked_share_urls {
+		fmt.Printf("server %s Dolev-Strong broadcast: %+v\n", s.cfg.Server_ID, msg)
+		writer := &ds_message
+		send(address, writer.ToJson())
+	}
+}
+
+func loadPublicKey(Cert_path string) *rsa.PublicKey {
+	// Read the fullchain.pem file
+	certPEMBlock, err := os.ReadFile(Cert_path)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Decode PEM encoded data
+	pemBlock, _ := pem.Decode(certPEMBlock)
+	if pemBlock == nil {
+		log.Fatal("Failed to parse certificate PEM")
+	}
+
+	// Parse the certificate
+	cert, err := x509.ParseCertificate(pemBlock.Bytes)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return cert.PublicKey.(*rsa.PublicKey)
+}
+
+func (s *Server) loadPrivateKey() *rsa.PrivateKey {
+	// Read the privkey.pem file
+	privKeyPEMBlock, err := os.ReadFile(s.cfg.Key_path)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Decode PEM encoded data
+	pemBlock, _ := pem.Decode(privKeyPEMBlock)
+	if pemBlock == nil {
+		log.Fatal("Failed to parse private key PEM")
+	}
+
+	// Parse the private key
+	privateKey, err := x509.ParsePKCS1PrivateKey(pemBlock.Bytes)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return privateKey
+}
+
 func (s *Server) Start() {
 
 	http.HandleFunc("/client/", s.clientRequestHandler)
-	//http.HandleFunc("/experiment/", s.expInforHandler)
 	http.HandleFunc("/complaint/", s.serverComplaintHandler)
 	http.HandleFunc("/maskedShare/", s.serverMaskedSharesHandler)
+	http.HandleFunc("/dolevComplaint/", s.dolevComplaintHandler)
+	http.HandleFunc("/dolevMaskedShare/", s.dolevMaskedSharesHandler)
 
 	log.Fatal(http.ListenAndServe(":"+s.cfg.Port, nil))
 
 }
 
-func (s *Server) StartTLS(certFile string, keyFile string) {
+func (s *Server) StartTLS() {
 
 	http.HandleFunc("/client/", s.clientRequestHandler)
-	//http.HandleFunc("/outputParty", s.expInforHandler)
+	http.HandleFunc("/complaint/", s.serverComplaintHandler)
+	http.HandleFunc("/maskedShare/", s.serverMaskedSharesHandler)
+	http.HandleFunc("/dolevComplaint/", s.dolevComplaintHandler)
+	http.HandleFunc("/dolevMaskedShare/", s.dolevMaskedSharesHandler)
 
-	log.Fatal(http.ListenAndServeTLS(":"+s.cfg.Port, certFile, keyFile, nil))
+	log.Fatal(http.ListenAndServeTLS(":"+s.cfg.Port, s.cfg.Cert_path, s.cfg.Key_path, nil))
 
 }

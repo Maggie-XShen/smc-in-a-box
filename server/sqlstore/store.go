@@ -228,6 +228,29 @@ func (db *DB) GetComplaintsPerClient(exp_id, client_id string) ([]Complaint, err
 	return comp, nil
 }
 
+func (db *DB) InsertEchoComplaint(exp_id, server_id, complaints string) error {
+	echo := EchoComplaint{
+		Exp_ID:     exp_id,
+		Server_ID:  server_id,
+		Complaints: complaints,
+	}
+	result := db.db.Clauses(clause.Insert{Modifier: "OR IGNORE"}).Create(&echo)
+	if result.Error != nil {
+		return result.Error
+	}
+	return nil
+}
+
+// get echo complaint record
+func (db *DB) GetEchoComplaint(exp_id, server_id, complaints string) ([]EchoComplaint, error) {
+	var echo []EchoComplaint
+	r := db.db.Find(&echo, "exp_id = ? and server_id = ? and complaints = ?", exp_id, server_id, complaints)
+	if r.Error != nil {
+		return nil, r.Error
+	}
+	return echo, nil
+}
+
 func (db *DB) InsertValidClient(exp_id, client_id string) error {
 	vc := ValidClient{
 		Exp_ID:    exp_id,
@@ -324,6 +347,29 @@ func (db *DB) GetMaskedSharesPerExperiment(exp_id string) ([]MaskedShare, error)
 		return nil, r.Error
 	}
 	return masked_shares, nil
+}
+
+func (db *DB) InsertEchoMaskedShare(exp_id, server_id, mask_shares string) error {
+	echo := EchoMaskedShare{
+		Exp_ID:       exp_id,
+		Server_ID:    server_id,
+		MaskedShares: mask_shares,
+	}
+	result := db.db.Clauses(clause.Insert{Modifier: "OR IGNORE"}).Create(&echo)
+	if result.Error != nil {
+		return result.Error
+	}
+	return nil
+}
+
+// get echo masked share record
+func (db *DB) GetEchoMaskedShare(exp_id, server_id, mask_shares string) ([]EchoMaskedShare, error) {
+	var echo []EchoMaskedShare
+	r := db.db.Find(&echo, "exp_id = ? and server_id = ? and maskedshares = ?", exp_id, server_id, mask_shares)
+	if r.Error != nil {
+		return nil, r.Error
+	}
+	return echo, nil
 }
 
 // create experiment record in the experiment tables

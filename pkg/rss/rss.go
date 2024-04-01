@@ -128,7 +128,7 @@ func findMajority(list []int) (int, error) {
 
 	// if maxCount is greater than n/2
 	// return the corresponding element
-	if maxCount > n/2 {
+	if maxCount > n/2 { //TODO: replace n with n choose t, minus t
 		return list[index], nil
 	}
 

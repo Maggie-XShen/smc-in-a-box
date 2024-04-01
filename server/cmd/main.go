@@ -26,7 +26,7 @@ func main() {
 	go s.WaitForEndOfShareBroadcast(ticker)
 
 	if *mode == "tls" {
-		s.StartTLS(conf.Cert_path, conf.Key_path)
+		s.StartTLS()
 	} else {
 		s.Start()
 	}

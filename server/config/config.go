@@ -7,19 +7,21 @@ import (
 )
 
 type Server struct {
-	Server_ID         string
-	Token             string
-	Cert_path         string
-	Key_path          string
-	Port              string
-	Complaint_urls    []string
-	Masked_share_urls []string
-	N                 int
-	T                 int
-	Q                 int
-	N_secrets         int
-	M                 int
-	N_open            int
+	Server_ID               string
+	Token                   string
+	Cert_path               string
+	Key_path                string
+	Port                    string
+	Complaint_urls          []string
+	Masked_share_urls       []string
+	Dolev_complaint_urls    []string
+	Dolev_masked_share_urls []string
+	N                       int
+	T                       int
+	Q                       int
+	N_secrets               int
+	M                       int
+	N_open                  int
 }
 
 func NewConfig() *Server {

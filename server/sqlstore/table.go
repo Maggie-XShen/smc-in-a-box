@@ -60,6 +60,18 @@ type Experiment struct {
 	Round3_Completed  bool //round3:masked shares broadcast
 }
 
+type EchoComplaint struct {
+	Exp_ID     string `gorm:"primaryKey"`
+	Server_ID  string `gorm:"primaryKey"`
+	Complaints string `gorm:"primaryKey"`
+}
+
+type EchoMaskedShare struct {
+	Exp_ID       string `gorm:"primaryKey"`
+	Server_ID    string `gorm:"primaryKey"`
+	MaskedShares string `gorm:"primaryKey"`
+}
+
 /**
 
 type ServerComputation struct {
