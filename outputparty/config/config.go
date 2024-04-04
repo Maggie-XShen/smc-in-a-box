@@ -15,7 +15,6 @@ type OutputParty struct {
 	T              int
 	K              int
 	Q              int
-	URLs           []string //servers urls
 }
 
 func Load(path string) *OutputParty {

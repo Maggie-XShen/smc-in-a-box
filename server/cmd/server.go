@@ -19,6 +19,7 @@ import (
 	"example.com/SMC/pkg/rss"
 	"example.com/SMC/server/config"
 	"example.com/SMC/server/sqlstore"
+	"github.com/sirupsen/logrus"
 )
 
 type Server struct {
@@ -41,7 +42,14 @@ func (s *Server) HandleExp(path string) {
 	expService := NewExperimentService(s.store)
 
 	for _, exp := range experiments {
-		//exp.ClientShareDue = time.Now().UTC().Add(time.Duration(1) * time.Minute).Format("2006-01-02 15:04:05")
+		logger.WithFields(logrus.Fields{
+			"Exp_ID":            exp.Exp_ID,
+			"ClientShareDue":    exp.ClientShareDue,
+			"ComplaintDue":      exp.ComplaintDue,
+			"ShareBroadcastDue": exp.ShareBroadcastDue,
+			"Owner":             exp.Owner,
+		}).Info("Experiment Information")
+
 		err := expService.CreateExperiment(exp)
 		if err != nil {
 			log.Println("error:", err)
@@ -54,8 +62,19 @@ func (s *Server) clientRequestHandler(rw http.ResponseWriter, req *http.Request)
 	var request ClientRequest
 
 	clientService := NewClientService(s.store)
+	data := request.ReadJson(req)
 
-	err := clientService.CreateClientShare(request.ReadJson(req), s.cfg)
+	err := clientService.CreateClientShare(data, s.cfg)
+
+	records, _ := s.store.GetClientsPerExperiment(data.Exp_ID)
+
+	if len(records) == client_size {
+		real_client_share_due := time.Now().UTC() // time to start the step of assemble complaints and broadcast without waiting
+		logger.WithFields(logrus.Fields{
+			"exp_id":                data.Exp_ID,
+			"real client share due": real_client_share_due.String(),
+		}).Info("Real client share due")
+	}
 
 	if err != nil {
 		log.Printf("error: %s\n", err)
@@ -72,8 +91,19 @@ func (s *Server) serverComplaintHandler(rw http.ResponseWriter, req *http.Reques
 	var request ComplaintRequest
 
 	serverService := NewServerService(s.store)
+	data := request.ReadJson(req)
 
-	err := serverService.CreateComplaint(request.ReadJson(req))
+	err := serverService.CreateComplaint(data)
+
+	records, _ := s.store.GetComplaintsPerExperiment(data.Exp_ID)
+
+	if len(records) == complaint_size {
+		real_complaint_due := time.Now().UTC() //time to start the step of masked share generation without waiting
+		logger.WithFields(logrus.Fields{
+			"exp_id":             data.Exp_ID,
+			"real complaint due": real_complaint_due.String(),
+		}).Info("Real complaint due")
+	}
 
 	if err != nil {
 		log.Printf("error: %s\n", err)
@@ -89,8 +119,19 @@ func (s *Server) serverMaskedSharesHandler(rw http.ResponseWriter, req *http.Req
 	var request MaskedShareRequest
 
 	serverService := NewServerService(s.store)
+	data := request.ReadJson(req)
 
-	err := serverService.CreateMaskedShares(request.ReadJson(req))
+	err := serverService.CreateMaskedShares(data)
+
+	records, _ := s.store.GetMaskedSharesPerExperiment(data.Exp_ID)
+
+	if len(records) == mask_share_size {
+		real_mask_share_due := time.Now().UTC() //time to start the step of share correction without waiting
+		logger.WithFields(logrus.Fields{
+			"exp_id":              data.Exp_ID,
+			"real mask share due": real_mask_share_due.String(),
+		}).Info("Real mask share due")
+	}
 
 	if err != nil {
 		log.Printf("error: %s\n", err)
@@ -128,7 +169,7 @@ func (s *Server) checkSigChain(msg string, sig_chain []Signature) bool {
 		cert_path := filepath.Join("rsa/", fileName)
 		err := rsa.VerifyPKCS1v15(loadPublicKey(cert_path), crypto.SHA256, hashed[:], sig.Sig)
 		if err != nil {
-			fmt.Println("Signature verification failed:", err)
+			log.Println("Signature verification failed:", err)
 			return false
 		}
 	}
@@ -251,8 +292,6 @@ func (s *Server) WaitForEndOfExperiment(ticker *time.Ticker) {
 
 			due, _ := time.Parse("2006-01-02 15:04:05", exp.ClientShareDue)
 			currentTime := time.Now().UTC()
-			//due := time.Now().UTC()
-			//currentTime := due.Add(1 * time.Minute)
 
 			if currentTime.After(due) {
 				complaints, err := s.store.GetComplaintsPerServer(exp.Exp_ID, s.cfg.Server_ID)
@@ -279,7 +318,7 @@ func (s *Server) WaitForEndOfExperiment(ticker *time.Ticker) {
 				}
 
 				for _, address := range s.cfg.Complaint_urls {
-					fmt.Printf("server %s sends complaints: %+v\n", s.cfg.Server_ID, message)
+					log.Printf("server %s sends complaints: %+v\n", s.cfg.Server_ID, message)
 					writer := &message
 					send(address, writer.ToJson())
 				}
@@ -317,6 +356,8 @@ func (s *Server) WaitForEndOfComplaintBroadcast(ticker *time.Ticker) {
 			currentTime := time.Now().UTC()
 
 			if currentTime.After(due) {
+				mask_share_start := time.Now() //masked share generation start time
+
 				//find dropout clients for the server
 				dropout, err := s.store.GetDropoutClient(exp.Exp_ID)
 				if err != nil {
@@ -397,6 +438,12 @@ func (s *Server) WaitForEndOfComplaintBroadcast(ticker *time.Ticker) {
 
 				}
 
+				mask_share_end := time.Since(mask_share_start) //masked share generation computing time
+				logger.WithFields(logrus.Fields{
+					"exp_id":                     exp.Exp_ID,
+					"mask share generation time": mask_share_end,
+				}).Info("Server generates masked shares for complainted clients")
+
 				maskedShares, err := s.store.GetMaskedSharesPerServer(exp.Exp_ID, s.cfg.Server_ID)
 				if err != nil {
 					//log.Fatal("cannot retreive masked shares record - error:", err)
@@ -417,7 +464,7 @@ func (s *Server) WaitForEndOfComplaintBroadcast(ticker *time.Ticker) {
 					}
 
 					for _, address := range s.cfg.Masked_share_urls {
-						log.Printf("server %s is sending to %s: %+v\n", s.cfg.Server_ID, address, message)
+						log.Printf("server %s is sending masked shares to %s: %+v\n", s.cfg.Server_ID, address, message)
 						writer := &message
 						send(address, writer.ToJson())
 					}
@@ -456,6 +503,8 @@ func (s *Server) WaitForEndOfShareBroadcast(ticker *time.Ticker) {
 			currentTime := time.Now().UTC()
 
 			if currentTime.After(due) {
+
+				share_correct_start := time.Now() //share correction start time
 
 				valid_clients, err := s.store.GetValidClientsPerExperiment(exp.Exp_ID)
 				if err != nil {
@@ -555,6 +604,12 @@ func (s *Server) WaitForEndOfShareBroadcast(ticker *time.Ticker) {
 
 				}
 
+				share_correct_end := time.Since(share_correct_start) //share correction computing time
+				logger.WithFields(logrus.Fields{
+					"exp_id":                exp.Exp_ID,
+					"share correction time": share_correct_end,
+				}).Info("Server corrects bad shares")
+
 				clientShares, err := s.store.GetValidClientShares(exp.Exp_ID)
 				if err != nil {
 					//log.Fatal("cannot retreive valid client shares record - error:", err)
@@ -573,8 +628,8 @@ func (s *Server) WaitForEndOfShareBroadcast(ticker *time.Ticker) {
 					aggreShares = []rss.Share{{Index: 0, Value: 27597}, {Index: 2, Value: 28090}, {Index: 3, Value: 35626}, {Index: 4, Value: 36324}, {Index: 5, Value: 38150}}
 				}**/
 
-				msg := AggregatedShareRequest{Exp_ID: exp.Exp_ID, Server_ID: s.cfg.Server_ID, Shares: aggreShares, Timestamp: time.Now().Format("2006-01-02 15:04:05")}
-				fmt.Printf("server %s sends: %+v\n", s.cfg.Server_ID, msg)
+				msg := AggregatedShareRequest{Exp_ID: exp.Exp_ID, Server_ID: s.cfg.Server_ID, Shares: aggreShares, Timestamp: time.Now().UTC().Format("2006-01-02 15:04:05")}
+				log.Printf("server %s sends aggregated shares: %+v\n", s.cfg.Server_ID, msg)
 				writer := &msg
 				send(exp.Owner, writer.ToJson())
 

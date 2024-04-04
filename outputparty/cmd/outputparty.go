@@ -9,6 +9,7 @@ import (
 	"example.com/SMC/outputparty/config"
 	"example.com/SMC/outputparty/sqlstore"
 	"example.com/SMC/pkg/rss"
+	"github.com/sirupsen/logrus"
 )
 
 type OutputParty struct {
@@ -25,6 +26,12 @@ func (op *OutputParty) HandelExp(path string) {
 
 	expService := NewExperimentService(op.store)
 	for _, exp := range experiments {
+		logger.WithFields(logrus.Fields{
+			"Exp_ID":         exp.Exp_ID,
+			"ClientShareDue": exp.ClientShareDue,
+			"ServerShareDue": exp.ServerShareDue,
+		}).Info("Experiment Information")
+
 		err := expService.CreateExperiment(exp)
 		if err != nil {
 			panic(err)
@@ -72,8 +79,6 @@ func (op *OutputParty) reveal(parties []rss.Party) (int, error) {
 }
 
 func (op *OutputParty) WaitForEndOfExperiment(ticker *time.Ticker) {
-	//TODO: need to remove
-	//time.Sleep(2 * time.Minute)
 	for range ticker.C {
 		experiments, err := op.store.GetAllExperiments()
 		if err != nil {
@@ -87,7 +92,6 @@ func (op *OutputParty) WaitForEndOfExperiment(ticker *time.Ticker) {
 			currentTime := time.Now().UTC()
 
 			if currentTime.After(due) {
-
 				records, err := op.store.GetSharesPerExperiment(exp.Exp_ID)
 				if err != nil {
 					//log.Println("cannot retrieve servers records - error:", err)
@@ -95,7 +99,7 @@ func (op *OutputParty) WaitForEndOfExperiment(ticker *time.Ticker) {
 					panic(err)
 				}
 
-				if len(records) > 0 {
+				if len(records) >= n_sh {
 					serverShare := make(map[string][]rss.Share)
 					for _, r := range records {
 						v1, check1 := serverShare[r.Server_ID]
@@ -112,21 +116,33 @@ func (op *OutputParty) WaitForEndOfExperiment(ticker *time.Ticker) {
 						parties = append(parties, rss.Party{Index: 0, Shares: server})
 					}
 
+					reconstruct_start := time.Now() //reconstruction start time
 					result, err := op.reveal(parties)
 					if err != nil {
 						panic(err)
 					}
+					reconstruct_end := time.Since(reconstruct_start) //reconstruction end time
+
+					computation_start, _ := time.Parse("2006-01-02 15:04:05", exp.ServerShareDue)
+					computation_end := time.Since(computation_start)
+
+					logger.WithFields(logrus.Fields{
+						"exp_id":                        exp.Exp_ID,
+						"reconstruction computing time": reconstruct_end,
+						"experiment computing time":     computation_end, //time from output party started to reconstruction of the experiment is done
+						"result":                        result,
+					}).Info("Output party finished")
 
 					fmt.Printf("sum of secrets for %s : %v\n", exp.Exp_ID, result)
 
 					WriteResult(exp.Exp_ID, result)
+
 				} else {
 					log.Println("cannot compute the result since servers' shares are missing")
 				}
 
-				//set experiments to completed
-				err1 := op.store.UpdateCompletedExperiment(exp.Exp_ID)
-				if err1 != nil {
+				err = op.store.UpdateCompletedExperiment(exp.Exp_ID) //set experiments to completed
+				if err != nil {
 					//log.Println("cannot set experiment to completed - error:", err1)
 					panic(err)
 				}
@@ -143,13 +159,24 @@ func (op *OutputParty) serverRequestHandler(rw http.ResponseWriter, req *http.Re
 	var request AggregatedShareRequest
 
 	serverService := NewServerService(op.store)
-	err := serverService.CreateServerShare(request.ReadJson(req))
+	data := request.ReadJson(req)
+	err := serverService.CreateServerShare(data)
 
 	if err != nil {
 		log.Printf("error: %s\n", err)
 		rw.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintln(rw, err)
 		return
+	}
+
+	records, _ := op.store.GetSharesPerExperiment(data.Exp_ID)
+
+	if len(records) == n_sh {
+		real_server_share_due := time.Now().UTC() //ideal server share due is when all server shares arrived at output party
+		logger.WithFields(logrus.Fields{
+			"exp_id":                data.Exp_ID,
+			"real server share due": real_server_share_due.String(),
+		}).Info("Time when all servers' shares arrived")
 	}
 
 	rw.WriteHeader(http.StatusOK)

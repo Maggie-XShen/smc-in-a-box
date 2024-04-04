@@ -333,3 +333,10 @@ func (zk *LigeroZK) check_linear_with_opened_column(test_value []int, randomness
 
 	return true
 }
+
+func (zk *LigeroZK) GetProofSize(proof Proof) int64 {
+	col_test_size := len(proof.ColumnTest) * (5 + len(proof.ColumnTest[0].List)*8 + len(proof.ColumnTest[0].Authpath)*len(proof.ColumnTest[0].Authpath[0]))
+	shares_size := len(proof.PartyShares) * (8 + len(proof.PartyShares[0].Shares)*16)
+	size := (len(proof.CodeTest)+len(proof.QuadraTest)+len(proof.LinearTest)+len(proof.Seeds))*8 + len(proof.MerkleRoot) + len(proof.FST_root) + len(proof.FST_authpath)*len(proof.FST_authpath[0]) + col_test_size + shares_size
+	return int64(size)
+}

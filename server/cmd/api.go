@@ -8,6 +8,7 @@ import (
 	"example.com/SMC/pkg/ligero"
 	"example.com/SMC/server/config"
 	"example.com/SMC/server/sqlstore"
+	"github.com/sirupsen/logrus"
 )
 
 type ClientService struct {
@@ -45,8 +46,6 @@ func (c *ClientService) CreateClientShare(request ClientRequest, cfg *config.Ser
 		return errors.New("experiment does not exist when server creates client share")
 	}
 
-	//timestamp, _ := time.Parse("2006-01-02 15:04:05", request.Timestamp)
-	//due, _ := time.Parse("2006-01-02 15:04:05", exp.ClientShareDue)
 	timestamp := time.Now().UTC()
 	due := timestamp.Add(1 * time.Minute)
 
@@ -75,7 +74,14 @@ func (c *ClientService) CreateClientShare(request ClientRequest, cfg *config.Ser
 		log.Fatal(err)
 	}
 
+	proof_verify_start := time.Now() //proof verification start time
 	verify, err := zk.VerifyProof(request.Proof)
+	proof_verify_end := time.Since(proof_verify_start) //proof verification computing time
+	logger.WithFields(logrus.Fields{
+		"exp_id":                  request.Exp_ID,
+		"client_id":               request.Client_ID,
+		"proof verification time": proof_verify_end.String(),
+	}).Info("Server verifies a client's proof")
 
 	//creat complaint record based on proof verification result
 	if !verify {

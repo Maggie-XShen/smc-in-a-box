@@ -169,6 +169,16 @@ func (db *DB) InsertComplaint(exp_id, server_id, client_id string, isComplain bo
 }
 
 // get a complaint record
+func (db *DB) GetComplaintsPerExperiment(exp_id string) ([]Complaint, error) {
+	var comp []Complaint
+	r := db.db.Find(&comp, "exp_id = ?", exp_id)
+	if r.Error != nil {
+		return nil, r.Error
+	}
+	return comp, nil
+}
+
+// get a complaint record
 func (db *DB) GetComplaint(exp_id, server_id, client_id string) (*Complaint, error) {
 	var comp Complaint
 	r := db.db.Find(&comp, "exp_id = ? and server_id = ? and client_id", exp_id, server_id, client_id)

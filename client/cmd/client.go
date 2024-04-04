@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/big"
 	"net/http"
 	"time"
 
 	"example.com/SMC/client/config"
 	"example.com/SMC/pkg/ligero"
+	"github.com/sirupsen/logrus"
 )
 
 type Client struct {
@@ -24,11 +26,12 @@ func (c *Client) Run(inputpath string) {
 	inputs := ReadClientInput(inputpath)
 	urls := c.cfg.URLs
 
+	zk, err := ligero.NewLigeroZK(c.cfg.N_secrets, c.cfg.M, c.cfg.N, c.cfg.T, c.cfg.Q, c.cfg.N_open)
+	if err != nil {
+		log.Fatalf("err: %v", err)
+	}
+
 	for _, input := range inputs {
-		zk, err := ligero.NewLigeroZK(c.cfg.N_secrets, c.cfg.M, c.cfg.N, c.cfg.T, c.cfg.Q, c.cfg.N_open)
-		if err != nil {
-			log.Fatalf("err: %v", err)
-		}
 
 		/**
 		//test c1's input is malformed
@@ -36,13 +39,25 @@ func (c *Client) Run(inputpath string) {
 			input.Secrets = []int{100}
 		}**/
 
+		proof_start := time.Now() //Proof generation start time
+
 		proof, err := zk.GenerateProof(input.Secrets)
+
+		proof_end := time.Since(proof_start) //Proof generation end time
 
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		current_time := time.Now().Format("2006-01-02 15:04:05")
+		theorySingleProofBytes := big.NewInt(zk.GetProofSize(*proof[0])) //Theoretical proof size
+
+		logger.WithFields(logrus.Fields{
+			"input":                    input,
+			"proof generation time":    proof_end,
+			"single proof size (byte)": theorySingleProofBytes,
+		}).Info("Client generates ZK proof")
+
+		current_time := time.Now().UTC().Format("2006-01-02 15:04:05")
 		for i := 0; i < len(urls); i++ {
 
 			/**

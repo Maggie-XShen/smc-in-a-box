@@ -17,6 +17,7 @@ require (
 )
 
 require (
+	github.com/sirupsen/logrus v1.9.3
 	gonum.org/v1/gonum v0.14.0
 	gorm.io/datatypes v1.2.0
 	gorm.io/driver/sqlite v1.5.1

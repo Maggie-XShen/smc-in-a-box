@@ -27,7 +27,6 @@ func NewReplicatedSecretSharing(N, T, Q int) (*ReplicatedSecretSharing, error) {
 		return nil, fmt.Errorf("n cannot be less than t")
 	}
 
-	//q has to be a prime number
 	if !big.NewInt(int64(Q)).ProbablyPrime(0) {
 		return nil, fmt.Errorf("q must be a prime number")
 	}
@@ -37,11 +36,10 @@ func NewReplicatedSecretSharing(N, T, Q int) (*ReplicatedSecretSharing, error) {
 }
 
 func (rss *ReplicatedSecretSharing) Split(secret int) ([]Share, []Party, error) {
-	//compute total number of shares a secret splits to
-	n_sh := combin.Binomial(rss.n, rss.t)
 
-	//compute total number of shares stored by each party
-	p_sh := combin.Binomial(rss.n-1, rss.t)
+	n_sh := combin.Binomial(rss.n, rss.t) //compute total number of shares a secret splits to
+
+	p_sh := combin.Binomial(rss.n-1, rss.t) //compute total number of shares stored by each party
 
 	//generate all shares
 	shares := make([]Share, n_sh)
