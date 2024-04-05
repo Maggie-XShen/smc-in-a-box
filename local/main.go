@@ -17,7 +17,7 @@ func main() {
 
 	n_client := 6
 	n_exp := 1
-	n_input := []int{1} // For the first experiment, client's input has one value
+	n_input := []int{2} // For the first experiment, client's input has one value
 
 	n_server := 6
 	server_port := []string{"50001", "50002", "50003", "50004", "50005", "50006"} //port for each server
@@ -25,10 +25,10 @@ func main() {
 	n_outputparty := 1
 	op_port := []string{"60000"}
 
-	clientShareDue := "2024-04-04 20:33:00"
+	clientShareDue := "2024-04-05 17:46:00"
 	t1 := 2 // ComplaintDue = ClientShareDue + t1
 	t2 := 5 // MaskedShareDue = ClientShareDue + t2
-	t3 := 8 // ServerShareDue = MaskedShareDue + t3
+	t3 := 8 // ServerShareDue = ClientShareDue + t3
 
 	client_gen.GenerateClientConfig(n_client, "client_template.json", "./client_config")
 

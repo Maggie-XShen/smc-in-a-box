@@ -93,35 +93,55 @@ func (op *OutputParty) WaitForEndOfExperiment(ticker *time.Ticker) {
 			currentTime := time.Now().UTC()
 
 			if currentTime.After(due) {
-				records, err := op.store.GetSharesPerExperiment(exp.Exp_ID)
+				list, err := op.store.GetSharesPerExperiment(exp.Exp_ID)
 				if err != nil {
 					//log.Println("cannot retrieve servers records - error:", err)
 					//continue
 					panic(err)
 				}
 
-				if len(records) >= n_sh {
-					serverShare := make(map[string][]rss.Share)
-					for _, r := range records {
-						v1, check1 := serverShare[r.Server_ID]
+				if len(list) >= n_sh {
+					inputShares := make(map[int]map[string][]rss.Share)
+					for _, record := range list {
+						v1, check1 := inputShares[record.Input_Index]
 						if check1 {
-							serverShare[r.Server_ID] = append(v1, rss.Share{Index: r.Index, Value: r.Value})
+							v2, check2 := v1[record.Server_ID]
+							if check2 {
+								inputShares[record.Input_Index][record.Server_ID] = append(v2, rss.Share{Index: record.Index, Value: record.Value})
+							} else {
+								inputShares[record.Input_Index][record.Server_ID] = []rss.Share{{Index: record.Index, Value: record.Value}}
+							}
 						} else {
-							serverShare[r.Server_ID] = []rss.Share{{Index: r.Index, Value: r.Value}}
+							inputShares[record.Input_Index] = make(map[string][]rss.Share)
+							inputShares[record.Input_Index][record.Server_ID] = []rss.Share{{Index: record.Index, Value: record.Value}}
 						}
 					}
 
 					// reconstruct sum of secrets
-					var parties []rss.Party
-					for _, server := range serverShare {
-						parties = append(parties, rss.Party{Index: 0, Shares: server})
-					}
-
 					reconstruct_start := time.Now() //reconstruction start time
-					result, err := op.reveal(parties)
+					nrss, err := rss.NewReplicatedSecretSharing(op.cfg.N, op.cfg.T, op.cfg.Q)
 					if err != nil {
 						panic(err)
 					}
+
+					result := make([]int, op.cfg.K)
+					for input_index, list := range inputShares {
+						size := len(list)
+						servers := make([]rss.Party, size)
+						i := 0
+						for _, shares := range list {
+							servers[i] = rss.Party{Index: 0, Shares: shares}
+							i++
+						}
+						sum, err := nrss.Reconstruct(servers)
+						if err != nil {
+							panic(err)
+						}
+
+						result[input_index] = sum
+
+					}
+
 					reconstruct_end := time.Since(reconstruct_start) //reconstruction end time
 
 					computation_start, _ := time.Parse("2006-01-02 15:04:05", exp.ServerShareDue)

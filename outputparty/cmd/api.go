@@ -33,11 +33,14 @@ func (ss *ServerService) CreateServerShare(request AggregatedShareRequest) error
 	}
 
 	//insert share to server share table
-	for _, sh := range request.Shares {
-		err = ss.store.InsertServerShare(request.Exp_ID, request.Server_ID, sh.Index, sh.Value)
-		if err != nil {
-			return err
+	for input_index, party := range request.Shares {
+		for _, share := range party.Shares {
+			err = ss.store.InsertServerShare(request.Exp_ID, request.Server_ID, input_index, share.Index, share.Value)
+			if err != nil {
+				return err
+			}
 		}
+
 	}
 
 	return nil

@@ -75,7 +75,7 @@ type DolevMaskedShareRequest struct {
 type AggregatedShareRequest struct {
 	Exp_ID    string      `json:"Exp_ID "`
 	Server_ID string      `json:"Server_ID"`
-	Shares    []rss.Share `json:"Shares"`
+	Shares    []rss.Party `json:"Shares"`
 	Timestamp string      `json:"Timestamp"`
 }
 

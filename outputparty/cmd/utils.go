@@ -12,7 +12,7 @@ import (
 type AggregatedShareRequest struct {
 	Exp_ID    string      `json:"Exp_ID "`
 	Server_ID string      `json:"Server_ID"`
-	Shares    []rss.Share `json:"Shares"`
+	Shares    []rss.Party `json:"Shares"`
 	Timestamp string      `json:"Timestamp"`
 }
 
@@ -30,7 +30,7 @@ type Experiment struct {
 
 type ExpResult struct {
 	Exp_ID string `json:"Exp_ID"`
-	Result int    `json:"Result"`
+	Result []int  `json:"Result"`
 }
 
 func (op *OutputPartyRequest) ToJson() []byte {
@@ -94,7 +94,7 @@ func appendDataToFile(filename string, data []ExpResult) error {
 }
 
 // write reconstructed result to the file
-func WriteResult(id string, result int) {
+func WriteResult(id string, result []int) {
 	expResult := ExpResult{
 		Exp_ID: id,
 		Result: result,

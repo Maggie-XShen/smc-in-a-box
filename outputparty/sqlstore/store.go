@@ -43,12 +43,13 @@ func SetupDatabase(sid string) (*gorm.DB, error) {
 }
 
 // create server sumShare record in the server table
-func (db *DB) InsertServerShare(exp_id, server_id string, index, value int) error {
+func (db *DB) InsertServerShare(exp_id, server_id string, input_index, index, value int) error {
 	s := ServerShare{
-		Exp_ID:    exp_id,
-		Server_ID: server_id,
-		Index:     index,
-		Value:     value,
+		Exp_ID:      exp_id,
+		Server_ID:   server_id,
+		Input_Index: input_index,
+		Index:       index,
+		Value:       value,
 	}
 	result := db.db.Clauses(clause.Insert{Modifier: "OR IGNORE"}).Create(&s)
 	if result.Error != nil {

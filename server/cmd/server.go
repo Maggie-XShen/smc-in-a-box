@@ -616,7 +616,7 @@ func (s *Server) WaitForEndOfShareBroadcast(ticker *time.Ticker) {
 				}
 
 				//compute aggregated share
-				aggreShares, err := aggregateShares(clientShares)
+				aggreShares, err := s.aggregateShares(clientShares)
 				if err != nil {
 					panic(err)
 				}
@@ -647,6 +647,7 @@ func (s *Server) WaitForEndOfShareBroadcast(ticker *time.Ticker) {
 
 }
 
+/**
 func aggregateShares(clientShares []sqlstore.ClientShare) ([]rss.Share, error) {
 	if len(clientShares) == 0 {
 		return nil, fmt.Errorf("client shares are empty: no valid client exists")
@@ -665,6 +666,39 @@ func aggregateShares(clientShares []sqlstore.ClientShare) ([]rss.Share, error) {
 
 	for key, val := range aggreShare {
 		result = append(result, rss.Share{Index: key, Value: val})
+	}
+
+	return result, nil
+}**/
+
+func (s *Server) aggregateShares(clientShares []sqlstore.ClientShare) ([]rss.Party, error) {
+	if len(clientShares) == 0 {
+		return nil, fmt.Errorf("client shares are empty: no valid client exists")
+	}
+
+	aggreShare := make(map[int]map[int]int) //(intput_index,(share_index, aggregateed_sh))
+	for _, record := range clientShares {
+		v1, check1 := aggreShare[record.Input_Index]
+		if check1 {
+			v2, check2 := v1[record.Index]
+			if check2 {
+				aggreShare[record.Input_Index][record.Index] = v2 + record.Value
+			} else {
+				aggreShare[record.Input_Index][record.Index] = record.Value
+			}
+		} else {
+			aggreShare[record.Input_Index] = make(map[int]int)
+			aggreShare[record.Input_Index][record.Index] = record.Value
+		}
+	}
+
+	result := make([]rss.Party, s.cfg.N_secrets)
+	for i := 0; i < len(aggreShare); i++ {
+		var shares []rss.Share
+		for index, value := range aggreShare[i] {
+			shares = append(shares, rss.Share{Index: index, Value: value})
+		}
+		result[i] = rss.Party{Index: 0, Shares: shares}
 	}
 
 	return result, nil

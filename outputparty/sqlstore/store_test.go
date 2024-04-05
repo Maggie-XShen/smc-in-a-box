@@ -8,7 +8,7 @@ func TestInsertClient(t *testing.T) {
 	db := NewDB("test")
 
 	//create a new server for experiment 1
-	err := db.InsertServerShare("exp1", "s1", 1, 100)
+	err := db.InsertServerShare("exp1", "s1", 0, 1, 100)
 	if err != nil {
 		t.Fatal(err)
 	} else {
@@ -24,7 +24,7 @@ func TestInsertClient(t *testing.T) {
 	}
 
 	// create same server for experiment 1
-	err = db.InsertServerShare("exp1", "s1", 1, 100)
+	err = db.InsertServerShare("exp1", "s1", 0, 1, 100)
 	if err != nil {
 		t.Fatal(err)
 	} else {
@@ -40,7 +40,7 @@ func TestInsertClient(t *testing.T) {
 	}
 
 	// create second client for experiment 1
-	err = db.InsertServerShare("exp1", "s2", 1, 100)
+	err = db.InsertServerShare("exp1", "s2", 0, 1, 100)
 	if err != nil {
 		t.Fatal(err)
 	} else {
@@ -56,7 +56,7 @@ func TestInsertClient(t *testing.T) {
 	}
 
 	// create new client for experiment 2
-	err = db.InsertServerShare("exp2", "s2", 1, 100)
+	err = db.InsertServerShare("exp2", "s2", 0, 1, 100)
 	if err != nil {
 		t.Fatal(err)
 	} else {
