@@ -235,7 +235,7 @@ func (s *AggregatedShareRequest) ReadJson(req *http.Request) AggregatedShareRequ
 	return t
 }
 
-func FindMajority(list []int) (int, error) {
+func FindMajority(list []int, t int) (int, error) {
 	maxCount := 0
 	index := -1
 	n := len(list)
@@ -258,7 +258,7 @@ func FindMajority(list []int) (int, error) {
 
 	// if maxCount is greater than n/2
 	// return the corresponding element
-	if maxCount > n/2 {
+	if maxCount >= t+1 {
 		return list[index], nil
 	}
 

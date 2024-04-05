@@ -423,6 +423,17 @@ func (db *DB) GetAllExperiments() ([]Experiment, error) {
 	return experiments, nil
 }
 
+// get experiments count
+func (db *DB) GetExperimentCount() (int64, error) {
+	var count int64
+	err := db.db.Model(&Experiment{}).Count(&count).Error
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
 // get all experiments that round1 is completed
 func (db *DB) GetExpsWithRound1Completed() ([]Experiment, error) {
 	var experiments []Experiment
@@ -438,6 +449,17 @@ func (db *DB) GetExpsWithRound1Completed() ([]Experiment, error) {
 func (db *DB) GetExpsWithRound2Completed() ([]Experiment, error) {
 	var experiments []Experiment
 	r := db.db.Find(&experiments, "round1_completed = ? and round2_completed=? and round3_completed=?", true, true, false)
+	if r.Error != nil {
+		return nil, r.Error
+	}
+
+	return experiments, nil
+}
+
+// get all experiments records that round3 is completed
+func (db *DB) GetExpsWithRound3Completed() ([]Experiment, error) {
+	var experiments []Experiment
+	r := db.db.Find(&experiments, "round1_completed = ? and round2_completed=? and round3_completed=?", true, true, true)
 	if r.Error != nil {
 		return nil, r.Error
 	}

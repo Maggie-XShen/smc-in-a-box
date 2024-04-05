@@ -165,8 +165,8 @@ func (s *Server) dolevComplaintHandler(rw http.ResponseWriter, req *http.Request
 func (s *Server) checkSigChain(msg string, sig_chain []Signature) bool {
 	hashed := sha256.Sum256([]byte(fmt.Sprintf("%+v", msg)))
 	for _, sig := range sig_chain {
-		fileName := fmt.Sprintf("cert_+%s.pem", sig.Server_ID)
-		cert_path := filepath.Join("rsa/", fileName)
+		fileName := fmt.Sprintf("cert_%s.pem", sig.Server_ID)
+		cert_path := filepath.Join("./rsa/", fileName)
 		err := rsa.VerifyPKCS1v15(loadPublicKey(cert_path), crypto.SHA256, hashed[:], sig.Sig)
 		if err != nil {
 			log.Println("Signature verification failed:", err)
@@ -247,7 +247,7 @@ func generateMaskedShareMap(input []sqlstore.MaskedShare) (map[int]map[string][]
 	return inputMaskedShares, nil
 }**/
 
-func computeMajority(input map[string][]rss.Share) ([]rss.Share, error) {
+func computeMajority(input map[string][]rss.Share, t int) ([]rss.Share, error) {
 	if len(input) <= 0 {
 		return nil, fmt.Errorf("masked shares map is empty")
 	}
@@ -266,7 +266,7 @@ func computeMajority(input map[string][]rss.Share) ([]rss.Share, error) {
 
 	result := make([]rss.Share, len(shareValue))
 	for index, values := range shareValue {
-		val, err := FindMajority(values)
+		val, err := FindMajority(values, t)
 		if err != nil {
 			return nil, err
 		}
@@ -330,7 +330,6 @@ func (s *Server) WaitForEndOfExperiment(ticker *time.Ticker) {
 					panic(err)
 				}
 
-				//TODO: dolev strong broadcast
 				//s.dolevComplaintBroadcast(1, message, []Signature{})
 
 			}
@@ -544,10 +543,10 @@ func (s *Server) WaitForEndOfShareBroadcast(ticker *time.Ticker) {
 
 						//remove invalid client from valid set
 						isRemoved := false
-						for _, val := range inputMaskedShares {
+						for _, list := range inputMaskedShares {
 							parties := []rss.Party{}
-							for _, party := range val {
-								parties = append(parties, rss.Party{Index: 0, Shares: party})
+							for _, shares := range list {
+								parties = append(parties, rss.Party{Index: 0, Shares: shares})
 							}
 							nrss, _ := rss.NewReplicatedSecretSharing(s.cfg.N, s.cfg.T, s.cfg.Q)
 
@@ -576,7 +575,7 @@ func (s *Server) WaitForEndOfShareBroadcast(ticker *time.Ticker) {
 							//share correction
 							if record.Exp_ID != "" && record.Complain {
 								for input_index, shares := range inputMaskedShares {
-									masked_shares, err := computeMajority(shares)
+									masked_shares, err := computeMajority(shares, s.cfg.T)
 									if err != nil {
 										panic(err)
 									}
@@ -700,7 +699,9 @@ func (s *Server) dolevComplaintBroadcast(round int, msg ComplaintRequest, sig_ch
 	hashed := sha256.Sum256([]byte(fmt.Sprintf("%+v", msg)))
 
 	// Sign the hashed message using RSA private key
-	sig, err := rsa.SignPKCS1v15(rand.Reader, s.loadPrivateKey(), crypto.SHA256, hashed[:])
+	fileName := fmt.Sprintf("priv_%s.pem", s.cfg.Server_ID)
+	priv_path := filepath.Join("./rsa/", fileName)
+	sig, err := rsa.SignPKCS1v15(rand.Reader, s.loadPrivateKey(priv_path), crypto.SHA256, hashed[:])
 	if err != nil {
 		panic(err)
 	}
@@ -715,7 +716,7 @@ func (s *Server) dolevComplaintBroadcast(round int, msg ComplaintRequest, sig_ch
 	}
 
 	for _, address := range s.cfg.Dolev_complaint_urls {
-		fmt.Printf("server %s Dolev-Strong broadcast: %+v\n", s.cfg.Server_ID, msg)
+		fmt.Printf("server %s Dolev-Strong broadcasts complaints: %+v\n", s.cfg.Server_ID, msg)
 		writer := &ds_message
 		send(address, writer.ToJson())
 	}
@@ -726,7 +727,9 @@ func (s *Server) dolevMaskedShareBroadcast(round int, msg MaskedShareRequest, si
 	hashed := sha256.Sum256([]byte(fmt.Sprintf("%+v", msg)))
 
 	// Sign the hashed message using RSA private key
-	sig, err := rsa.SignPKCS1v15(rand.Reader, s.loadPrivateKey(), crypto.SHA256, hashed[:])
+	fileName := fmt.Sprintf("priv_+%s.pem", s.cfg.Server_ID)
+	priv_path := filepath.Join("./rsa/", fileName)
+	sig, err := rsa.SignPKCS1v15(rand.Reader, s.loadPrivateKey(priv_path), crypto.SHA256, hashed[:])
 	if err != nil {
 		panic(err)
 	}
@@ -769,9 +772,9 @@ func loadPublicKey(Cert_path string) *rsa.PublicKey {
 	return cert.PublicKey.(*rsa.PublicKey)
 }
 
-func (s *Server) loadPrivateKey() *rsa.PrivateKey {
+func (s *Server) loadPrivateKey(path string) *rsa.PrivateKey {
 	// Read the privkey.pem file
-	privKeyPEMBlock, err := os.ReadFile(s.cfg.Key_path)
+	privKeyPEMBlock, err := os.ReadFile(path)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -783,12 +786,12 @@ func (s *Server) loadPrivateKey() *rsa.PrivateKey {
 	}
 
 	// Parse the private key
-	privateKey, err := x509.ParsePKCS1PrivateKey(pemBlock.Bytes)
+	privateKey, err := x509.ParsePKCS8PrivateKey(pemBlock.Bytes)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	return privateKey
+	return privateKey.(*rsa.PrivateKey)
 }
 
 func (s *Server) Start() {
@@ -812,5 +815,27 @@ func (s *Server) StartTLS() {
 	http.HandleFunc("/dolevMaskedShare/", s.dolevMaskedSharesHandler)
 
 	log.Fatal(http.ListenAndServeTLS(":"+s.cfg.Port, s.cfg.Cert_path, s.cfg.Key_path, nil))
+
+}
+
+func (s *Server) Close(ticker *time.Ticker) {
+	for range ticker.C {
+		finished, err := s.store.GetExpsWithRound3Completed()
+		if err != nil {
+			//log.Println("cannot retreive non-completed experiments - error:", err)
+			panic(err)
+		}
+
+		all, err := s.store.GetExperimentCount()
+		if err != nil {
+			//log.Println("cannot retreive non-completed experiments - error:", err)
+			panic(err)
+		}
+
+		if int64(len(finished)) == all {
+			log.Printf("%s is finishing\n", s.cfg.Server_ID)
+			os.Exit(0)
+		}
+	}
 
 }

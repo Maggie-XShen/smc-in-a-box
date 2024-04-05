@@ -1,7 +1,7 @@
 {
     "Server_ID": "s1",
     "Token": "stk1",
-    "Cert_path":"/path to cerfiticate",
+    "Cert_path":"/path to certificate",
     "Key_path":"/path to private key",
     "Port": "50001",
     "Complaint_urls":[

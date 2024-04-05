@@ -70,6 +70,7 @@ func main() {
 	go s.WaitForEndOfExperiment(ticker)
 	go s.WaitForEndOfComplaintBroadcast(ticker)
 	go s.WaitForEndOfShareBroadcast(ticker)
+	go s.Close(ticker)
 
 	start := time.Now().UTC()
 	logger.WithFields(logrus.Fields{

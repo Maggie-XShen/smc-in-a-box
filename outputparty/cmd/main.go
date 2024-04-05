@@ -56,6 +56,7 @@ func main() {
 
 	ticker := time.NewTicker(1 * time.Second) // set up ticker
 	go op.WaitForEndOfExperiment(ticker)
+	go op.Close(ticker)
 
 	start := time.Now().UTC()
 	logger.WithFields(logrus.Fields{

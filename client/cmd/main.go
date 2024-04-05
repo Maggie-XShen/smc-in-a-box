@@ -14,7 +14,6 @@ import (
 var logger *logrus.Logger
 
 func main() {
-	//read configuration
 	confpath := flag.String("confpath", "../config/client.json", "config file path")
 	inputpath := flag.String("inputpath", "input.json", "client input path")
 	logpath := flag.String("logpath", "./", "client log path")

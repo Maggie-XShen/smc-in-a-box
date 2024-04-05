@@ -16,6 +16,7 @@ type Server struct {
 	Masked_share_urls       []string
 	Dolev_complaint_urls    []string
 	Dolev_masked_share_urls []string
+	Share_Index             int
 	N                       int
 	T                       int
 	Q                       int

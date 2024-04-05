@@ -90,7 +90,7 @@ func (rss *ReplicatedSecretSharing) Reconstruct(parties []Party) (int, error) {
 
 	result := 0
 	for _, val := range mapping {
-		temp, err := findMajority(val)
+		temp, err := findMajority(val, rss.t)
 		if err != nil {
 			return 0, err
 		}
@@ -103,7 +103,7 @@ func (rss *ReplicatedSecretSharing) Reconstruct(parties []Party) (int, error) {
 
 }
 
-func findMajority(list []int) (int, error) {
+func findMajority(list []int, t int) (int, error) {
 	maxCount := 0
 	index := -1
 	n := len(list)
@@ -116,17 +116,14 @@ func findMajority(list []int) (int, error) {
 
 		}
 
-		// update maxCount if count of
-		// current element is greater
+		// update maxCount if count of current element is greater
 		if count > maxCount {
 			maxCount = count
 			index = i
 		}
 	}
 
-	// if maxCount is greater than n/2
-	// return the corresponding element
-	if maxCount > n/2 { //TODO: replace n with n choose t, minus t
+	if maxCount >= t+1 {
 		return list[index], nil
 	}
 

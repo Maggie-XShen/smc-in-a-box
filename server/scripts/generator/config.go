@@ -10,20 +10,22 @@ import (
 )
 
 type Server struct {
-	Server_ID         string
-	Token             string
-	Cert_path         string
-	Key_path          string
-	Port              string
-	Complaint_urls    []string
-	Masked_share_urls []string
-	Share_Index       int
-	N                 int
-	T                 int
-	Q                 int
-	N_secrets         int
-	M                 int
-	N_open            int
+	Server_ID               string
+	Token                   string
+	Cert_path               string
+	Key_path                string
+	Port                    string
+	Complaint_urls          []string
+	Masked_share_urls       []string
+	Dolev_complaint_urls    []string
+	Dolev_masked_share_urls []string
+	Share_Index             int
+	N                       int
+	T                       int
+	Q                       int
+	N_secrets               int
+	M                       int
+	N_open                  int
 }
 
 func GenerateServerConfigLocal(num int, ports []string, src string, des string) {
@@ -59,6 +61,8 @@ func GenerateServerConfigLocal(num int, ports []string, src string, des string) 
 
 		c_urls := make([]string, num-1)
 		m_urls := make([]string, num-1)
+		dc_urls := make([]string, num-1)
+		dm_urls := make([]string, num-1)
 		index := 0
 		for j := 0; j < num; j++ {
 			if j != i {
@@ -66,6 +70,11 @@ func GenerateServerConfigLocal(num int, ports []string, src string, des string) 
 				c_urls[index] = c_url
 				m_url := "http://127.0.0.1:" + ports[j] + "/maskedShare/"
 				m_urls[index] = m_url
+				dc_url := "http://127.0.0.1:" + ports[j] + "/dolevComplaint/"
+				dc_urls[index] = dc_url
+				dm_url := "http://127.0.0.1:" + ports[j] + "/dolevMaskedShare/"
+				dm_urls[index] = dm_url
+
 				index++
 
 			}
@@ -113,6 +122,8 @@ func GenerateServerConfigCloud(num int, ip []string, src string, des string) {
 
 		c_urls := make([]string, num-1)
 		m_urls := make([]string, num-1)
+		dc_urls := make([]string, num-1)
+		dm_urls := make([]string, num-1)
 		index := 0
 		for j := 0; j < num; j++ {
 			if j != i {
@@ -120,6 +131,10 @@ func GenerateServerConfigCloud(num int, ip []string, src string, des string) {
 				c_urls[index] = c_url
 				m_url := ip[j] + config.Port + "/maskedShare/"
 				m_urls[index] = m_url
+				dc_url := ip[j] + config.Port + "/dolevComplaint/"
+				dc_urls[index] = dc_url
+				dm_url := ip[j] + config.Port + "/dolevMaskedShare/"
+				dm_urls[index] = dm_url
 				index++
 
 			}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"example.com/SMC/outputparty/config"
@@ -194,5 +195,22 @@ func (op *OutputParty) StartTLS(certFile string, keyFile string) {
 	http.HandleFunc("/serverShare/", op.serverRequestHandler)
 
 	log.Fatal(http.ListenAndServeTLS(":"+op.cfg.Port, certFile, keyFile, nil))
+
+}
+
+func (op *OutputParty) Close(ticker *time.Ticker) {
+	for range ticker.C {
+
+		all, err := op.store.GetAllExperiments()
+		if err != nil {
+			//log.Println("cannot retreive non-completed experiments - error:", err)
+			panic(err)
+		}
+
+		if len(all) == 0 {
+			log.Printf("%s is finishing\n", op.cfg.OutputParty_ID)
+			os.Exit(0)
+		}
+	}
 
 }

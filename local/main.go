@@ -25,7 +25,7 @@ func main() {
 	n_outputparty := 1
 	op_port := []string{"60000"}
 
-	clientShareDue := "2024-04-04 01:08:00"
+	clientShareDue := "2024-04-04 20:33:00"
 	t1 := 2 // ComplaintDue = ClientShareDue + t1
 	t2 := 5 // MaskedShareDue = ClientShareDue + t2
 	t3 := 8 // ServerShareDue = MaskedShareDue + t3
