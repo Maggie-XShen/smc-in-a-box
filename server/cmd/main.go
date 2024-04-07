@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"time"
@@ -34,6 +35,13 @@ func main() {
 
 	logger = logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
+
+	// Ensure the log folder exists
+	err := os.MkdirAll(*logpath, os.ModePerm)
+	if err != nil {
+		log.Fatalf("Error creating folder:%s", err)
+		return
+	}
 
 	// Log to a file
 	fileName := fmt.Sprintf("%s.log", conf.Server_ID)

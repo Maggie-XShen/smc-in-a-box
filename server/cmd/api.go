@@ -80,7 +80,7 @@ func (c *ClientService) CreateClientShare(request ClientRequest, cfg *config.Ser
 	logger.WithFields(logrus.Fields{
 		"exp_id":                  request.Exp_ID,
 		"client_id":               request.Client_ID,
-		"proof verification time": proof_verify_end.String(),
+		"proof verification time": proof_verify_end,
 	}).Info("Server verifies a client's proof")
 
 	//creat complaint record based on proof verification result
@@ -187,10 +187,6 @@ func (s *ServerService) CreateValidClient(exp_id, client_id string) error {
 }
 
 func (e *ExperimentService) CreateExperiment(request Experiment) error {
-	//TODO: need to remove and use due in the file
-	//complaint_due := time.Now().UTC().Add(time.Duration(4) * time.Minute).Format("2006-01-02 15:04:05")
-	//share_broadcast_due := time.Now().UTC().Add(time.Duration(7) * time.Minute).Format("2006-01-02 15:04:05")
-
 	err := e.db.InsertExperiment(request.Exp_ID, request.ClientShareDue, request.ComplaintDue, request.ShareBroadcastDue, request.Owner)
 
 	if err != nil {
