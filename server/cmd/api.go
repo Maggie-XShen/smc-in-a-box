@@ -11,6 +11,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+var client_count = 0
+
 type ClientService struct {
 	db *sqlstore.DB
 }
@@ -47,12 +49,13 @@ func (c *ClientService) CreateClientShare(request ClientRequest, cfg *config.Ser
 	}
 
 	timestamp := time.Now().UTC()
-	due := timestamp.Add(1 * time.Minute)
+	due, _ := time.Parse("2006-01-02 15:04:05", exp.ClientShareDue)
 
 	if timestamp.After(due) {
 		return errors.New("client submitted share after due")
 	}
 
+	complaint_start := time.Now()
 	//insert experiment id and client id to client table
 	err = c.db.InsertClient(request.Exp_ID, request.Client_ID)
 	if err != nil {
@@ -78,10 +81,10 @@ func (c *ClientService) CreateClientShare(request ClientRequest, cfg *config.Ser
 	verify, err := zk.VerifyProof(request.Proof)
 	proof_verify_end := time.Since(proof_verify_start) //proof verification computing time
 	logger.WithFields(logrus.Fields{
-		"exp_id":                  request.Exp_ID,
-		"client_id":               request.Client_ID,
-		"proof verification time": proof_verify_end,
-	}).Info("Server verifies a client's proof")
+		"exp_id":      request.Exp_ID,
+		"client_id":   request.Client_ID,
+		"verify_time": proof_verify_end.String(),
+	}).Info("")
 
 	//creat complaint record based on proof verification result
 	if !verify {
@@ -122,7 +125,13 @@ func (c *ClientService) CreateClientShare(request ClientRequest, cfg *config.Ser
 		}
 
 	}
+	complaint_end = time.Since(complaint_start)
+	complaint_end += complaint_end
 
+	client_count += 1
+	if client_count == client_size {
+		real_client_share_due = time.Now().UTC() // time to start the step of assemble complaints and broadcast without waiting
+	}
 	return nil
 }
 

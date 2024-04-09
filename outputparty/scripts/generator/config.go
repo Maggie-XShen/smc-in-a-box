@@ -16,7 +16,7 @@ type OutputParty struct {
 	Port           string
 	N              int
 	T              int
-	K              int
+	N_secrets      int
 	Q              int
 }
 

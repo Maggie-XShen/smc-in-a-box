@@ -12,19 +12,19 @@ There are two ways running computation:
    
    To run a server with TLS (default), at the folder server/cmd, compile then run
    ```
-   ./cmd -confpath="path_to_server_config_file" -inputpath="path_to_experiments_file"
+   ./cmd -confpath="path_to_server_config_file" -inputpath="path_to_experiments_file" -logpath="path_to_log_folder" -n_client=num_of_clients
    ```
-   Note: use -mode=http to run without TLS
+   Note: use -mode=http to run without TLS, default setting is using TLS
 
    To run an output party with TLS (default), at the folder outputparty/cmd, compile then run
    ```
-   ./cmd -confpath="path_to_output_party_config_file" -inputpath="path_to_experiments_file"
+   ./cmd -confpath="path_to_output_party_config_file" -inputpath="path_to_experiments_file" -logpath="path_to_log_folder" -n_client=num_of_clients
    ```
-   Note: use -mode=http to run without TLS
+   Note: use -mode=http to run without TLS, default setting is using TLS
 
    To run a client, at the folder client/cmd, compile then run
    ```
-   ./cmd -confpath=“path_to_client_config_file” -inputpath=“path_to_input_file”
+   ./cmd -confpath=“path_to_client_config_file” -inputpath=“path_to_input_file” -logpath="path_to_log_folder"
    ``` 
    **Note:** Servers and output party need to start running before clients.
 2. One-command local executaion. This allows all parties running on the same machine.

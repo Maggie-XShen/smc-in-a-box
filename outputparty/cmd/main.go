@@ -16,6 +16,9 @@ import (
 var logger *logrus.Logger
 var p_sh int //total number of shares per secret stored by each server
 var n_sh int //total number of shares a secret splits to
+var start time.Time
+var real_server_share_due time.Time
+var experiment_end time.Duration
 
 func main() {
 	//read configuration
@@ -23,13 +26,22 @@ func main() {
 	inputpath := flag.String("inputpath", "experiments.json", "experiments infor path")
 	mode := flag.String("mode", "tls", "use tls")
 	logpath := flag.String("logpath", "./", "outputparty log path")
+	n_client := flag.Int("n_client", 0, "client number")
 	flag.Parse()
+
+	if *n_client == 0 {
+		log.Fatal("number of clients in command could not be 0")
+	}
 
 	conf := config.Load(*confpath)
 	p_sh = combin.Binomial(conf.N-1, conf.T) //compute total number of shares each party has
-	n_sh = p_sh * conf.N
+	n_sh = p_sh * conf.N * conf.N_secrets
 
 	logger = logrus.New()
+	formatter := &logrus.JSONFormatter{
+		DisableTimestamp: true,
+	}
+	logger.SetFormatter(formatter)
 	logger.SetLevel(logrus.DebugLevel)
 
 	// Ensure the log folder exists
@@ -49,14 +61,14 @@ func main() {
 		logger.Info("Failed to log to file, using default stderr")
 	}
 	logger.WithFields(logrus.Fields{
-		"party":     "output party",
 		"id":        conf.OutputParty_ID,
+		"N_clients": *n_client,
 		"N":         conf.N,
 		"T":         conf.T,
 		"Q":         conf.Q,
-		"N_secrets": conf.K,
+		"N_secrets": conf.N_secrets,
 		"Port":      conf.Port,
-	}).Info("Output Party configuration")
+	}).Info("")
 
 	op := NewOutputParty(conf)
 
@@ -66,10 +78,10 @@ func main() {
 	go op.WaitForEndOfExperiment(ticker)
 	go op.Close(ticker)
 
-	start := time.Now().UTC()
+	start = time.Now().UTC()
 	logger.WithFields(logrus.Fields{
-		"start time": start.String(),
-	}).Info("Output party started")
+		"start": start.String(),
+	}).Info("")
 
 	if *mode == "tls" {
 		op.StartTLS(conf.Cert_path, conf.Key_path)

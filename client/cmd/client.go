@@ -52,10 +52,10 @@ func (c *Client) Run(inputpath string) {
 		theorySingleProofBytes := big.NewInt(zk.GetProofSize(*proof[0])) //Theoretical proof size
 
 		logger.WithFields(logrus.Fields{
-			"input":                    input,
-			"proof generation time":    proof_end,
-			"single proof size (byte)": theorySingleProofBytes,
-		}).Info("Client generates ZK proof")
+			"input":      input,
+			"proof_time": proof_end.String(),
+			"proof_size": theorySingleProofBytes,
+		}).Info("")
 
 		current_time := time.Now().UTC().Format("2006-01-02 15:04:05")
 		for i := 0; i < len(urls); i++ {

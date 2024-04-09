@@ -18,11 +18,16 @@ func main() {
 	confpath := flag.String("confpath", "../config/client.json", "config file path")
 	inputpath := flag.String("inputpath", "input.json", "client input path")
 	logpath := flag.String("logpath", "./", "client log path")
+	//csvlocation := flag.String("csvlocation", "./", "csv file location")
 	flag.Parse()
 
 	conf := config.Load(*confpath)
 
 	logger = logrus.New()
+	formatter := &logrus.JSONFormatter{
+		DisableTimestamp: true,
+	}
+	logger.SetFormatter(formatter)
 	logger.SetLevel(logrus.DebugLevel)
 
 	// Ensure the log folder exists
@@ -43,7 +48,6 @@ func main() {
 	}
 
 	logger.WithFields(logrus.Fields{
-		"party":     "client",
 		"id":        conf.Client_ID,
 		"N":         conf.N,
 		"T":         conf.T,
@@ -52,20 +56,20 @@ func main() {
 		"M":         conf.M,
 		"N_open":    conf.N_open,
 		"URLs":      conf.URLs,
-	}).Info("Client configuration")
+	}).Info("")
 
 	client := NewClient(conf)
 
 	start := time.Now().UTC()
 	logger.WithFields(logrus.Fields{
-		"start time": start.String(),
-	}).Info("Client started")
+		"start": start.String(),
+	}).Info("")
 
 	client.Run(*inputpath)
 
 	end := time.Since(start)
 	logger.WithFields(logrus.Fields{
-		"duration": end,
-	}).Info("Client finished")
+		"end": end.String(),
+	}).Info("")
 
 }

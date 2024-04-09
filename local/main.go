@@ -25,7 +25,7 @@ func main() {
 	n_outputparty := 1
 	op_port := []string{"60000"}
 
-	clientShareDue := "2024-04-07 12:09:00"
+	clientShareDue := "2024-04-09 17:11:00"
 	t1 := 2 // ComplaintDue = ClientShareDue + t1
 	t2 := 5 // MaskedShareDue = ClientShareDue + t2
 	t3 := 8 // ServerShareDue = ClientShareDue + t3
@@ -51,22 +51,24 @@ func run(n_server, n_outputparty, n_client int) {
 	l1 := n_server + n_outputparty
 	firstGroup := make([][]string, l1)
 	for i := 0; i < n_server; i++ {
-		firstGroup[i] = make([]string, 5)
+		firstGroup[i] = make([]string, 6)
 		firstGroup[i][0] = "../server/cmd/cmd"
 		firstGroup[i][1] = fmt.Sprintf("-confpath=./server_config/config_s%s.json", strconv.Itoa(i+1))
 		firstGroup[i][2] = "-inputpath=./server_input/experiments.json"
 		firstGroup[i][3] = "-mode=http"
 		firstGroup[i][4] = "-logpath=./server_log/"
+		firstGroup[i][5] = fmt.Sprintf("-n_client=%d", n_client)
 
 	}
 
 	for i := n_server; i < l1; i++ {
-		firstGroup[i] = make([]string, 5)
+		firstGroup[i] = make([]string, 6)
 		firstGroup[i][0] = "../outputparty/cmd/cmd"
 		firstGroup[i][1] = fmt.Sprintf("-confpath=./op_config/config_op%s.json", strconv.Itoa(i-n_server+1))
 		firstGroup[i][2] = "-inputpath=./op_input/experiments.json"
 		firstGroup[i][3] = "-mode=http"
 		firstGroup[i][4] = "-logpath=./op_log/"
+		firstGroup[i][5] = fmt.Sprintf("-n_client=%d", n_client)
 	}
 
 	secondGroup := make([][]string, n_client)
@@ -84,7 +86,7 @@ func run(n_server, n_outputparty, n_client int) {
 	// Execute the first group of processes in parallel
 	for _, cmd := range firstGroup {
 		wg.Add(1)
-		go executeFirstGroup(cmd[0], cmd[1], cmd[2], cmd[3], cmd[4], &wg)
+		go executeFirstGroup(cmd[0], cmd[1], cmd[2], cmd[3], cmd[4], cmd[5], &wg)
 	}
 
 	time.Sleep(30 * time.Second)
@@ -98,10 +100,10 @@ func run(n_server, n_outputparty, n_client int) {
 	wg.Wait()
 }
 
-func executeFirstGroup(command, conf_path, input_path, mode, log_path string, wg *sync.WaitGroup) {
+func executeFirstGroup(command, conf_path, input_path, mode, log_path, n_client string, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	cmd := exec.Command(command, conf_path, input_path, mode, log_path)
+	cmd := exec.Command(command, conf_path, input_path, mode, log_path, n_client)
 
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
