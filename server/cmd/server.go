@@ -85,9 +85,9 @@ func (s *Server) serverComplaintHandler(rw http.ResponseWriter, req *http.Reques
 
 	err := serverService.CreateComplaint(data)
 
-	records, _ := s.store.GetComplaintsPerExperiment(data.Exp_ID)
+	count := s.store.CountComplaintsPerExperiment(data.Exp_ID)
 
-	if len(records) == complaint_size {
+	if count == int64(complaint_size) {
 		real_complaint_due = time.Now().UTC() //time to start the step of masked share generation without waiting
 	}
 
@@ -109,9 +109,9 @@ func (s *Server) serverMaskedSharesHandler(rw http.ResponseWriter, req *http.Req
 
 	err := serverService.CreateMaskedShares(data)
 
-	records, _ := s.store.GetMaskedSharesPerExperiment(data.Exp_ID)
+	count := s.store.CountMaskedSharesPerExperiment(data.Exp_ID)
 
-	if len(records) == mask_share_size {
+	if count == int64(mask_share_size) {
 		real_share_broadcast_due = time.Now().UTC() //time to start the step of share correction without waiting
 
 	}
@@ -273,7 +273,7 @@ func (s *Server) WaitForEndOfExperiment(ticker *time.Ticker) {
 
 		for _, exp := range experiments {
 
-			due, _ := time.Parse("2006-01-02 15:04:05", exp.ClientShareDue)
+			due, _ := time.Parse("2006-01-02 15:04:05.999999999 +0000 UTC", exp.ClientShareDue)
 			currentTime := time.Now().UTC()
 
 			if currentTime.After(due) {
@@ -335,7 +335,7 @@ func (s *Server) WaitForEndOfComplaintBroadcast(ticker *time.Ticker) {
 
 		for _, exp := range experiments {
 
-			due, _ := time.Parse("2006-01-02 15:04:05", exp.ComplaintDue)
+			due, _ := time.Parse("2006-01-02 15:04:05.999999999 +0000 UTC", exp.ComplaintDue)
 			currentTime := time.Now().UTC()
 
 			if currentTime.After(due) {
@@ -478,7 +478,7 @@ func (s *Server) WaitForEndOfShareBroadcast(ticker *time.Ticker) {
 
 		for _, exp := range experiments {
 
-			due, _ := time.Parse("2006-01-02 15:04:05", exp.ShareBroadcastDue)
+			due, _ := time.Parse("2006-01-02 15:04:05.999999999 +0000 UTC", exp.ShareBroadcastDue)
 			currentTime := time.Now().UTC()
 
 			if currentTime.After(due) {

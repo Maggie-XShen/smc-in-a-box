@@ -168,7 +168,7 @@ func (db *DB) InsertComplaint(exp_id, server_id, client_id string, isComplain bo
 	return nil
 }
 
-// get a complaint record
+// get all complaints of an experiment
 func (db *DB) GetComplaintsPerExperiment(exp_id string) ([]Complaint, error) {
 	var comp []Complaint
 	r := db.db.Find(&comp, "exp_id = ?", exp_id)
@@ -176,6 +176,13 @@ func (db *DB) GetComplaintsPerExperiment(exp_id string) ([]Complaint, error) {
 		return nil, r.Error
 	}
 	return comp, nil
+}
+
+// get count of complaints of an experiment
+func (db *DB) CountComplaintsPerExperiment(exp_id string) int64 {
+	var count int64
+	db.db.Model(&Complaint{}).Where("exp_id = ?", exp_id).Count(&count)
+	return count
 }
 
 // get a complaint record
@@ -357,6 +364,12 @@ func (db *DB) GetMaskedSharesPerExperiment(exp_id string) ([]MaskedShare, error)
 		return nil, r.Error
 	}
 	return masked_shares, nil
+}
+
+func (db *DB) CountMaskedSharesPerExperiment(exp_id string) int64 {
+	var count int64
+	db.db.Model(&MaskedShare{}).Where("exp_id = ?", exp_id).Count(&count)
+	return count
 }
 
 func (db *DB) InsertEchoMaskedShare(exp_id, server_id, mask_shares string) error {

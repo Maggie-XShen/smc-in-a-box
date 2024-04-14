@@ -79,6 +79,13 @@ func (db *DB) GetSharesPerExperiment(exp_id string) ([]ServerShare, error) {
 	return shares, nil
 }
 
+func (db *DB) CountSharesPerExperiment(exp_id string) int64 {
+	var count int64
+	db.db.Model(&ServerShare{}).Where("exp_id = ?", exp_id).Count(&count)
+
+	return count
+}
+
 // create experiment record in the experiment tables
 func (db *DB) InsertExperiment(exp_id, due1, due2 string) error {
 	exp := &Experiment{

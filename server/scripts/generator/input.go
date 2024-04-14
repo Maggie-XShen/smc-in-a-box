@@ -17,7 +17,7 @@ type Experiment struct {
 	Owner             string `json:"Owner"`
 }
 
-func GenerateServerInput(exp_num int, start_time string, t1 int, t2 int, owner string, des string) {
+func GenerateServerInput(exp_num int, start_time time.Time, t1 int, t2 int, owner string, des string) {
 	// Ensure the folder exists
 	err := os.MkdirAll(des, os.ModePerm)
 	if err != nil {
@@ -29,13 +29,13 @@ func GenerateServerInput(exp_num int, start_time string, t1 int, t2 int, owner s
 	dataList := make([]Experiment, 0)
 	for i := 0; i < exp_num; i++ {
 		expID := "exp" + strconv.Itoa(i+1)
-		client_share_due, _ := time.Parse("2006-01-02 15:04:05", start_time)
-		complaint_due := client_share_due.UTC().Add(time.Duration(t1) * time.Minute).Format("2006-01-02 15:04:05")
-		share_broadcast_due := client_share_due.UTC().Add(time.Duration(t2) * time.Minute).Format("2006-01-02 15:04:05")
+		client_share_due := start_time.UTC()
+		complaint_due := client_share_due.Add(time.Duration(t1) * time.Minute).String()
+		share_broadcast_due := client_share_due.Add(time.Duration(t2) * time.Minute).String()
 
 		data := Experiment{
 			Exp_ID:            expID,
-			ClientShareDue:    start_time,
+			ClientShareDue:    client_share_due.String(),
 			ComplaintDue:      complaint_due,
 			ShareBroadcastDue: share_broadcast_due,
 			Owner:             owner,

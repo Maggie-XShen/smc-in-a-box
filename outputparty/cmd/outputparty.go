@@ -89,7 +89,7 @@ func (op *OutputParty) WaitForEndOfExperiment(ticker *time.Ticker) {
 
 		for _, exp := range experiments {
 
-			due, _ := time.Parse("2006-01-02 15:04:05", exp.ServerShareDue)
+			due, _ := time.Parse("2006-01-02 15:04:05.999999999 +0000 UTC", exp.ServerShareDue)
 			currentTime := time.Now().UTC()
 
 			if currentTime.After(due) {
@@ -100,62 +100,57 @@ func (op *OutputParty) WaitForEndOfExperiment(ticker *time.Ticker) {
 					panic(err)
 				}
 
-				if len(list) >= n_sh {
-					inputShares := make(map[int]map[string][]rss.Share)
-					for _, record := range list {
-						v1, check1 := inputShares[record.Input_Index]
-						if check1 {
-							v2, check2 := v1[record.Server_ID]
-							if check2 {
-								inputShares[record.Input_Index][record.Server_ID] = append(v2, rss.Share{Index: record.Index, Value: record.Value})
-							} else {
-								inputShares[record.Input_Index][record.Server_ID] = []rss.Share{{Index: record.Index, Value: record.Value}}
-							}
+				inputShares := make(map[int]map[string][]rss.Share)
+				for _, record := range list {
+					v1, check1 := inputShares[record.Input_Index]
+					if check1 {
+						v2, check2 := v1[record.Server_ID]
+						if check2 {
+							inputShares[record.Input_Index][record.Server_ID] = append(v2, rss.Share{Index: record.Index, Value: record.Value})
 						} else {
-							inputShares[record.Input_Index] = make(map[string][]rss.Share)
 							inputShares[record.Input_Index][record.Server_ID] = []rss.Share{{Index: record.Index, Value: record.Value}}
 						}
+					} else {
+						inputShares[record.Input_Index] = make(map[string][]rss.Share)
+						inputShares[record.Input_Index][record.Server_ID] = []rss.Share{{Index: record.Index, Value: record.Value}}
 					}
+				}
 
-					// reconstruct sum of secrets
-					nrss, err := rss.NewReplicatedSecretSharing(op.cfg.N, op.cfg.T, op.cfg.Q)
+				// reconstruct sum of secrets
+				nrss, err := rss.NewReplicatedSecretSharing(op.cfg.N, op.cfg.T, op.cfg.Q)
+				if err != nil {
+					panic(err)
+				}
+
+				result := make([]int, op.cfg.N_secrets)
+				for input_index, list := range inputShares {
+					size := len(list)
+					servers := make([]rss.Party, size)
+					i := 0
+					for _, shares := range list {
+						servers[i] = rss.Party{Index: 0, Shares: shares}
+						i++
+					}
+					sum, err := nrss.Reconstruct(servers)
 					if err != nil {
 						panic(err)
 					}
 
-					result := make([]int, op.cfg.N_secrets)
-					for input_index, list := range inputShares {
-						size := len(list)
-						servers := make([]rss.Party, size)
-						i := 0
-						for _, shares := range list {
-							servers[i] = rss.Party{Index: 0, Shares: shares}
-							i++
-						}
-						sum, err := nrss.Reconstruct(servers)
-						if err != nil {
-							panic(err)
-						}
+					result[input_index] = sum
 
-						result[input_index] = sum
-
-					}
-
-					experiment_start, _ := time.Parse("2006-01-02 15:04:05", exp.ServerShareDue)
-					experiment_end = time.Since(experiment_start)
-
-					logger.WithFields(logrus.Fields{
-						"exp_id": exp.Exp_ID,
-						"result": result,
-					}).Info("")
-
-					fmt.Printf("sum of secrets for %s : %v\n", exp.Exp_ID, result)
-
-					WriteResult(exp.Exp_ID, result)
-
-				} else {
-					log.Println("cannot compute the result since servers' shares are missing")
 				}
+
+				reconstruction_start, _ := time.Parse("2006-01-02 15:04:05.999999999 +0000 UTC", exp.ServerShareDue)
+				reconstruction_end = time.Since(reconstruction_start)
+
+				logger.WithFields(logrus.Fields{
+					"exp_id": exp.Exp_ID,
+					"result": result,
+				}).Info("")
+
+				fmt.Printf("sum of secrets for %s : %v\n", exp.Exp_ID, result)
+
+				WriteResult(exp.Exp_ID, result)
 
 				err = op.store.UpdateCompletedExperiment(exp.Exp_ID) //set experiments to completed
 				if err != nil {
@@ -185,9 +180,9 @@ func (op *OutputParty) serverRequestHandler(rw http.ResponseWriter, req *http.Re
 		return
 	}
 
-	records, _ := op.store.GetSharesPerExperiment(data.Exp_ID)
+	count := op.store.CountSharesPerExperiment(data.Exp_ID)
 
-	if len(records) == n_sh {
+	if count == int64(n_sh) {
 		real_server_share_due = time.Now().UTC() //ideal server share due is when all server shares arrived at output party
 
 	}
@@ -223,7 +218,7 @@ func (op *OutputParty) Close(ticker *time.Ticker) {
 			end := time.Since(start)
 			logger.WithFields(logrus.Fields{
 				"real_server_share_due": real_server_share_due.String(),
-				"experiment_time":       experiment_end.String(), //time from output party started to reconstruction of the experiment is done
+				"reconstruction_time":   reconstruction_end.String(), //time from output party started to reconstruction of the experiment is done
 				"end":                   end.String(),
 			}).Info("")
 			log.Printf("%s is finishing\n", op.cfg.OutputParty_ID)

@@ -15,7 +15,7 @@ type Experiment struct {
 	ServerShareDue string `json:"ServerShareDue"`
 }
 
-func GenerateOPInput(exp_num int, start_time string, t int, des string) {
+func GenerateOPInput(exp_num int, start_time time.Time, t int, des string) {
 	// Ensure the folder exists
 	err := os.MkdirAll(des, os.ModePerm)
 	if err != nil {
@@ -27,12 +27,12 @@ func GenerateOPInput(exp_num int, start_time string, t int, des string) {
 	dataList := make([]Experiment, 0)
 	for i := 0; i < exp_num; i++ {
 		expID := "exp" + strconv.Itoa(i+1)
-		client_share_due, _ := time.Parse("2006-01-02 15:04:05", start_time)
-		server_share_due := client_share_due.UTC().Add(time.Duration(t) * time.Minute).Format("2006-01-02 15:04:05")
+		client_share_due := start_time.UTC()
+		server_share_due := client_share_due.Add(time.Duration(t) * time.Minute).String()
 
 		data := Experiment{
 			Exp_ID:         expID,
-			ClientShareDue: start_time,
+			ClientShareDue: client_share_due.String(),
 			ServerShareDue: server_share_due,
 		}
 

@@ -15,20 +15,21 @@ import (
 
 func main() {
 
-	n_client := 6
+	n_client := 10
 	n_exp := 1
-	n_input := []int{2} //clarify the number of inputs for each experiment, e.g. n_input={1,2} means first experiment has 1 input, second experiment has 2 inputs
+	n_input := []int{10} //clarify the number of inputs for each experiment, e.g. n_input={1,2} means first experiment has 1 input, second experiment has 2 inputs
 
-	n_server := 6
-	server_port := []string{"50001", "50002", "50003", "50004", "50005", "50006"} //port for each server
+	n_server := 4
+	server_port := []string{"50001", "50002", "50003", "50004"} //port for each server
 
 	n_outputparty := 1
 	op_port := []string{"60000"}
 
-	clientShareDue := "2024-04-09 17:11:00"
-	t1 := 2 // ComplaintDue = ClientShareDue + t1
-	t2 := 5 // MaskedShareDue = ClientShareDue + t2
-	t3 := 8 // ServerShareDue = ClientShareDue + t3
+	start := time.Now().UTC()
+	clientShareDue := start.Add(time.Minute * 4)
+	t1 := 2  // ComplaintDue = ClientShareDue + t1
+	t2 := 5  // MaskedShareDue = ClientShareDue + t2
+	t3 := 10 // ServerShareDue = ClientShareDue + t3
 
 	client_gen.GenerateClientConfig(n_client, "client_template.json", "./client_config")
 
@@ -48,9 +49,9 @@ func main() {
 
 func run(n_server, n_outputparty, n_client int) {
 
-	l1 := n_server + n_outputparty
+	l1 := n_server
 	firstGroup := make([][]string, l1)
-	for i := 0; i < n_server; i++ {
+	for i := 0; i < l1; i++ {
 		firstGroup[i] = make([]string, 6)
 		firstGroup[i][0] = "../server/cmd/cmd"
 		firstGroup[i][1] = fmt.Sprintf("-confpath=./server_config/config_s%s.json", strconv.Itoa(i+1))
@@ -58,40 +59,46 @@ func run(n_server, n_outputparty, n_client int) {
 		firstGroup[i][3] = "-mode=http"
 		firstGroup[i][4] = "-logpath=./server_log/"
 		firstGroup[i][5] = fmt.Sprintf("-n_client=%d", n_client)
-
 	}
 
-	for i := n_server; i < l1; i++ {
-		firstGroup[i] = make([]string, 6)
-		firstGroup[i][0] = "../outputparty/cmd/cmd"
-		firstGroup[i][1] = fmt.Sprintf("-confpath=./op_config/config_op%s.json", strconv.Itoa(i-n_server+1))
-		firstGroup[i][2] = "-inputpath=./op_input/experiments.json"
-		firstGroup[i][3] = "-mode=http"
-		firstGroup[i][4] = "-logpath=./op_log/"
-		firstGroup[i][5] = fmt.Sprintf("-n_client=%d", n_client)
+	secondGroup := make([][]string, n_outputparty)
+	for i := 0; i < n_outputparty; i++ {
+		secondGroup[i] = make([]string, 6)
+		secondGroup[i][0] = "../outputparty/cmd/cmd"
+		secondGroup[i][1] = fmt.Sprintf("-confpath=./op_config/config_op%s.json", strconv.Itoa(i+1))
+		secondGroup[i][2] = "-inputpath=./op_input/experiments.json"
+		secondGroup[i][3] = "-mode=http"
+		secondGroup[i][4] = "-logpath=./op_log/"
+		secondGroup[i][5] = fmt.Sprintf("-n_client=%d", n_client)
 	}
 
-	secondGroup := make([][]string, n_client)
+	thirdGroup := make([][]string, n_client)
 	for i := 0; i < n_client; i++ {
-		secondGroup[i] = make([]string, 4)
-		secondGroup[i][0] = "../client/cmd/cmd"
-		secondGroup[i][1] = fmt.Sprintf("-confpath=./client_config/config_c%s.json", strconv.Itoa(i+1))
-		secondGroup[i][2] = fmt.Sprintf("-inputpath=./client_input/input_c%s.json", strconv.Itoa(i+1))
-		secondGroup[i][3] = "-logpath=./client_log/"
+		thirdGroup[i] = make([]string, 4)
+		thirdGroup[i][0] = "../client/cmd/cmd"
+		thirdGroup[i][1] = fmt.Sprintf("-confpath=./client_config/config_c%s.json", strconv.Itoa(i+1))
+		thirdGroup[i][2] = fmt.Sprintf("-inputpath=./client_input/input_c%s.json", strconv.Itoa(i+1))
+		thirdGroup[i][3] = "-logpath=./client_log/"
 
 	}
 
 	var wg sync.WaitGroup
 
-	// Execute the first group of processes in parallel
+	// Execute servers in parallel
 	for _, cmd := range firstGroup {
+		wg.Add(1)
+		go executeFirstGroup(cmd[0], cmd[1], cmd[2], cmd[3], cmd[4], cmd[5], &wg)
+	}
+
+	// Execute output parties in parallel
+	for _, cmd := range secondGroup {
 		wg.Add(1)
 		go executeFirstGroup(cmd[0], cmd[1], cmd[2], cmd[3], cmd[4], cmd[5], &wg)
 	}
 
 	time.Sleep(30 * time.Second)
 
-	for _, cmd := range secondGroup {
+	for _, cmd := range thirdGroup {
 		wg.Add(1)
 		go executeSecondGroup(cmd[0], cmd[1], cmd[2], cmd[3], &wg)
 	}

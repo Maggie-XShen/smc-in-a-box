@@ -16,7 +16,7 @@ import (
 
 var client_header = []string{"id", "N_secrets", "N", "M", "N_open", "T", "start", "proof_size", "proof_time", "end"}
 var server_header = []string{"id", "N_clients", "N_secrets", "N", "M", "N_open", "T", "client_share_due", "complaint_due", "share_broadcast_due", "start", "real_client_share_due", "complaint_time", "real_complaint_due", "mask_share_time", "share_correction_time", "end"}
-var op_header = []string{"id", "N_clients", "N_secrets", "N", "T", "client_share_due", "server_share_due", "start", "real_server_share_due", "experiment_time", "end"}
+var op_header = []string{"id", "N_clients", "N_secrets", "N", "T", "client_share_due", "server_share_due", "start", "real_server_share_due", "reconstruction_time", "end"}
 var server_mal_header = []string{"id", "N_clients", "N_secrets", "N", "M", "N_open", "T", "client_share_due", "complaint_due", "share_broadcast_due", "start", "complaint_time", "real_client_share_due", "real_complaint_due", "mask_share_time", "real_mask_share_due", "share_correction_time", "end"}
 
 func main() {

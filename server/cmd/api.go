@@ -49,7 +49,7 @@ func (c *ClientService) CreateClientShare(request ClientRequest, cfg *config.Ser
 	}
 
 	timestamp := time.Now().UTC()
-	due, _ := time.Parse("2006-01-02 15:04:05", exp.ClientShareDue)
+	due, _ := time.Parse("2006-01-02 15:04:05.999999999 +0000 UTC", exp.ClientShareDue)
 
 	if timestamp.After(due) {
 		return errors.New("client submitted share after due")

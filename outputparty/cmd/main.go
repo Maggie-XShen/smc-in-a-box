@@ -18,7 +18,7 @@ var p_sh int //total number of shares per secret stored by each server
 var n_sh int //total number of shares a secret splits to
 var start time.Time
 var real_server_share_due time.Time
-var experiment_end time.Duration
+var reconstruction_end time.Duration
 
 func main() {
 	//read configuration
