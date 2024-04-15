@@ -55,7 +55,6 @@ func (c *ClientService) CreateClientShare(request ClientRequest, cfg *config.Ser
 		return errors.New("client submitted share after due")
 	}
 
-	complaint_start := time.Now()
 	//insert experiment id and client id to client table
 	err = c.db.InsertClient(request.Exp_ID, request.Client_ID)
 	if err != nil {
@@ -125,8 +124,8 @@ func (c *ClientService) CreateClientShare(request ClientRequest, cfg *config.Ser
 		}
 
 	}
-	complaint_end = time.Since(complaint_start)
-	complaint_end += complaint_end
+
+	total_verify_time += proof_verify_end
 
 	client_count += 1
 	if client_count == client_size {

@@ -23,7 +23,7 @@ var start time.Time
 var real_client_share_due time.Time
 var real_complaint_due time.Time
 var real_share_broadcast_due time.Time
-var complaint_end time.Duration
+var total_verify_time time.Duration
 var mask_share_end time.Duration
 var share_correct_end time.Duration
 

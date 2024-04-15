@@ -847,7 +847,7 @@ func (s *Server) Close(ticker *time.Ticker) {
 
 			logger.WithFields(logrus.Fields{
 				"real_client_share_due":    real_client_share_due.String(),
-				"complaint_time":           complaint_end.String(),
+				"total_verify_time":        total_verify_time.String(),
 				"real_complaint_due":       real_complaint_due.String(),
 				"mask_share_time":          mask_share_end.String(),
 				"real_share_broadcast_due": real_share_broadcast_due.String(),
