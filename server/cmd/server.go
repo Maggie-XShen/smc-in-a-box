@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"example.com/SMC/pkg/rss"
@@ -59,71 +60,78 @@ func (s *Server) HandleExp(path string) {
 }
 
 func (s *Server) clientRequestHandler(rw http.ResponseWriter, req *http.Request) {
+	rw.WriteHeader(http.StatusOK)
+
 	var request ClientRequest
 
 	clientService := NewClientService(s.store)
 	data := request.ReadJson(req)
 
-	err := clientService.CreateClientShare(data, s.cfg)
+	go func() {
 
-	if err != nil {
-		log.Printf("error: %s\n", err)
-		rw.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintln(rw, err)
-		return
-	}
+		err := clientService.CreateClientShare(data, s.cfg)
 
-	rw.WriteHeader(http.StatusOK)
+		if err != nil {
+			log.Printf("error: %s\n", err)
+		}
+
+		client_count += 1
+		if client_count == client_size {
+			real_client_share_due = time.Now().UTC() // time to start the step of assemble complaints and broadcast without waiting
+		}
+	}()
 
 }
 
 func (s *Server) serverComplaintHandler(rw http.ResponseWriter, req *http.Request) {
+	rw.WriteHeader(http.StatusOK)
+
 	var request ComplaintRequest
 
 	serverService := NewServerService(s.store)
 	data := request.ReadJson(req)
 
-	err := serverService.CreateComplaint(data)
+	go func() {
 
-	count := s.store.CountComplaintsPerExperiment(data.Exp_ID)
+		err := serverService.CreateComplaint(data)
 
-	if count == int64(complaint_size) {
-		real_complaint_due = time.Now().UTC() //time to start the step of masked share generation without waiting
-	}
+		count := s.store.CountComplaintsPerExperiment(data.Exp_ID)
 
-	if err != nil {
-		log.Printf("error: %s\n", err)
-		rw.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintln(rw, err)
-		return
-	}
+		if count == int64(complaint_size) {
+			real_complaint_due = time.Now().UTC() //time to start the step of masked share generation without waiting
+		}
 
-	rw.WriteHeader(http.StatusOK)
+		if err != nil {
+			log.Printf("error: %s\n", err)
+		}
+	}()
+
 }
 
 func (s *Server) serverMaskedSharesHandler(rw http.ResponseWriter, req *http.Request) {
+	rw.WriteHeader(http.StatusOK)
+
 	var request MaskedShareRequest
 
 	serverService := NewServerService(s.store)
 	data := request.ReadJson(req)
 
-	err := serverService.CreateMaskedShares(data)
+	go func() {
 
-	count := s.store.CountMaskedSharesPerExperiment(data.Exp_ID)
+		err := serverService.CreateMaskedShares(data)
 
-	if count == int64(mask_share_size) {
-		real_share_broadcast_due = time.Now().UTC() //time to start the step of share correction without waiting
+		count := s.store.CountMaskedSharesPerExperiment(data.Exp_ID)
 
-	}
+		if count == int64(mask_share_size) {
+			real_share_broadcast_due = time.Now().UTC() //time to start the step of share correction without waiting
 
-	if err != nil {
-		log.Printf("error: %s\n", err)
-		rw.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintln(rw, err)
-		return
-	}
+		}
 
-	rw.WriteHeader(http.StatusOK)
+		if err != nil {
+			log.Printf("error: %s\n", err)
+		}
+	}()
+
 }
 
 func (s *Server) dolevComplaintHandler(rw http.ResponseWriter, req *http.Request) {
@@ -301,10 +309,15 @@ func (s *Server) WaitForEndOfExperiment(ticker *time.Ticker) {
 					Complaints: set,
 				}
 
+				var wg sync.WaitGroup
 				for _, address := range s.cfg.Complaint_urls {
-					log.Printf("server %s sends complaints to %s: %+v\n", s.cfg.Server_ID, address, message)
-					writer := &message
-					send(address, writer.ToJson())
+					wg.Add(1)
+					go func(addr string) {
+						defer wg.Done()
+						log.Printf("server %s sends complaints to %s: %+v\n", s.cfg.Server_ID, addr, message)
+						writer := &message
+						send(addr, writer.ToJson())
+					}(address)
 				}
 
 				//set round1 to completed
@@ -442,10 +455,15 @@ func (s *Server) WaitForEndOfComplaintBroadcast(ticker *time.Ticker) {
 						MaskedShares: set,
 					}
 
+					var wg sync.WaitGroup
 					for _, address := range s.cfg.Masked_share_urls {
-						log.Printf("server %s is sending masked shares to %s: %+v\n", s.cfg.Server_ID, address, message)
-						writer := &message
-						send(address, writer.ToJson())
+						wg.Add(1)
+						go func(addr string) {
+							defer wg.Done()
+							log.Printf("server %s is sending masked shares to %s: %+v\n", s.cfg.Server_ID, addr, message)
+							writer := &message
+							send(addr, writer.ToJson())
+						}(address)
 					}
 
 					//TODO:dolev strong broadcast
@@ -845,9 +863,13 @@ func (s *Server) Close(ticker *time.Ticker) {
 		if int64(len(finished)) == all {
 			end := time.Since(start)
 
+			avg := total_verify_time.Seconds() / float64(client_size)
+
+			avg_verify_time := time.Duration(avg) * time.Second
+
 			logger.WithFields(logrus.Fields{
 				"real_client_share_due":    real_client_share_due.String(),
-				"total_verify_time":        total_verify_time.String(),
+				"avg_verify_time":          avg_verify_time.String(),
 				"real_complaint_due":       real_complaint_due.String(),
 				"mask_share_time":          mask_share_end.String(),
 				"real_share_broadcast_due": real_share_broadcast_due.String(),

@@ -144,7 +144,8 @@ func GenerateServerConfigCloud(num int, ip []string, src string, des string) {
 		config.Masked_share_urls = m_urls
 
 		file, _ := json.MarshalIndent(config, "", " ")
-		file_name := fmt.Sprintf("config_%s.json", config.Server_ID)
-		_ = os.WriteFile(des+file_name, file, 0644)
+		fileName := fmt.Sprintf("config_%s.json", config.Server_ID)
+		filePath := filepath.Join(des, fileName)
+		_ = os.WriteFile(filePath, file, 0644)
 	}
 }

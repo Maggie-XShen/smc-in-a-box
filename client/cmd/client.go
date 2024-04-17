@@ -7,6 +7,7 @@ import (
 	"log"
 	"math/big"
 	"net/http"
+	"sync"
 	"time"
 
 	"example.com/SMC/client/config"
@@ -58,30 +59,37 @@ func (c *Client) Run(inputpath string) {
 		}).Info("")
 
 		current_time := time.Now().UTC().Format("2006-01-02 15:04:05")
+		var wg sync.WaitGroup
 		for i := 0; i < len(urls); i++ {
 
-			/**
-			//test c1 not sending data to s1
-			if i == 0 && c.cfg.Client_ID == "c1" || i == 1 && c.cfg.Client_ID == "c2" {
-				continue
-			}**/
+			wg.Add(1)
+			index := i // Create a local variable inside the loop
+			go func(idx int) {
+				defer wg.Done()
 
-			/**
-			//test c1's proof is malformed
-			if c.cfg.Client_ID == "c1" {
-				temp := proof[i].CodeTest[0]
-				proof[i].CodeTest[0] = temp%c.cfg.Q - 3
-			}**/
+				/**
+				  //test c1 not sending data to s1
+				  if idx == 0 && c.cfg.Client_ID == "c1" || idx == 1 && c.cfg.Client_ID == "c2" {
+				      return
+				  }**/
 
-			msg := ClientRequest{Exp_ID: input.Exp_ID, Client_ID: c.cfg.Client_ID, Token: c.cfg.Token, Proof: *proof[i], Timestamp: current_time}
+				/**
+				  //test c1's proof is malformed
+				  if c.cfg.Client_ID == "c1" {
+				      temp := proof[idx].CodeTest[0]
+				      proof[idx].CodeTest[0] = temp%c.cfg.Q - 3
+				  }**/
 
-			writer := &msg
+				msg := ClientRequest{Exp_ID: input.Exp_ID, Client_ID: c.cfg.Client_ID, Token: c.cfg.Token, Proof: *proof[idx], Timestamp: current_time}
 
-			log.Printf("client %s is sending data of %s to server%d ...\n", msg.Client_ID, msg.Exp_ID, msg.Proof.PartyShares[0].Index+1)
-			c.Send(urls[i], writer.ToJson())
+				writer := &msg
 
+				log.Printf("client %s is sending data of %s to server%d ...\n", msg.Client_ID, msg.Exp_ID, msg.Proof.PartyShares[0].Index+1)
+				c.Send(urls[idx], writer.ToJson())
+			}(index) // Pass the local variable to the goroutine
 		}
 
+		wg.Wait()
 	}
 
 }

@@ -84,7 +84,7 @@ func (c *ClientService) CreateClientShare(request ClientRequest, cfg *config.Ser
 		"client_id":   request.Client_ID,
 		"verify_time": proof_verify_end.String(),
 	}).Info("")
-
+	total_verify_time += proof_verify_end
 	//creat complaint record based on proof verification result
 	if !verify {
 		log.Printf("failed to verify %s proof for %s -- %s\n", request.Client_ID, request.Exp_ID, err)
@@ -125,12 +125,6 @@ func (c *ClientService) CreateClientShare(request ClientRequest, cfg *config.Ser
 
 	}
 
-	total_verify_time += proof_verify_end
-
-	client_count += 1
-	if client_count == client_size {
-		real_client_share_due = time.Now().UTC() // time to start the step of assemble complaints and broadcast without waiting
-	}
 	return nil
 }
 

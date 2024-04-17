@@ -280,8 +280,6 @@ func (zk *LigeroZK) check_shares_with_opened_column(parties []rss.Party, key []i
 			for i := 0; i < len(parties[0].Shares); i++ {
 				rw := bl + parties[0].Shares[i].Index + 1
 				if (encoded_witness[rw][col.Index]) != col.List[rw] {
-					fmt.Printf("test1: %d\n", encoded_witness[rw][col.Index])
-					fmt.Printf("test2: %d\n", col.List[rw])
 					return false
 				}
 			}

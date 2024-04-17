@@ -17,9 +17,9 @@ func main() {
 
 	n_client := 10
 	n_exp := 1
-	n_input := []int{10} //clarify the number of inputs for each experiment, e.g. n_input={1,2} means first experiment has 1 input, second experiment has 2 inputs
+	n_input := []int{100} //clarify the number of inputs for each experiment, e.g. n_input={1,2} means first experiment has 1 input, second experiment has 2 inputs
 
-	n_server := 4
+	n_server := 1
 	server_port := []string{"50001", "50002", "50003", "50004"} //port for each server
 
 	n_outputparty := 1
@@ -27,15 +27,15 @@ func main() {
 
 	start := time.Now().UTC()
 	clientShareDue := start.Add(time.Minute * 4)
-	t1 := 2  // ComplaintDue = ClientShareDue + t1
-	t2 := 5  // MaskedShareDue = ClientShareDue + t2
+	t1 := 4  // ComplaintDue = ClientShareDue + t1
+	t2 := 7  // MaskedShareDue = ClientShareDue + t2
 	t3 := 10 // ServerShareDue = ClientShareDue + t3
 
 	client_gen.GenerateClientConfig(n_client, "client_template.json", "./client_config")
 
 	client_gen.GenerateClientInput(n_client, n_exp, n_input, "./client_input")
 
-	server_gen.GenerateServerConfigLocal(n_server, server_port, "server_template.json", "./server_config")
+	server_gen.GenerateServerConfigLocal(n_server, server_port[:n_server], "server_template.json", "./server_config")
 
 	server_gen.GenerateServerInput(n_exp, clientShareDue, t1, t2, "http://127.0.0.1:60000/serverShare/", "./server_input")
 
