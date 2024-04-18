@@ -8,16 +8,17 @@ import (
 	"golang.org/x/crypto/chacha20"
 )
 
-var mainCipher *chacha20.Cipher
-
 type CryptoRandSource struct {
+	mainCipher *chacha20.Cipher
 }
 
 func NewCryptoRandSource() CryptoRandSource {
-	return CryptoRandSource{}
+	return CryptoRandSource{
+		mainCipher: new(chacha20.Cipher),
+	}
 }
 
-func (c CryptoRandSource) Seed(seeds ...interface{}) {
+func (c *CryptoRandSource) Seed(seeds ...interface{}) {
 	// Concatenate the seeds
 	var concatenatedSeeds []byte
 	for _, seed := range seeds {
@@ -40,21 +41,21 @@ func (c CryptoRandSource) Seed(seeds ...interface{}) {
 	nonce := make([]byte, 24)
 
 	var err error
-	mainCipher, err = chacha20.NewUnauthenticatedCipher(key[:], nonce)
+	c.mainCipher, err = chacha20.NewUnauthenticatedCipher(key[:], nonce)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func (c CryptoRandSource) Int63(q int64) int64 {
-	if mainCipher == nil {
+func (c *CryptoRandSource) Int63(q int64) int64 {
+	if c.mainCipher == nil {
 		panic(errors.New("crypto seed not set"))
 	}
 
 	//var b [8]byte
 	b := make([]byte, 8)
 	zeroes := make([]byte, 8)
-	mainCipher.XORKeyStream(b, zeroes)
+	c.mainCipher.XORKeyStream(b, zeroes)
 
 	// mask off sign bit to ensure positive number
 	return int64(binary.LittleEndian.Uint64(b[:])&(1<<63-1)) % q

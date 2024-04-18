@@ -12,37 +12,39 @@ import (
 // for everything in order to ensure both good randomness and repeatability.
 // It's based on the chacha20 cipher.
 
-var mainCipher *chacha20.Cipher
-
 type CryptoRandSource struct {
+	mainCipher *chacha20.Cipher
 }
 
 func NewCryptoRandSource() CryptoRandSource {
-	return CryptoRandSource{}
+	return CryptoRandSource{
+		mainCipher: new(chacha20.Cipher),
+	}
 }
 
-func (c CryptoRandSource) Int63() int64 {
-	if mainCipher == nil {
+func (c *CryptoRandSource) Int63() int64 {
+	if c.mainCipher == nil {
 		panic(errors.New("crypto seed not set"))
 	}
 
 	//var b [8]byte
 	b := make([]byte, 8)
 	zeroes := make([]byte, 8)
-	mainCipher.XORKeyStream(b, zeroes)
+
+	c.mainCipher.XORKeyStream(b, zeroes)
 
 	// mask off sign bit to ensure positive number
 	return int64(binary.LittleEndian.Uint64(b[:]) & (1<<63 - 1))
 }
 
-func (c CryptoRandSource) Seed(seed int64) {
+func (c *CryptoRandSource) Seed(seed int64) {
 	var err error
 	key := make([]byte, 32)
 	seedU := uint64(seed)
 	binary.BigEndian.PutUint64(key, seedU)
 	nonce := make([]byte, 24)
 
-	mainCipher, err = chacha20.NewUnauthenticatedCipher(key, nonce)
+	c.mainCipher, err = chacha20.NewUnauthenticatedCipher(key, nonce)
 	if err != nil {
 		panic(err)
 	}
