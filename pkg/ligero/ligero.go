@@ -7,6 +7,8 @@ import (
 	"log"
 	"math"
 	"math/big"
+	"sync"
+	"time"
 
 	"strings"
 
@@ -25,6 +27,20 @@ import (
 // q: a modulus
 // n_encode:the number of shares that each row of rearranged input vector is split into
 // n_open_col: number of opened columns
+
+var step_1_end time.Duration
+var step_2_end time.Duration
+var step_3_end time.Duration
+var step_4_end time.Duration
+var step_5_end time.Duration
+var step_6_end time.Duration
+var step_7_end time.Duration
+var step_8_end time.Duration
+var step_9_end time.Duration
+var step_10_end time.Duration
+var step_11_end time.Duration
+var step_12_end time.Duration
+var share_end time.Duration
 
 type LigeroZK struct {
 	n_secret, n_shares, m, l, n_server, t, q, n_encode, n_open_col int
@@ -65,44 +81,57 @@ func NewLigeroZK(N_secret, M, N_server, T, Q, N_open int) (*LigeroZK, error) {
 }
 
 func (zk *LigeroZK) GenerateProof(secrets []int) ([]*Proof, error) {
+	step_1_start := time.Now()
 	claims, party_sh, err := zk.preprocess(secrets)
 	if err != nil {
 		log.Fatal(err)
 	}
+	step_1_end = time.Since(step_1_start)
 	//fmt.Printf("claims: %v\n", claims)
 	//fmt.Printf("party_sh: %v\n", party_sh)
 
+	step_2_start := time.Now()
 	extended_witness, err := zk.prepare_extended_witness(claims)
 	if err != nil {
 		log.Fatal(err)
 	}
+	step_2_end = time.Since(step_2_start)
 	//fmt.Printf("extended_witness: %v\n", extended_witness)
 
+	step_3_start := time.Now()
 	seed0 := generate_seeds(zk.n_shares+1, zk.q)
 	encoded_witness, err := zk.encode_extended_witness(extended_witness, seed0)
 	if err != nil {
 		log.Fatal(err)
 	}
+	step_3_end = time.Since(step_3_start)
 
+	step_4_start := time.Now()
 	encoded_witeness_columnwise, err := ConvertToColumnwise(encoded_witness)
 	if err != nil {
 		log.Fatal(err)
 	}
+	step_4_end = time.Since(step_4_start)
 
+	step_5_start := time.Now()
 	//commit to the Extended Witness via Merkle Tree
 	tree, leaves, nonces, err := zk.generate_merkletree(encoded_witeness_columnwise)
 	if err != nil {
 		log.Fatal(err)
 	}
 	root := tree.Root()
+	step_5_end = time.Since(step_5_start)
 
+	step_6_start := time.Now()
 	//generate a vector of random numbers using the hash of merkle tree root as seed
 	len1 := zk.m * (1 + zk.n_server)
 	len2 := zk.m
 	len3 := zk.m + zk.m*(zk.n_server-zk.t-1)
 	h1 := zk.generate_hash([][]byte{root})
 	random_vector := RandVector(h1, len1+len2+len3, zk.q)
+	step_6_end = time.Since(step_6_start)
 
+	step_7_start := time.Now()
 	//generate code test
 	seed1 := generate_seeds(zk.l, zk.q)
 	code_mask := zk.generate_mask(seed1)
@@ -112,7 +141,9 @@ func (zk *LigeroZK) GenerateProof(secrets []int) ([]*Proof, error) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	step_7_end = time.Since(step_7_start)
 
+	step_8_start := time.Now()
 	//generate quadratic test
 	seed2 := make([]int, zk.l)
 	quadra_mask := zk.generate_mask(seed2)
@@ -122,7 +153,9 @@ func (zk *LigeroZK) GenerateProof(secrets []int) ([]*Proof, error) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	step_8_end = time.Since(step_8_start)
 
+	step_9_start := time.Now()
 	//generate linear test
 	seed3 := make([]int, zk.l)
 	linear_mask := zk.generate_mask(seed3)
@@ -132,14 +165,18 @@ func (zk *LigeroZK) GenerateProof(secrets []int) ([]*Proof, error) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	step_9_end = time.Since(step_9_start)
 
+	step_10_start := time.Now()
 	//generate FST root
 	fst_tree, fst_leaves, err := zk.generate_fst_merkletree(party_sh, seed0)
 	if err != nil {
 		log.Fatal(err)
 	}
 	fst_root := fst_tree.Root()
+	step_10_end = time.Since(step_10_start)
 
+	step_11_start := time.Now()
 	h2 := zk.generate_hash([][]byte{h1, fst_root, ConvertToByteArray(q_code), ConvertToByteArray(q_quadra), ConvertToByteArray(q_linear)})
 
 	//generate column check
@@ -148,7 +185,9 @@ func (zk *LigeroZK) GenerateProof(secrets []int) ([]*Proof, error) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	step_11_end = time.Since(step_11_start)
 
+	step_12_start := time.Now()
 	//generate proof for each party
 	proofs := make([]*Proof, zk.n_server)
 	for i := 0; i < zk.n_server; i++ {
@@ -160,6 +199,9 @@ func (zk *LigeroZK) GenerateProof(secrets []int) ([]*Proof, error) {
 
 		proofs[i] = newProof(root, column_check, q_code, q_quadra, q_linear, party_sh[i], seed0, fst_root, fst_proof.Hashes)
 	}
+	step_12_end = time.Since(step_12_start)
+
+	//fmt.Printf("step_3: %v\n", step_3_end.String())
 
 	return proofs, nil
 
@@ -262,7 +304,9 @@ func (zk *LigeroZK) encode_extended_witness(input [][]int, key []int) ([][]int, 
 	}
 
 	crs := NewCryptoRandSource()
-	//shamir-secret sharing each row in input
+
+	/**
+	// shamir-secret sharing each row in input
 	for i := 0; i < len(input); i++ {
 		nonce := i / (1 + zk.n_shares)
 
@@ -278,7 +322,30 @@ func (zk *LigeroZK) encode_extended_witness(input [][]int, key []int) ([][]int, 
 			values[j] = shares[j].Value
 		}
 
-		matrix[i] = values
+	}**/
+
+	var wg sync.WaitGroup
+	//shamir-secret sharing each row in input
+	for i := 0; i < len(input); i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			nonce := i / (1 + zk.n_shares)
+
+			crs.Seed(key[i%(1+zk.n_shares)], nonce)
+
+			shares, err := npss.Split(input[i], int(crs.Int63(int64(zk.q))))
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			values := make([]int, zk.n_encode)
+			for j := 0; j < zk.n_encode; j++ {
+				values[j] = shares[j].Value
+			}
+
+			matrix[i] = values
+		}(i)
 
 	}
 

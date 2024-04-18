@@ -31,6 +31,7 @@ func SetupDatabase(sid string) (*gorm.DB, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	log.Printf("Connection to %s Database Established\n", sid)
 
 	db.AutoMigrate(&Experiment{})

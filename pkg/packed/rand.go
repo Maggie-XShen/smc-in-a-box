@@ -4,7 +4,6 @@ package packed
 import (
 	"encoding/binary"
 	"errors"
-	"math/rand"
 
 	"golang.org/x/crypto/chacha20"
 )
@@ -12,7 +11,6 @@ import (
 // ta cryptographically secure pseudorandom number generator that we should use
 // for everything in order to ensure both good randomness and repeatability.
 // It's based on the chacha20 cipher.
-var MainCSRNG *rand.Rand
 
 var mainCipher *chacha20.Cipher
 

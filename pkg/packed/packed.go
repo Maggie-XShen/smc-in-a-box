@@ -3,7 +3,6 @@ package packed
 import (
 	"fmt"
 	"math/big"
-	"math/rand"
 )
 
 // n: the number of shares that a vector of secrets are split into
@@ -101,10 +100,10 @@ func (p *PackedSecretSharing) sample_packed_polynomial(secrets []int, seed int) 
 
 	randomness_values := make([]int, p.t)
 	seedValue := int64(seed)
-	MainCSRNG = rand.New(NewCryptoRandSource())
-	MainCSRNG.Seed(seedValue)
+	crs := NewCryptoRandSource()
+	crs.Seed(seedValue)
 	for i := 0; i < p.t; i++ {
-		randomNumber := MainCSRNG.Int63()
+		randomNumber := crs.Int63()
 		randomness_values[i] = int(randomNumber % int64(p.q))
 	}
 

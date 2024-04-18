@@ -135,7 +135,6 @@ func TestGenerate_MerkleTree(t *testing.T) {
 	}
 	//get root of merkletree
 	root := tree.Root()
-	fmt.Printf("leaves: %v\n", leaves)
 
 	for _, leaf := range leaves {
 		proof, err := tree.GenerateProof(leaf)
@@ -175,9 +174,29 @@ func TestGenerate(t *testing.T) {
 			log.Fatal(err)
 		}
 		if !verify {
-			fmt.Printf("Verification failed for party %d!\n", proof[i].PartyShares[0].Index)
+			fmt.Println("Verification failed for party!")
 		}
-		fmt.Printf("Verification succeed for party %d!\n", proof[i].PartyShares[0].Index)
+		fmt.Println("Verification succeed for party !")
 	}
 
+}
+
+func BenchmarkGenerateProof(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		zk, err := NewLigeroZK(100, 4, 4, 1, 10631, 240)
+		if err != nil {
+			log.Fatalf("err: %v", err)
+		}
+
+		secrets := []int{0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1}
+
+		proof, err := zk.GenerateProof(secrets)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+		zk.GetProofSize(*proof[0])
+
+		//fmt.Printf("%d\n", zk.GetProofSize(*proof[0]))
+	}
 }

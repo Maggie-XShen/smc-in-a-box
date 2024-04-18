@@ -3,20 +3,24 @@ package main
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"example.com/SMC/pkg/ligero"
 )
 
 func main() {
 
-	zk, err := ligero.NewLigeroZK(3, 1, 6, 1, 10631, 3)
+	zk, err := ligero.NewLigeroZK(100, 4, 4, 1, 10631, 240)
 	if err != nil {
 		log.Fatalf("err: %v", err)
 	}
 
-	secrets := []int{1, 1, 0}
+	secrets := []int{0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1}
 
+	start := time.Now()
 	proof, err := zk.GenerateProof(secrets)
+	end := time.Since(start)
+	fmt.Printf("main end: %v\n", end)
 
 	if err != nil {
 		log.Fatal(err)

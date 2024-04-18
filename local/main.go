@@ -15,21 +15,21 @@ import (
 
 func main() {
 
-	n_client := 10
+	n_client := 1
 	n_exp := 1
-	n_input := []int{100} //clarify the number of inputs for each experiment, e.g. n_input={1,2} means first experiment has 1 input, second experiment has 2 inputs
+	n_input := []int{1000} //clarify the number of inputs for each experiment, e.g. n_input={1,2} means first experiment has 1 input, second experiment has 2 inputs
 
-	n_server := 1
+	n_server := 4
 	server_port := []string{"50001", "50002", "50003", "50004"} //port for each server
 
 	n_outputparty := 1
 	op_port := []string{"60000"}
 
 	start := time.Now().UTC()
-	clientShareDue := start.Add(time.Minute * 4)
-	t1 := 4  // ComplaintDue = ClientShareDue + t1
+	clientShareDue := start.Add(time.Minute * 8)
+	t1 := 3  // ComplaintDue = ClientShareDue + t1
 	t2 := 7  // MaskedShareDue = ClientShareDue + t2
-	t3 := 10 // ServerShareDue = ClientShareDue + t3
+	t3 := 11 // ServerShareDue = ClientShareDue + t3
 
 	client_gen.GenerateClientConfig(n_client, "client_template.json", "./client_config")
 

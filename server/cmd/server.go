@@ -275,8 +275,8 @@ func (s *Server) WaitForEndOfExperiment(ticker *time.Ticker) {
 
 		experiments, err := s.store.GetAllExperiments()
 		if err != nil {
-			//log.Println("cannot retreive non-completed experiments - error:", err)
-			panic(err)
+			log.Println("cannot retreive non-completed experiments - error:", err)
+			continue
 		}
 
 		for _, exp := range experiments {
@@ -288,9 +288,8 @@ func (s *Server) WaitForEndOfExperiment(ticker *time.Ticker) {
 
 				complaints, err := s.store.GetComplaintsPerServer(exp.Exp_ID, s.cfg.Server_ID)
 				if err != nil {
-					//log.Println("cannot retreive complaints records- error:", err)
-					//continue
-					panic(err)
+					log.Println("cannot retreive complaints records- error:", err)
+					continue
 				}
 
 				if len(complaints) == 0 {
@@ -342,8 +341,8 @@ func (s *Server) WaitForEndOfComplaintBroadcast(ticker *time.Ticker) {
 
 		experiments, err := s.store.GetExpsWithRound1Completed()
 		if err != nil {
-			//log.Println("cannot retreive non-completed experiments - error:", err)
-			panic(err)
+			log.Println("cannot retreive non-completed experiments - error:", err)
+			continue
 		}
 
 		for _, exp := range experiments {
@@ -357,9 +356,9 @@ func (s *Server) WaitForEndOfComplaintBroadcast(ticker *time.Ticker) {
 				//find dropout clients for the server
 				dropout, err := s.store.GetDropoutClient(exp.Exp_ID)
 				if err != nil {
-					//log.Println("cannot retreive missing clients- error:", err)
-					//continue
-					panic(err)
+					log.Println("cannot retreive missing clients- error:", err)
+					continue
+
 				}
 
 				//generate complaint of dropout client
@@ -490,8 +489,8 @@ func (s *Server) WaitForEndOfShareBroadcast(ticker *time.Ticker) {
 
 		experiments, err := s.store.GetExpsWithRound2Completed()
 		if err != nil {
-			//log.Println("cannot retreive non-completed experiments - error:", err)
-			panic(err)
+			log.Println("cannot retreive non-completed experiments - error:", err)
+			continue
 		}
 
 		for _, exp := range experiments {
@@ -505,8 +504,8 @@ func (s *Server) WaitForEndOfShareBroadcast(ticker *time.Ticker) {
 
 				valid_clients, err := s.store.GetValidClientsPerExperiment(exp.Exp_ID)
 				if err != nil {
-					//log.Fatal("cannot retreive valid clients - error:", err)
-					panic(err)
+					log.Fatal("cannot retreive valid clients - error:", err)
+					continue
 				}
 
 				//prepare valid client set for share correction
@@ -850,14 +849,14 @@ func (s *Server) Close(ticker *time.Ticker) {
 	for range ticker.C {
 		finished, err := s.store.GetExpsWithRound3Completed()
 		if err != nil {
-			//log.Println("cannot retreive non-completed experiments - error:", err)
-			panic(err)
+			log.Println("cannot retreive completed experiments - error:", err)
+			continue
 		}
 
 		all, err := s.store.GetExperimentCount()
 		if err != nil {
-			//log.Println("cannot retreive non-completed experiments - error:", err)
-			panic(err)
+			log.Println("cannot retreive non-completed experiments - error:", err)
+			continue
 		}
 
 		if int64(len(finished)) == all {
