@@ -15,7 +15,7 @@ import (
 
 func main() {
 
-	n_client := 1
+	n_client := 10
 	n_exp := 1
 	n_input := []int{1000} //clarify the number of inputs for each experiment, e.g. n_input={1,2} means first experiment has 1 input, second experiment has 2 inputs
 
@@ -27,9 +27,9 @@ func main() {
 
 	start := time.Now().UTC()
 	clientShareDue := start.Add(time.Minute * 8)
-	t1 := 3  // ComplaintDue = ClientShareDue + t1
-	t2 := 7  // MaskedShareDue = ClientShareDue + t2
-	t3 := 11 // ServerShareDue = ClientShareDue + t3
+	t1 := 2 // ComplaintDue = ClientShareDue + t1
+	t2 := 5 // MaskedShareDue = ClientShareDue + t2
+	t3 := 9 // ServerShareDue = ClientShareDue + t3
 
 	client_gen.GenerateClientConfig(n_client, "client_template.json", "./client_config")
 
