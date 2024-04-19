@@ -11,11 +11,11 @@ import (
 // k: the number of secrets shared together
 // q: a modulus
 // t + k: the minimum number of shares needed to reconstruct the secret
-var flag []int
-var glob_constants [][]int
 
 type PackedSecretSharing struct {
-	n, t, k, q int
+	n, t, k, q     int
+	flag           []bool
+	glob_constants [][]int
 }
 
 type Share struct {
@@ -38,13 +38,7 @@ func NewPackedSecretSharing(N, T, K, Q int) (*PackedSecretSharing, error) {
 		return nil, fmt.Errorf("q must be a prime number")
 	}
 
-	flag = make([]int, N)
-	for i := range flag {
-		flag[i] = -1
-	}
-	glob_constants = make([][]int, N)
-
-	return &PackedSecretSharing{n: N, t: T, k: K, q: Q}, nil
+	return &PackedSecretSharing{n: N, t: T, k: K, q: Q, flag: make([]bool, N), glob_constants: make([][]int, N)}, nil
 
 }
 
@@ -117,21 +111,6 @@ func (p *PackedSecretSharing) sample_packed_polynomial(secrets []int, seed int) 
 		randomness_values[i] = int(randomNumber % int64(p.q))
 	}
 
-	/**
-	r := rand.New(rand.NewSource(int64(seed)))
-	checkMap := map[int]bool{}
-	for i := 0; i < p.t; i++ {
-		for {
-			value := r.Intn(p.q)
-			if !checkMap[int(value)] {
-				checkMap[int(value)] = true
-				randomness_values[i] = int(value)
-				break
-			}
-
-		}
-	}**/
-
 	y_samples := append(secrets, randomness_values...)
 
 	return x_samples, y_samples, nil
@@ -140,16 +119,16 @@ func (p *PackedSecretSharing) sample_packed_polynomial(secrets []int, seed int) 
 // interpolate_at_point takes t+k sample points and returns
 // the value at a given x using a lagrange interpolation.
 func (p *PackedSecretSharing) interpolate_at_point(x_samples []int, y_samples []int, x int) int {
-	if flag[x-1] == -1 {
-		glob_constants[x-1] = make([]int, len(x_samples))
-		glob_constants[x-1] = p.lagrange_constants_for_point(x_samples, x)
-		flag[x-1] = 0
+	if !p.flag[x-1] {
+		p.glob_constants[x-1] = make([]int, len(x_samples))
+		p.glob_constants[x-1] = p.lagrange_constants_for_point(x_samples, x)
+		p.flag[x-1] = true
 	}
 	//constants := p.lagrange_constants_for_point(x_samples, x)
 
 	y := 0
 	for i := 0; i < len(y_samples); i++ {
-		y = y + y_samples[i]*glob_constants[x-1][i]
+		y = y + y_samples[i]*p.glob_constants[x-1][i]
 	}
 	return mod(y, p.q)
 }

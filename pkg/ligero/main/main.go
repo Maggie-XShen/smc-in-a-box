@@ -8,6 +8,7 @@ import (
 	"example.com/SMC/pkg/ligero"
 )
 
+var verify_start time.Time
 var verify_end time.Duration
 
 func main() {
@@ -37,9 +38,15 @@ func main() {
 
 	for i := 0; i < len(proof); i++ {
 
-		verify_start := time.Now()
+		if i == 0 {
+			verify_start = time.Now()
+		}
+
 		verify, err := zk.VerifyProof(*proof[i])
-		verify_end = time.Since(verify_start)
+		if i == 0 {
+			verify_end = time.Since(verify_start)
+		}
+
 		if err != nil {
 			fmt.Printf("verification failed for party %d\n", proof[i].PartyShares[0].Index)
 			log.Fatal(err)

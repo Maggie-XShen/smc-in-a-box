@@ -64,7 +64,7 @@ func MulList(list1 []int, list2 []int, q int) (int, error) {
 
 // interpolate_at_point takes points and returns
 // the value at a given x using a lagrange interpolation.
-func Interpolate_at_Point(x_samples []int, y_samples []int, x int, q int) (int, error) {
+func (zk *LigeroZK) Interpolate_at_Point(x_samples []int, y_samples []int, x int, q int) (int, error) {
 	if len(x_samples) != len(y_samples) {
 		return 0, fmt.Errorf("Invalid inputs: x_samples and y_samples length are different")
 
@@ -76,10 +76,15 @@ func Interpolate_at_Point(x_samples []int, y_samples []int, x int, q int) (int, 
 		}
 	}
 
-	constants := GenerateLagrangeConstants(x_samples, x, q)
+	if !zk.glob_constants.flag[x-1] {
+		zk.glob_constants.values[x-1] = make([]int, len(x_samples))
+		zk.glob_constants.values[x-1] = GenerateLagrangeConstants(x_samples, x, q)
+		zk.glob_constants.flag[x-1] = true
+	}
+
 	y := 0
 	for i := 0; i < len(y_samples); i++ {
-		y = y + y_samples[i]*constants[i]
+		y = y + y_samples[i]*zk.glob_constants.values[x-1][i]
 	}
 	return mod(y, q), nil
 }

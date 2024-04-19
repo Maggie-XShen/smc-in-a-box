@@ -4,10 +4,23 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"example.com/SMC/pkg/rss"
 	merkletree "github.com/wealdtech/go-merkletree"
 )
+
+type GlobConstants struct {
+	flag   []bool
+	values [][]int
+}
+
+var auth_path_end time.Duration
+var gen_hash_end time.Duration
+var open_col_end time.Duration
+var code_end time.Duration
+var quadra_end time.Duration
+var linear_end time.Duration
 
 type Proof struct {
 	MerkleRoot   []byte         `json:"MerkleRoot"`
@@ -47,20 +60,26 @@ func newProof(root []byte, column_check []OpenedColumn, q_code []int, q_quadra [
 
 func (zk *LigeroZK) VerifyProof(proof Proof) (bool, error) {
 	//verify fst auth path
+	auth_path_start := time.Now()
 	fstAuthPathTest, err := zk.verify_fst_authpath(proof.PartyShares, proof.Seeds, proof.FST_authpath, proof.FST_root)
 	if !fstAuthPathTest {
 		return false, err
 	}
+	auth_path_end = time.Since(auth_path_start)
 
+	gen_hash_start := time.Now()
 	h1 := zk.generate_hash([][]byte{proof.MerkleRoot})
 	//h2 := zk.generate_hash([][]byte{h1, proof.FST_root, ConvertToByteArray(proof.CodeTest), ConvertToByteArray(proof.QuadraTest), ConvertToByteArray(proof.LinearTest)})
 	//r4 := zk.generate_random_vector(h2, zk.n_open_col, zk.n_encode)
+	gen_hash_end = time.Since(gen_hash_start)
 
 	//verify opened columns are correct
+	open_col_start := time.Now()
 	openenColumnTest, err := zk.verify_opened_columns(proof.ColumnTest, proof.MerkleRoot)
 	if !openenColumnTest {
 		return false, err
 	}
+	open_col_end = time.Since(open_col_start)
 
 	len1 := zk.m * (1 + zk.n_server)
 	len2 := zk.m
@@ -68,26 +87,51 @@ func (zk *LigeroZK) VerifyProof(proof Proof) (bool, error) {
 
 	random_vector := RandVector(h1, len1+len2+len3, zk.q)
 
-	//verify code test proof
-	r1 := random_vector[:len1]
-	codeTest, err := zk.verify_code_proof(proof.CodeTest, r1, proof.ColumnTest)
-	if !codeTest {
-		return false, err
-	}
-
 	//verify quadratic test proof
+	quadra_start := time.Now()
 	r2 := random_vector[len1 : len1+len2]
 	quadraticTest, err := zk.verify_quadratic_constraints(proof.QuadraTest, r2, proof.ColumnTest)
 	if !quadraticTest {
 		return false, err
 	}
+	quadra_end = time.Since(quadra_start)
+
+	//verify code test proof
+	code_start := time.Now()
+	r1 := random_vector[:len1]
+	codeTest, err := zk.verify_code_proof(proof.CodeTest, r1, proof.ColumnTest)
+	if !codeTest {
+		return false, err
+	}
+	code_end = time.Since(code_start)
 
 	//verify linear test proof
+	linear_start := time.Now()
 	r3 := random_vector[len1+len2 : len1+len2+zk.m]
 	linearTest, err := zk.verify_linear_proof(proof.PartyShares, proof.Seeds, proof.LinearTest, r3, proof.ColumnTest)
 	if !linearTest {
 		return false, err
 	}
+	linear_end = time.Since(linear_start)
+
+	type step struct {
+		name     string
+		time     time.Duration
+		duration string
+	}
+
+	/**
+		list := []step{{name: "auth_path", time: auth_path_end, duration: auth_path_end.String()}, {name: "gen_hash", time: gen_hash_end, duration: gen_hash_end.String()}, {name: "open_col", time: open_col_end, duration: open_col_end.String()}, {name: "code_end", time: code_end, duration: code_end.String()}, {name: "quadra_hash", time: quadra_end, duration: quadra_end.String()}, {name: "linear_end", time: linear_end, duration: linear_end.String()}}
+
+		sort.Slice(list, func(i, j int) bool {
+			return list[i].time > list[j].time
+		})
+		fmt.Printf("%+v\n", list)
+
+	fmt.Printf("quadra_end:%+v\n", quadra_end)
+	fmt.Printf("linear_end:%+v\n", linear_end)
+	fmt.Printf("code_end:%+v\n", code_end)
+	**/
 
 	return true, nil
 }
@@ -175,7 +219,7 @@ func (zk *LigeroZK) verify_code_proof(q_code []int, randomness []int, open_cols 
 
 	for _, col := range open_cols {
 		x := col.Index + 1
-		result1, err := Interpolate_at_Point(x_sample, q_code, x, zk.q)
+		result1, err := zk.Interpolate_at_Point(x_sample, q_code, x, zk.q)
 		if err != nil {
 			return false, fmt.Errorf("code test failed: x_samples and y_samples length are different")
 		}
@@ -195,14 +239,14 @@ func (zk *LigeroZK) verify_code_proof(q_code []int, randomness []int, open_cols 
 
 func (zk *LigeroZK) verify_quadratic_constraints(q_quadra []int, randomness []int, open_cols []OpenedColumn) (bool, error) {
 	//generate x coordicates
-	x_sample := make([]int, len(q_quadra))
-	for i := 0; i < len(q_quadra); i++ {
+	length := len(q_quadra)
+	x_sample := make([]int, length)
+	for i := 0; i < length; i++ {
 		x_sample[i] = i + 1
 	}
-
 	for j := 0; j < zk.l; j++ {
 		x := mod(-j-1, zk.q)
-		result, err := Interpolate_at_Point(x_sample, q_quadra, x, zk.q)
+		result, err := zk.Interpolate_at_Point(x_sample, q_quadra, x, zk.q)
 		if err != nil {
 			return false, fmt.Errorf("quadratic test failed: failed to evaluat polynomial")
 		}
@@ -227,14 +271,15 @@ func (zk *LigeroZK) verify_linear_proof(parties []rss.Party, key []int, q_linear
 	}
 
 	// generate x coordicates
-	x_sample := make([]int, len(q_linear))
-	for i := 0; i < len(q_linear); i++ {
+	length := len(q_linear)
+	x_sample := make([]int, length)
+	for i := 0; i < length; i++ {
 		x_sample[i] = i + 1
 	}
 
 	for j := 0; j < zk.l; j++ {
 		x := mod(-j-1, zk.q)
-		result, err := Interpolate_at_Point(x_sample, q_linear, x, zk.q)
+		result, err := zk.Interpolate_at_Point(x_sample, q_linear, x, zk.q)
 		if err != nil {
 			return false, fmt.Errorf("linear test failed: failed to evaluat polynomial")
 		}

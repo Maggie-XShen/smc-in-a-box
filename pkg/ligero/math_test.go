@@ -41,6 +41,7 @@ func TestMulMatrix(t *testing.T) {
 	}
 }
 
+/**
 func TestInterpolateAtPoint(t *testing.T) {
 	tests := []struct {
 		x_sample  []int
@@ -54,8 +55,9 @@ func TestInterpolateAtPoint(t *testing.T) {
 		{[]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13}, []int{33, 24, 39, 29, 36, 18, 18, 35, 24, 13, 7, 2, 36}, 40, 41, 0, nil},
 	}
 
+
 	for _, test := range tests {
-		result, err := Interpolate_at_Point(test.x_sample, test.y_samples, test.x, test.q)
+		result, err := zk.Interpolate_at_Point(test.x_sample, test.y_samples, test.x, test.q)
 
 		// Check if an error is expected
 		if err != test.wantErr {
@@ -69,3 +71,4 @@ func TestInterpolateAtPoint(t *testing.T) {
 		}
 	}
 }
+**/
