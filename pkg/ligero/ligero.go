@@ -7,7 +7,6 @@ import (
 	"log"
 	"math"
 	"math/big"
-	"sync"
 	"time"
 
 	"strings"
@@ -40,7 +39,6 @@ var step_9_end time.Duration
 var step_10_end time.Duration
 var step_11_end time.Duration
 var step_12_end time.Duration
-var share_end time.Duration
 
 type LigeroZK struct {
 	n_secret, n_shares, m, l, n_server, t, q, n_encode, n_open_col int
@@ -200,8 +198,24 @@ func (zk *LigeroZK) GenerateProof(secrets []int) ([]*Proof, error) {
 		proofs[i] = newProof(root, column_check, q_code, q_quadra, q_linear, party_sh[i], seed0, fst_root, fst_proof.Hashes)
 	}
 	step_12_end = time.Since(step_12_start)
+	/**
+	type step struct {
+		name     string
+		time     time.Duration
+		duration string
+	}
 
-	//fmt.Printf("step_3: %v\n", step_3_end.String())
+
+	list := []step{{name: "step_1", time: Step_1_end, duration: Step_1_end.String()}, {name: "step_2", time: Step_2_end, duration: Step_2_end.String()}, {name: "step_3", time: Step_3_end, duration: Step_3_end.String()}, {name: "step_4", time: Step_4_end, duration: Step_4_end.String()}, {name: "step_5", time: Step_5_end, duration: Step_5_end.String()}, {name: "step_6", time: Step_6_end, duration: Step_6_end.String()}, {name: "step_7", time: Step_7_end, duration: Step_7_end.String()}, {name: "step_8", time: Step_8_end, duration: Step_8_end.String()}, {name: "step_9", time: Step_9_end, duration: Step_9_end.String()}, {name: "step_10", time: Step_10_end, duration: Step_10_end.String()}, {name: "step_11", time: Step_11_end, duration: Step_11_end.String()}, {name: "step_12", time: Step_12_end, duration: Step_12_end.String()}}
+
+	sort.Slice(list, func(i, j int) bool {
+		return list[i].time > list[j].time
+	})**/
+
+	fmt.Printf("step 3:%+v\n", step_3_end)
+	fmt.Printf("step 7:%+v\n", step_7_end)
+	fmt.Printf("step 8:%+v\n", step_8_end)
+	fmt.Printf("step 9:%+v\n", step_9_end)
 
 	return proofs, nil
 
@@ -303,7 +317,7 @@ func (zk *LigeroZK) encode_extended_witness(input [][]int, key []int) ([][]int, 
 		log.Fatal(err)
 	}
 
-	/**
+	crs := NewCryptoRandSource()
 	// shamir-secret sharing each row in input
 	for i := 0; i < len(input); i++ {
 		nonce := i / (1 + zk.n_shares)
@@ -320,35 +334,36 @@ func (zk *LigeroZK) encode_extended_witness(input [][]int, key []int) ([][]int, 
 			values[j] = shares[j].Value
 		}
 
-	}**/
-
-	var wg sync.WaitGroup
-	//shamir-secret sharing each row in input
-	for i := 0; i < len(input); i++ {
-		wg.Add(1)
-		go func(i int) {
-			defer wg.Done()
-			nonce := i / (1 + zk.n_shares)
-
-			crs := NewCryptoRandSource()
-			crs.Seed(key[i%(1+zk.n_shares)], nonce)
-
-			shares, err := npss.Split(input[i], int(crs.Int63(int64(zk.q))))
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			values := make([]int, zk.n_encode)
-			for j := 0; j < zk.n_encode; j++ {
-				values[j] = shares[j].Value
-			}
-
-			matrix[i] = values
-		}(i)
-
 	}
-	wg.Wait()
 
+	/**
+		var wg sync.WaitGroup
+		//shamir-secret sharing each row in input
+		for i := 0; i < len(input); i++ {
+			wg.Add(1)
+			go func(i int) {
+				defer wg.Done()
+				nonce := i / (1 + zk.n_shares)
+
+				crs := NewCryptoRandSource()
+				crs.Seed(key[i%(1+zk.n_shares)], nonce)
+
+				shares, err := npss.Split(input[i], int(crs.Int63(int64(zk.q))))
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				values := make([]int, zk.n_encode)
+				for j := 0; j < zk.n_encode; j++ {
+					values[j] = shares[j].Value
+				}
+
+				matrix[i] = values
+			}(i)
+
+		}
+		wg.Wait()
+	**/
 	return matrix, nil
 }
 
@@ -550,7 +565,7 @@ func (zk *LigeroZK) generate_mask(seeds []int) []int {
 
 	mask := make([]int, zk.n_encode)
 
-	npss, err := packed.NewPackedSecretSharing(zk.n_encode, zk.t, zk.l, zk.q)
+	npss, err := packed.NewPackedSecretSharing(zk.n_encode, zk.n_open_col, zk.l, zk.q)
 	if err != nil {
 		log.Fatal(err)
 	}

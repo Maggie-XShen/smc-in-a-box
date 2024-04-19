@@ -11,6 +11,8 @@ import (
 // k: the number of secrets shared together
 // q: a modulus
 // t + k: the minimum number of shares needed to reconstruct the secret
+var flag []int
+var glob_constants [][]int
 
 type PackedSecretSharing struct {
 	n, t, k, q int
@@ -36,6 +38,12 @@ func NewPackedSecretSharing(N, T, K, Q int) (*PackedSecretSharing, error) {
 		return nil, fmt.Errorf("q must be a prime number")
 	}
 
+	flag = make([]int, N)
+	for i := range flag {
+		flag[i] = -1
+	}
+	glob_constants = make([][]int, N)
+
 	return &PackedSecretSharing{n: N, t: T, k: K, q: Q}, nil
 
 }
@@ -54,9 +62,11 @@ func (p *PackedSecretSharing) Split(secrets []int, seed int) ([]Share, error) {
 	}
 
 	shares := make([]Share, p.n)
+
 	for idx := range shares {
 		xCoordinate := idx + 1
 		shares[idx].Index = xCoordinate
+
 		shares[idx].Value = p.interpolate_at_point(x_samples, y_samples, xCoordinate)
 	}
 
@@ -130,11 +140,16 @@ func (p *PackedSecretSharing) sample_packed_polynomial(secrets []int, seed int) 
 // interpolate_at_point takes t+k sample points and returns
 // the value at a given x using a lagrange interpolation.
 func (p *PackedSecretSharing) interpolate_at_point(x_samples []int, y_samples []int, x int) int {
+	if flag[x-1] == -1 {
+		glob_constants[x-1] = make([]int, len(x_samples))
+		glob_constants[x-1] = p.lagrange_constants_for_point(x_samples, x)
+		flag[x-1] = 0
+	}
+	//constants := p.lagrange_constants_for_point(x_samples, x)
 
-	constants := p.lagrange_constants_for_point(x_samples, x)
 	y := 0
 	for i := 0; i < len(y_samples); i++ {
-		y = y + y_samples[i]*constants[i]
+		y = y + y_samples[i]*glob_constants[x-1][i]
 	}
 	return mod(y, p.q)
 }
