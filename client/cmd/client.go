@@ -16,11 +16,12 @@ import (
 )
 
 type Client struct {
-	cfg *config.Client
+	cfg  *config.Client
+	mode string
 }
 
-func NewClient(conf *config.Client) *Client {
-	return &Client{cfg: conf}
+func NewClient(conf *config.Client, md string) *Client {
+	return &Client{cfg: conf, mode: md}
 }
 
 func (c *Client) Run(inputpath string) {
@@ -61,34 +62,32 @@ func (c *Client) Run(inputpath string) {
 		current_time := time.Now().UTC().Format("2006-01-02 15:04:05")
 		var wg sync.WaitGroup
 		for i := 0; i < len(urls); i++ {
-
 			wg.Add(1)
-			index := i // Create a local variable inside the loop
 			go func(idx int) {
 				defer wg.Done()
-
 				/**
 				  //test c1 not sending data to s1
 				  if idx == 0 && c.cfg.Client_ID == "c1" || idx == 1 && c.cfg.Client_ID == "c2" {
 				      return
 				  }**/
 
-				/**
-				  //test c1's proof is malformed
-				  if c.cfg.Client_ID == "c1" {
-				      temp := proof[idx].CodeTest[0]
-				      proof[idx].CodeTest[0] = temp%c.cfg.Q - 3
-				  }**/
+				//test client's proof is malformed
+				var msg ClientRequest
+				if c.mode == "malicious" && idx == 0 {
+					mal_proof := proof[idx]
+					mal_proof.CodeTest = make([]int, len(proof[0].CodeTest))
 
-				msg := ClientRequest{Exp_ID: input.Exp_ID, Client_ID: c.cfg.Client_ID, Token: c.cfg.Token, Proof: *proof[idx], Timestamp: current_time}
+					msg = ClientRequest{Exp_ID: input.Exp_ID, Client_ID: c.cfg.Client_ID, Token: c.cfg.Token, Proof: *mal_proof, Timestamp: current_time}
+				} else {
+					msg = ClientRequest{Exp_ID: input.Exp_ID, Client_ID: c.cfg.Client_ID, Token: c.cfg.Token, Proof: *proof[idx], Timestamp: current_time}
+				}
 
 				writer := &msg
-
 				log.Printf("client %s is sending data of %s to server%d ...\n", msg.Client_ID, msg.Exp_ID, msg.Proof.PartyShares[0].Index+1)
 				c.Send(urls[idx], writer.ToJson())
-			}(index) // Pass the local variable to the goroutine
-		}
+			}(i)
 
+		}
 		wg.Wait()
 	}
 

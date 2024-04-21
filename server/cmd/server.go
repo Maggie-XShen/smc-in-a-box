@@ -53,7 +53,7 @@ func (s *Server) HandleExp(path string) {
 
 		err := expService.CreateExperiment(exp)
 		if err != nil {
-			log.Println("error:", err)
+			log.Printf("%s cannot creat experiment - error: %s\n", s.cfg.Server_ID, err)
 		}
 	}
 
@@ -72,7 +72,7 @@ func (s *Server) clientRequestHandler(rw http.ResponseWriter, req *http.Request)
 		err := clientService.CreateClientShare(data, s.cfg)
 
 		if err != nil {
-			log.Printf("error: %s\n", err)
+			log.Printf("%s cannot create client share - error: %s\n", s.cfg.Server_ID, err)
 		}
 
 		client_count += 1
@@ -160,7 +160,7 @@ func (s *Server) checkSigChain(msg string, sig_chain []Signature) bool {
 		cert_path := filepath.Join("./rsa/", fileName)
 		err := rsa.VerifyPKCS1v15(loadPublicKey(cert_path), crypto.SHA256, hashed[:], sig.Sig)
 		if err != nil {
-			log.Println("Signature verification failed:", err)
+			log.Printf("Signature verification failed: %s\n", err)
 			return false
 		}
 	}
@@ -275,7 +275,7 @@ func (s *Server) WaitForEndOfExperiment(ticker *time.Ticker) {
 
 		experiments, err := s.store.GetAllExperiments()
 		if err != nil {
-			log.Println("cannot retreive non-completed experiments - error:", err)
+			log.Printf("%s cannot retreive non-completed experiments - error: %s\n", s.cfg.Server_ID, err)
 			continue
 		}
 
@@ -288,12 +288,17 @@ func (s *Server) WaitForEndOfExperiment(ticker *time.Ticker) {
 
 				complaints, err := s.store.GetComplaintsPerServer(exp.Exp_ID, s.cfg.Server_ID)
 				if err != nil {
-					log.Println("cannot retreive complaints records- error:", err)
+					log.Printf("%s cannot retreive complaints records - error: %s\n", s.cfg.Server_ID, err)
 					continue
 				}
 
 				if len(complaints) == 0 {
-					log.Println("error: complaints table is empty")
+					log.Printf("client share due passed, %s complaint table is empty\n", s.cfg.Server_ID)
+					err = s.store.UpdateRound1Completed(exp.Exp_ID) //set round1 to completed
+					if err != nil {
+						log.Printf(" %s cannot set round1 to completed\n", s.cfg.Server_ID)
+						panic(err)
+					}
 					continue
 				}
 
@@ -313,16 +318,15 @@ func (s *Server) WaitForEndOfExperiment(ticker *time.Ticker) {
 					wg.Add(1)
 					go func(addr string) {
 						defer wg.Done()
-						log.Printf("server %s sends complaints to %s: %+v\n", s.cfg.Server_ID, addr, message)
+						log.Printf("server %s is sending complaints to %s\n", s.cfg.Server_ID, addr)
 						writer := &message
 						send(addr, writer.ToJson())
 					}(address)
 				}
 
-				//set round1 to completed
-				err = s.store.UpdateRound1Completed(exp.Exp_ID)
+				err = s.store.UpdateRound1Completed(exp.Exp_ID) //set round1 to completed
 				if err != nil {
-					//log.Println("cannot set round1 to completed - error:", err)
+					log.Printf("error: %s cannot set round1 to completed\n", s.cfg.Server_ID)
 					panic(err)
 				}
 
@@ -341,7 +345,7 @@ func (s *Server) WaitForEndOfComplaintBroadcast(ticker *time.Ticker) {
 
 		experiments, err := s.store.GetExpsWithRound1Completed()
 		if err != nil {
-			log.Println("cannot retreive non-completed experiments - error:", err)
+			log.Printf("%s cannot retreive non-completed experiments - error: %s\n", s.cfg.Server_ID, err)
 			continue
 		}
 
@@ -356,7 +360,7 @@ func (s *Server) WaitForEndOfComplaintBroadcast(ticker *time.Ticker) {
 				//find dropout clients for the server
 				dropout, err := s.store.GetDropoutClient(exp.Exp_ID)
 				if err != nil {
-					log.Println("cannot retreive missing clients- error:", err)
+					log.Printf("%s cannot retreive missing clients- error: %s\n", s.cfg.Server_ID, err)
 					continue
 
 				}
@@ -365,20 +369,20 @@ func (s *Server) WaitForEndOfComplaintBroadcast(ticker *time.Ticker) {
 				for _, client_id := range dropout {
 					err := s.store.InsertClient(exp.Exp_ID, client_id)
 					if err != nil {
-						//log.Fatal("cannot insert missing client to the client table - error:", err)
+						log.Printf("%s cannot insert missing client to the client table\n", s.cfg.Server_ID)
 						panic(err)
 					}
 
 					err = s.store.InsertComplaint(exp.Exp_ID, s.cfg.Server_ID, client_id, true, []byte("default"))
 					if err != nil {
-						//log.Fatal("cannot insert complaint of missing client to the complaint table - error:", err)
+						log.Printf("%s cannot insert complaint of missing client to the complaint table\n", s.cfg.Server_ID)
 						panic(err)
 					}
 				}
 
 				clients, err := s.store.GetClientsPerExperiment(exp.Exp_ID)
 				if err != nil {
-					//log.Fatal("cannot retreive clients records - error:", err)
+					log.Printf("%s cannot retreive clients records\n", s.cfg.Server_ID)
 					panic(err)
 				}
 
@@ -386,7 +390,7 @@ func (s *Server) WaitForEndOfComplaintBroadcast(ticker *time.Ticker) {
 				for _, c := range clients {
 					complaints, err := s.store.GetComplaintsPerClient(exp.Exp_ID, c.Client_ID)
 					if err != nil {
-						//log.Fatal("cannot retreive complaints records - error:", err)
+						log.Printf("%s cannot retreive complaints records\n", s.cfg.Server_ID)
 						panic(err)
 					}
 
@@ -395,7 +399,7 @@ func (s *Server) WaitForEndOfComplaintBroadcast(ticker *time.Ticker) {
 					if num_isNotComplain >= s.cfg.N-s.cfg.T && maxCount >= s.cfg.N-s.cfg.T {
 						err = s.store.InsertValidClient(exp.Exp_ID, c.Client_ID)
 						if err != nil {
-							//log.Fatal("cannot create valid client record - error:", err)
+							log.Printf("%s cannot create valid client record\n", s.cfg.Server_ID)
 							panic(err)
 						}
 
@@ -403,7 +407,7 @@ func (s *Server) WaitForEndOfComplaintBroadcast(ticker *time.Ticker) {
 						if num_isNotComplain < s.cfg.N || rootCount > 1 {
 							clientShares, err := s.store.GetClientShares(exp.Exp_ID, c.Client_ID)
 							if err != nil {
-								//log.Fatal("cannot get client shares record - error:", err)
+								log.Printf("%s cannot get client shares record\n", s.cfg.Server_ID)
 								panic(err)
 							}
 
@@ -415,13 +419,13 @@ func (s *Server) WaitForEndOfComplaintBroadcast(ticker *time.Ticker) {
 
 								err := s.store.InsertMask(cs.Exp_ID, cs.Client_ID, cs.Input_Index, cs.Index, mask)
 								if err != nil {
-									//log.Fatal("cannot add mask record to the table - error:", err)
+									log.Printf("%s cannot add mask record to the table\n", s.cfg.Server_ID)
 									panic(err)
 								}
 
 								err = s.store.InsertMaskedShare(cs.Exp_ID, s.cfg.Server_ID, cs.Client_ID, cs.Input_Index, cs.Index, mask+cs.Value)
 								if err != nil {
-									//log.Fatal("cannot add masked share to the table - error:", err)
+									log.Printf("%s cannot add masked share to the table\n", s.cfg.Server_ID)
 									panic(err)
 								}
 
@@ -437,7 +441,7 @@ func (s *Server) WaitForEndOfComplaintBroadcast(ticker *time.Ticker) {
 
 				maskedShares, err := s.store.GetMaskedSharesPerServer(exp.Exp_ID, s.cfg.Server_ID)
 				if err != nil {
-					//log.Fatal("cannot retreive masked shares record - error:", err)
+					log.Printf("%s cannot retreive masked shares record\n", s.cfg.Server_ID)
 					panic(err)
 
 				}
@@ -459,7 +463,7 @@ func (s *Server) WaitForEndOfComplaintBroadcast(ticker *time.Ticker) {
 						wg.Add(1)
 						go func(addr string) {
 							defer wg.Done()
-							log.Printf("server %s is sending masked shares to %s: %+v\n", s.cfg.Server_ID, addr, message)
+							log.Printf("server %s is sending masked shares to %s\n", s.cfg.Server_ID, addr)
 							writer := &message
 							send(addr, writer.ToJson())
 						}(address)
@@ -470,10 +474,9 @@ func (s *Server) WaitForEndOfComplaintBroadcast(ticker *time.Ticker) {
 
 				}
 
-				//set round2 to completed
-				err = s.store.UpdateRound2Completed(exp.Exp_ID)
+				err = s.store.UpdateRound2Completed(exp.Exp_ID) //set round2 to completed
 				if err != nil {
-					//log.Println("cannot set round2 to completed - error:", err)
+					log.Printf("%s cannot set round2 to completed\n", s.cfg.Server_ID)
 					panic(err)
 				}
 
@@ -489,7 +492,7 @@ func (s *Server) WaitForEndOfShareBroadcast(ticker *time.Ticker) {
 
 		experiments, err := s.store.GetExpsWithRound2Completed()
 		if err != nil {
-			log.Println("cannot retreive non-completed experiments - error:", err)
+			log.Printf("%s cannot retreive non-completed experiments - error: %s\n", s.cfg.Server_ID, err)
 			continue
 		}
 
@@ -504,7 +507,7 @@ func (s *Server) WaitForEndOfShareBroadcast(ticker *time.Ticker) {
 
 				valid_clients, err := s.store.GetValidClientsPerExperiment(exp.Exp_ID)
 				if err != nil {
-					log.Fatal("cannot retreive valid clients - error:", err)
+					log.Printf("%s cannot retreive valid clients - error: %s\n", s.cfg.Server_ID, err)
 					continue
 				}
 
@@ -512,7 +515,7 @@ func (s *Server) WaitForEndOfShareBroadcast(ticker *time.Ticker) {
 				for _, vc := range valid_clients {
 					notComplain, err := s.store.GetNoComplain(exp.Exp_ID, vc.Client_ID)
 					if err != nil {
-						//log.Fatal("cannot retreive complaint records where complaint is false - error:", err)
+						log.Printf("%s cannot retreive complaint records where complaint is false\n", s.cfg.Server_ID)
 						panic(err)
 					}
 
@@ -549,11 +552,11 @@ func (s *Server) WaitForEndOfShareBroadcast(ticker *time.Ticker) {
 
 							_, err := nrss.Reconstruct(parties)
 							if err != nil {
-								log.Printf("reconstruct fail, need to remove client from valid set - error:%s", err)
+								log.Printf("%s reconstruct fail, need to remove client from valid set - err: %s\n", s.cfg.Server_ID, err)
 								err = s.store.DeleteValidClient(exp.Exp_ID, vc.Client_ID)
 								isRemoved = true
 								if err != nil {
-									//log.Fatal("cannot remove client from valid set - error:", err)
+									log.Printf("%s cannot remove client from valid set\n", s.cfg.Server_ID)
 									panic(err)
 								}
 								break
@@ -565,7 +568,7 @@ func (s *Server) WaitForEndOfShareBroadcast(ticker *time.Ticker) {
 							//check if server itself complains this valid client
 							record, err := s.store.GetComplaint(exp.Exp_ID, s.cfg.Server_ID, vc.Client_ID)
 							if err != nil {
-								//log.Fatal("cannot retreive complaint record - error:", err)
+								log.Printf("%s cannot retreive complaint record\n", s.cfg.Server_ID)
 								panic(err)
 							}
 
@@ -580,14 +583,14 @@ func (s *Server) WaitForEndOfShareBroadcast(ticker *time.Ticker) {
 									for _, sh := range masked_shares {
 										mask, err := s.store.GetMask(exp.Exp_ID, vc.Client_ID, input_index, sh.Index)
 										if err != nil {
-											//log.Fatal("cannot get mask from table - error:", err)
+											log.Printf("%s cannot get mask from table\n", s.cfg.Server_ID)
 											panic(err)
 										}
 
 										newShare := sh.Value - mask.Value
 										err = s.store.UpdateClientShare(exp.Exp_ID, vc.Client_ID, input_index, sh.Index, newShare)
 										if err != nil {
-											//log.Fatal("cannot update client share - error:", err)
+											log.Printf("%s cannot update client share\n", s.cfg.Server_ID)
 											panic(err)
 										}
 
@@ -604,7 +607,7 @@ func (s *Server) WaitForEndOfShareBroadcast(ticker *time.Ticker) {
 
 				clientShares, err := s.store.GetValidClientShares(exp.Exp_ID)
 				if err != nil {
-					//log.Fatal("cannot retreive valid client shares record - error:", err)
+					log.Printf("%s cannot retreive valid client shares record\n", s.cfg.Server_ID)
 					panic(err)
 				}
 
@@ -621,14 +624,14 @@ func (s *Server) WaitForEndOfShareBroadcast(ticker *time.Ticker) {
 				}**/
 
 				msg := AggregatedShareRequest{Exp_ID: exp.Exp_ID, Server_ID: s.cfg.Server_ID, Shares: aggreShares, Timestamp: time.Now().UTC().Format("2006-01-02 15:04:05")}
-				log.Printf("server %s sends aggregated shares: %+v\n", s.cfg.Server_ID, msg)
+				log.Printf("server %s is sending aggregated shares: %+v\n", s.cfg.Server_ID, msg)
 				writer := &msg
 				send(exp.Owner, writer.ToJson())
 
 				//set round3 to completed
 				err = s.store.UpdateRound3Completed(exp.Exp_ID)
 				if err != nil {
-					//log.Println("cannot set round3 to completed - error:", err)
+					log.Printf("%s cannot set round3 to completed\n", s.cfg.Server_ID)
 					panic(err)
 				}
 			}
@@ -639,30 +642,6 @@ func (s *Server) WaitForEndOfShareBroadcast(ticker *time.Ticker) {
 	//TODO: check if experiment is over and do something (e.g., remove exp and clients information from DB)
 
 }
-
-/**
-func aggregateShares(clientShares []sqlstore.ClientShare) ([]rss.Share, error) {
-	if len(clientShares) == 0 {
-		return nil, fmt.Errorf("client shares are empty: no valid client exists")
-	}
-
-	var result []rss.Share
-	aggreShare := make(map[int]int)
-	for _, entry := range clientShares {
-		val, exist := aggreShare[entry.Index]
-		if exist {
-			aggreShare[entry.Index] = val + entry.Value
-		} else {
-			aggreShare[entry.Index] = entry.Value
-		}
-	}
-
-	for key, val := range aggreShare {
-		result = append(result, rss.Share{Index: key, Value: val})
-	}
-
-	return result, nil
-}**/
 
 func (s *Server) aggregateShares(clientShares []sqlstore.ClientShare) ([]rss.Party, error) {
 	if len(clientShares) == 0 {
@@ -707,9 +686,9 @@ func send(address string, data []byte) {
 	client := &http.Client{}
 	res, err := client.Do(req)
 	if err != nil {
-		log.Printf("impossible to send http request: %s", err)
+		log.Printf("impossible to send http request: %s\n", err)
 	} else {
-		log.Printf("response Status:%s", res.Status)
+		log.Printf("response Status:%s\n", res.Status)
 
 		defer res.Body.Close()
 		body, _ := io.ReadAll(res.Body)
@@ -743,7 +722,7 @@ func (s *Server) dolevComplaintBroadcast(round int, msg ComplaintRequest, sig_ch
 	}
 
 	for _, address := range s.cfg.Dolev_complaint_urls {
-		fmt.Printf("server %s Dolev-Strong broadcasts complaints: %+v\n", s.cfg.Server_ID, msg)
+		log.Printf("server %s Dolev-Strong broadcasts complaints: %+v\n", s.cfg.Server_ID, msg)
 		writer := &ds_message
 		send(address, writer.ToJson())
 	}
@@ -771,7 +750,7 @@ func (s *Server) dolevMaskedShareBroadcast(round int, msg MaskedShareRequest, si
 	}
 
 	for _, address := range s.cfg.Dolev_masked_share_urls {
-		fmt.Printf("server %s Dolev-Strong broadcast: %+v\n", s.cfg.Server_ID, msg)
+		log.Printf("server %s Dolev-Strong broadcast: %+v\n", s.cfg.Server_ID, msg)
 		writer := &ds_message
 		send(address, writer.ToJson())
 	}
@@ -849,13 +828,13 @@ func (s *Server) Close(ticker *time.Ticker) {
 	for range ticker.C {
 		finished, err := s.store.GetExpsWithRound3Completed()
 		if err != nil {
-			log.Println("cannot retreive completed experiments - error:", err)
+			log.Printf("%s cannot retreive completed experiments - error: %s\n", s.cfg.Server_ID, err)
 			continue
 		}
 
 		all, err := s.store.GetExperimentCount()
 		if err != nil {
-			log.Println("cannot retreive non-completed experiments - error:", err)
+			log.Printf("%scannot retreive non-completed experiments - error: %s\n", s.cfg.Server_ID, err)
 			continue
 		}
 

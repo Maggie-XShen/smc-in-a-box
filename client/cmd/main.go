@@ -18,7 +18,7 @@ func main() {
 	confpath := flag.String("confpath", "../config/client.json", "config file path")
 	inputpath := flag.String("inputpath", "input.json", "client input path")
 	logpath := flag.String("logpath", "./", "client log path")
-	//csvlocation := flag.String("csvlocation", "./", "csv file location")
+	mode := flag.String("mode", "malicious", "malicious client mode")
 	flag.Parse()
 
 	conf := config.Load(*confpath)
@@ -58,7 +58,7 @@ func main() {
 		"URLs":      conf.URLs,
 	}).Info("")
 
-	client := NewClient(conf)
+	client := NewClient(conf, *mode)
 
 	start := time.Now().UTC()
 	logger.WithFields(logrus.Fields{

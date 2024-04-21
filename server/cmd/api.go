@@ -83,11 +83,12 @@ func (c *ClientService) CreateClientShare(request ClientRequest, cfg *config.Ser
 		"exp_id":      request.Exp_ID,
 		"client_id":   request.Client_ID,
 		"verify_time": proof_verify_end.String(),
+		"is_verified": verify,
 	}).Info("")
 	total_verify_time += proof_verify_end
 	//creat complaint record based on proof verification result
 	if !verify {
-		log.Printf("failed to verify %s proof for %s -- %s\n", request.Client_ID, request.Exp_ID, err)
+		log.Printf("%s failed to verify %s proof for %s -- %s\n", cfg.Server_ID, request.Client_ID, request.Exp_ID, err)
 
 		/**
 		//test s6 should complaint but not complaint
@@ -105,7 +106,7 @@ func (c *ClientService) CreateClientShare(request ClientRequest, cfg *config.Ser
 			panic(err)
 		}
 	} else {
-		log.Printf("succeed to verify %s proof for %s\n", request.Client_ID, request.Exp_ID)
+		log.Printf("%s succeed to verify %s proof for %s\n", cfg.Server_ID, request.Client_ID, request.Exp_ID)
 
 		/**
 		//test s6 should not complaint but complaint
