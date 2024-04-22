@@ -91,6 +91,7 @@ func (zk *LigeroZK) GenerateProof(secrets []int) ([]*Proof, error) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	step_1_end = time.Since(step_1_start)
 
 	step_2_start := time.Now()

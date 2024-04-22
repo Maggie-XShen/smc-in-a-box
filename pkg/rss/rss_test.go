@@ -5,9 +5,9 @@ import (
 )
 
 func TestSplitReconstruct(t *testing.T) {
-	secret := 7
+	secret := 1
 
-	rss, err := NewReplicatedSecretSharing(7, 2, 17)
+	rss, err := NewReplicatedSecretSharing(4, 1, 10631)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

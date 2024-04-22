@@ -122,7 +122,7 @@ func (s *Server) serverMaskedSharesHandler(rw http.ResponseWriter, req *http.Req
 
 		count := s.store.CountMaskedSharesPerExperiment(data.Exp_ID)
 
-		if count == int64(mask_share_size) {
+		if mask_share_size != 0 && count == int64(mask_share_size) {
 			real_share_broadcast_due = time.Now().UTC() //time to start the step of share correction without waiting
 
 		}

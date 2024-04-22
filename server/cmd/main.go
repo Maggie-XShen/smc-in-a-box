@@ -15,7 +15,7 @@ import (
 
 var logger *logrus.Logger
 var client_size int     //total number of clients (no dropout) per experiment
-var bad_client_size = 1 // total number of bad client (no dropout) per experiment
+var bad_client_size int // total number of bad client (no dropout) per experiment
 var complaint_size int  //total number of complaints from all servers per experiment
 var mask_share_size int //total number of masked share records per experiment
 var p_sh int            //total number of shares per secret stored by each server
@@ -33,7 +33,9 @@ func main() {
 	inputpath := flag.String("inputpath", "experiments.json", "experiments file path")
 	mode := flag.String("mode", "tls", "use tls")
 	logpath := flag.String("logpath", "./", "server log path")
-	n_client := flag.Int("n_client", 0, "client number")
+	n_client := flag.Int("n_client", 0, "total client number")
+	n_client_mal := flag.Int("n_client_mal", 0, "malicious client number")
+
 	flag.Parse()
 
 	if *n_client == 0 {
@@ -45,6 +47,7 @@ func main() {
 	conf := config.Load(*confpath)
 
 	complaint_size = client_size * conf.N
+	bad_client_size = *n_client_mal
 	p_sh = combin.Binomial(conf.N-1, conf.T)
 	mask_share_size = conf.N * bad_client_size * conf.N_secrets * p_sh
 

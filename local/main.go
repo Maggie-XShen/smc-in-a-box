@@ -16,6 +16,7 @@ import (
 func main() {
 
 	n_client := 10
+	n_client_mal := 10
 	n_exp := 1
 	n_input := []int{10} //clarify the number of inputs for each experiment, e.g. n_input={1,2} means first experiment has 1 input, second experiment has 2 inputs
 
@@ -28,7 +29,7 @@ func main() {
 	start := time.Now().UTC()
 	clientShareDue := start.Add(time.Minute * 3)
 	t1 := 2 // ComplaintDue = ClientShareDue + t1
-	t2 := 4 // MaskedShareDue = ClientShareDue + t2
+	t2 := 6 // MaskedShareDue = ClientShareDue + t2
 	t3 := 9 // ServerShareDue = ClientShareDue + t3
 
 	client_gen.GenerateClientConfig(n_client, "client_template.json", "./client_config")
@@ -43,22 +44,23 @@ func main() {
 
 	output_gen.GenerateOPInput(n_exp, clientShareDue, t3, "./op_input")
 
-	run(n_server, n_outputparty, n_client)
+	run(n_server, n_outputparty, n_client, n_client_mal)
 
 }
 
-func run(n_server, n_outputparty, n_client int) {
+func run(n_server, n_outputparty, n_client, n_client_mal int) {
 
 	l1 := n_server
 	firstGroup := make([][]string, l1)
 	for i := 0; i < l1; i++ {
-		firstGroup[i] = make([]string, 6)
+		firstGroup[i] = make([]string, 7)
 		firstGroup[i][0] = "../server/cmd/cmd"
 		firstGroup[i][1] = fmt.Sprintf("-confpath=./server_config/config_s%s.json", strconv.Itoa(i+1))
 		firstGroup[i][2] = "-inputpath=./server_input/experiments.json"
 		firstGroup[i][3] = "-mode=http"
 		firstGroup[i][4] = "-logpath=./server_log/"
 		firstGroup[i][5] = fmt.Sprintf("-n_client=%d", n_client)
+		firstGroup[i][6] = fmt.Sprintf("-n_client_mal=%d", n_client_mal)
 	}
 
 	secondGroup := make([][]string, n_outputparty)
@@ -73,13 +75,23 @@ func run(n_server, n_outputparty, n_client int) {
 	}
 
 	thirdGroup := make([][]string, n_client)
-	for i := 0; i < n_client; i++ {
-		thirdGroup[i] = make([]string, 4)
+
+	for i := 0; i < n_client_mal; i++ {
+		thirdGroup[i] = make([]string, 5)
 		thirdGroup[i][0] = "../client/cmd/cmd"
 		thirdGroup[i][1] = fmt.Sprintf("-confpath=./client_config/config_c%s.json", strconv.Itoa(i+1))
 		thirdGroup[i][2] = fmt.Sprintf("-inputpath=./client_input/input_c%s.json", strconv.Itoa(i+1))
 		thirdGroup[i][3] = "-logpath=./client_log/"
+		thirdGroup[i][4] = "-mode=malicious"
+	}
 
+	for i := n_client_mal; i < n_client; i++ {
+		thirdGroup[i] = make([]string, 5)
+		thirdGroup[i][0] = "../client/cmd/cmd"
+		thirdGroup[i][1] = fmt.Sprintf("-confpath=./client_config/config_c%s.json", strconv.Itoa(i+1))
+		thirdGroup[i][2] = fmt.Sprintf("-inputpath=./client_input/input_c%s.json", strconv.Itoa(i+1))
+		thirdGroup[i][3] = "-logpath=./client_log/"
+		thirdGroup[i][4] = "-mode=honest"
 	}
 
 	var wg sync.WaitGroup
@@ -87,27 +99,40 @@ func run(n_server, n_outputparty, n_client int) {
 	// Execute servers in parallel
 	for _, cmd := range firstGroup {
 		wg.Add(1)
-		go executeFirstGroup(cmd[0], cmd[1], cmd[2], cmd[3], cmd[4], cmd[5], &wg)
+		go executeFirstGroup(cmd[0], cmd[1], cmd[2], cmd[3], cmd[4], cmd[5], cmd[6], &wg)
 	}
 
 	// Execute output parties in parallel
 	for _, cmd := range secondGroup {
 		wg.Add(1)
-		go executeFirstGroup(cmd[0], cmd[1], cmd[2], cmd[3], cmd[4], cmd[5], &wg)
+		go executeSecondGroup(cmd[0], cmd[1], cmd[2], cmd[3], cmd[4], cmd[5], &wg)
 	}
 
 	time.Sleep(30 * time.Second)
 
 	for _, cmd := range thirdGroup {
 		wg.Add(1)
-		go executeSecondGroup(cmd[0], cmd[1], cmd[2], cmd[3], &wg)
+		go executeThirdGroup(cmd[0], cmd[1], cmd[2], cmd[3], cmd[4], &wg)
 	}
 
 	// Wait for all commands to finish
 	wg.Wait()
 }
 
-func executeFirstGroup(command, conf_path, input_path, mode, log_path, n_client string, wg *sync.WaitGroup) {
+func executeFirstGroup(command, conf_path, input_path, mode, log_path, n_client, n_client_mal string, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	cmd := exec.Command(command, conf_path, input_path, mode, log_path, n_client, n_client_mal)
+
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Start(); err != nil {
+		fmt.Printf("Error executing command %s with %s: %v\n", command, conf_path, err)
+		return
+	}
+}
+
+func executeSecondGroup(command, conf_path, input_path, mode, log_path, n_client string, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	cmd := exec.Command(command, conf_path, input_path, mode, log_path, n_client)
@@ -120,10 +145,10 @@ func executeFirstGroup(command, conf_path, input_path, mode, log_path, n_client 
 	}
 }
 
-func executeSecondGroup(command, conf_path, input_path, log_path string, wg *sync.WaitGroup) {
+func executeThirdGroup(command, conf_path, input_path, log_path, mode string, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	cmd := exec.Command(command, conf_path, input_path, log_path)
+	cmd := exec.Command(command, conf_path, input_path, log_path, mode)
 
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

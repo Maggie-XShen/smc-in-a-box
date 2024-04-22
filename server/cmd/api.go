@@ -158,7 +158,7 @@ func (s *ServerService) CreateMaskedShares(request MaskedShareRequest) error {
 		return errors.New("experiment does not exist when create other servers' masked shares")
 	}
 
-	log.Printf("server received masked shares from %s: %+v\n", request.Server_ID, request)
+	log.Printf("server received masked shares from %s\n", request.Server_ID)
 	for _, masked_sh := range request.MaskedShares {
 		err = s.db.InsertMaskedShare(request.Exp_ID, request.Server_ID, masked_sh.Client_ID, masked_sh.Input_Index, masked_sh.Index, masked_sh.Value)
 		if err != nil {

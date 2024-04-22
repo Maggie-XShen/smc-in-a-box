@@ -39,7 +39,8 @@ func (rss *ReplicatedSecretSharing) Split(secret int) ([]Share, []Party, error) 
 
 	n_sh := combin.Binomial(rss.n, rss.t) //compute total number of shares a secret splits to
 
-	p_sh := combin.Binomial(rss.n-1, rss.t) //compute total number of shares stored by each party
+	//p_sh := combin.Binomial(rss.n-1, rss.t) //compute total number of shares stored by each party
+	combinations := combin.Combinations(rss.n, rss.t)
 
 	//generate all shares
 	shares := make([]Share, n_sh)
@@ -55,8 +56,10 @@ func (rss *ReplicatedSecretSharing) Split(secret int) ([]Share, []Party, error) 
 	}
 	shares[n_sh-1].Value = mod(shares[n_sh-1].Value, rss.q)
 
+	/**
 	//generate shares for each party
 	list := combin.Combinations(n_sh, p_sh)
+
 	result := make([]Party, rss.n)
 	for i := 0; i < rss.n; i++ {
 		p_sh := make([]Share, p_sh)
@@ -65,6 +68,22 @@ func (rss *ReplicatedSecretSharing) Split(secret int) ([]Share, []Party, error) 
 		}
 
 		result[i] = Party{Index: i, Shares: p_sh}
+
+	}**/
+
+	// Associate the above shares to respective parties
+	shParty := make(map[int][]Share)
+	for i := 0; i < n_sh; i++ {
+		for j := 0; j < rss.n; j++ {
+			if !contains(combinations[i], j) {
+				shParty[j] = append(shParty[j], Share{Index: i, Value: shares[i].Value})
+			}
+		}
+	}
+
+	result := make([]Party, rss.n)
+	for i := 0; i < rss.n; i++ {
+		result[i] = Party{Index: i, Shares: shParty[i]}
 
 	}
 
@@ -101,6 +120,15 @@ func (rss *ReplicatedSecretSharing) Reconstruct(parties []Party) (int, error) {
 
 	return result, nil
 
+}
+
+func contains(slice []int, val int) bool {
+	for _, item := range slice {
+		if item == val {
+			return true
+		}
+	}
+	return false
 }
 
 func findMajority(list []int, t int) (int, error) {
