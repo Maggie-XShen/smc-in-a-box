@@ -91,7 +91,6 @@ func (zk *LigeroZK) GenerateProof(secrets []int) ([]*Proof, error) {
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	step_1_end = time.Since(step_1_start)
 
 	step_2_start := time.Now()
@@ -127,9 +126,9 @@ func (zk *LigeroZK) GenerateProof(secrets []int) ([]*Proof, error) {
 
 	step_6_start := time.Now()
 	//generate a vector of random numbers using the hash of merkle tree root as seed
-	len1 := zk.m * (1 + zk.n_server)
+	len1 := zk.m * (1 + zk.n_shares)
 	len2 := zk.m
-	len3 := zk.m + zk.m*(zk.n_server-zk.t-1)
+	len3 := zk.m
 	h1 := zk.generate_hash([][]byte{root})
 	random_vector := RandVector(h1, len1+len2+len3, zk.q)
 	step_6_end = time.Since(step_6_start)
@@ -291,7 +290,7 @@ func (zk *LigeroZK) prepare_extended_witness(claims []Claim) ([][]int, error) {
 				k++
 			}
 			h := 0
-			for h < zk.n_server {
+			for h < zk.n_shares {
 				matrix[i+k+h][j] = claims[index].Shares[h].Value
 				h++
 			}
@@ -309,7 +308,7 @@ func (zk *LigeroZK) encode_extended_witness(input [][]int, key []int) ([][]int, 
 		return nil, fmt.Errorf("Invalid input: Input is empty")
 	}
 
-	if len(input) != zk.m*(1+zk.n_server) || len(input[0]) != zk.l {
+	if len(input) != zk.m*(1+zk.n_shares) || len(input[0]) != zk.l {
 		return nil, fmt.Errorf("Invalid input")
 	}
 
@@ -468,7 +467,7 @@ func (zk *LigeroZK) generate_code_proof(input [][]int, randomness []int, mask []
 		return nil, fmt.Errorf("Invalid input: Input is empty")
 	}
 
-	if len(input) != zk.m*(1+zk.n_server) || len(input[0]) != zk.n_encode {
+	if len(input) != zk.m*(1+zk.n_shares) || len(input[0]) != zk.n_encode {
 		return nil, fmt.Errorf("Invalid input")
 	}
 
@@ -503,7 +502,7 @@ func (zk *LigeroZK) generate_quadratic_proof(input [][]int, randomness []int, ma
 		return nil, fmt.Errorf("Invalid input: Input is empty")
 	}
 
-	if len(input) != zk.m*(1+zk.n_server) || len(input[0]) != zk.n_encode {
+	if len(input) != zk.m*(1+zk.n_shares) || len(input[0]) != zk.n_encode {
 		return nil, fmt.Errorf("Invalid input")
 	}
 
@@ -511,7 +510,7 @@ func (zk *LigeroZK) generate_quadratic_proof(input [][]int, randomness []int, ma
 	result := make([]int, zk.n_encode)
 
 	index := 0
-	for row := 0; row < len(input); row = row + zk.n_server + 1 {
+	for row := 0; row < len(input); row = row + zk.n_shares + 1 {
 		for col := 0; col < len(input[0]); col++ {
 			result[col] += randomness[index] * input[row][col] * (1 - input[row][col])
 			//result[col] = mod(result[col], zk.q)
@@ -534,7 +533,7 @@ func (zk *LigeroZK) generate_linear_proof(input [][]int, randomness []int, mask 
 		return nil, fmt.Errorf("Invalid input: Input is empty")
 	}
 
-	if len(input) != zk.m*(1+zk.n_server) || len(input[0]) != zk.n_encode {
+	if len(input) != zk.m*(1+zk.n_shares) || len(input[0]) != zk.n_encode {
 		return nil, fmt.Errorf("Invalid input")
 	}
 
@@ -542,11 +541,11 @@ func (zk *LigeroZK) generate_linear_proof(input [][]int, randomness []int, mask 
 	result := make([]int, zk.n_encode)
 
 	index := 0
-	for row := 0; row < len(input); row = row + zk.n_server + 1 {
+	for row := 0; row < len(input); row = row + zk.n_shares + 1 {
 		for col := 0; col < len(input[0]); col++ {
 			//result[col] = result[col]+input[row][col]
 			temp := input[row][col]
-			for j := 1; j < zk.n_server+1; j++ {
+			for j := 1; j < zk.n_shares+1; j++ {
 				temp = temp - input[row+j][col]
 			}
 			result[col] = result[col] + temp*randomness[index]

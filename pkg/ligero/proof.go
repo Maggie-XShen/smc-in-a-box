@@ -81,9 +81,9 @@ func (zk *LigeroZK) VerifyProof(proof Proof) (bool, error) {
 	}
 	open_col_end = time.Since(open_col_start)
 
-	len1 := zk.m * (1 + zk.n_server)
+	len1 := zk.m * (1 + zk.n_shares)
 	len2 := zk.m
-	len3 := zk.m + zk.m*(zk.n_server-zk.t-1)
+	len3 := zk.m
 
 	random_vector := RandVector(h1, len1+len2+len3, zk.q)
 
@@ -339,7 +339,7 @@ func (zk *LigeroZK) check_quadra_with_opened_column(test_value []int, randomness
 	for _, col := range open_cols {
 		result := 0
 		index := 0
-		for i := 0; i < len(col.List); i = i + zk.n_server + 1 {
+		for i := 0; i < len(col.List); i = i + zk.n_shares + 1 {
 			result += randomness[index] * col.List[i] * (1 - col.List[i])
 			index += 1
 		}
@@ -358,9 +358,9 @@ func (zk *LigeroZK) check_linear_with_opened_column(test_value []int, randomness
 		result := 0
 		index := 0
 
-		for row := 0; row < len(col.List); row = row + zk.n_server + 1 {
+		for row := 0; row < len(col.List); row = row + zk.n_shares + 1 {
 			temp := col.List[row]
-			for j := 1; j < zk.n_server+1; j++ {
+			for j := 1; j < zk.n_shares+1; j++ {
 				temp = temp - col.List[row+j]
 			}
 			result = result + temp*randomness[index]

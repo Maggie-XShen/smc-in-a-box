@@ -14,13 +14,13 @@ There are two ways running computation:
    ```
    ./cmd -confpath="path_to_server_config_file" -inputpath="path_to_experiments_file" -logpath="path_to_log_folder" -n_client=num_of_clients
    ```
-   Note: use -mode=http to run without TLS, default setting is using TLS; use -n_client_mal=num_of_malicious_client to run experiment with malicious clients, default setting is assuming clients are all honest.
+   Note: use -mode="http" to run without TLS, default setting is using TLS; use -n_client_mal=num_of_malicious_client to run experiment with malicious clients, default setting is assuming clients are all honest.
 
    To run an output party with TLS (default), at the folder outputparty/cmd, compile then run
    ```
    ./cmd -confpath="path_to_output_party_config_file" -inputpath="path_to_experiments_file" -logpath="path_to_log_folder" -n_client=num_of_clients
    ```
-   Note: use -mode=http to run without TLS, default setting is using TLS
+   Note: use -mode="http" to run without TLS, default setting is using TLS
 
    To run a client, at the folder client/cmd, compile then run
    ```
