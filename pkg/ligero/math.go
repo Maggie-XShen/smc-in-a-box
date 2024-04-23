@@ -62,6 +62,134 @@ func MulList(list1 []int, list2 []int, q int) (int, error) {
 	return mod(result, q), nil
 }
 
+func (zk *LigeroZK) Interpolate_at_Point(x_samples []int, y_samples []int, x int, q int) (int, error) {
+	if len(x_samples) != len(y_samples) {
+		return 0, fmt.Errorf("Invalid inputs: x_samples and y_samples length are different")
+
+	}
+
+	for index, item := range x_samples {
+		if item == x {
+			return y_samples[index], nil
+		}
+	}
+
+	if !zk.glob_constants.flag_denom {
+		zk.glob_constants.values_denom = make([]int, len(x_samples))
+		zk.glob_constants.values_denom = GenerateLagrangeConstants(x_samples, x, q)
+		zk.glob_constants.flag_denom = true
+	}
+
+	if !zk.glob_constants.flag_num[x-1] {
+		zk.glob_constants.values_num[x-1] = make([]int, len(x_samples))
+
+		num := 1
+		for j := 0; j < len(x_samples); j++ {
+			if x == x_samples[j] {
+				fmt.Println("ERROR: EQUAL. Numerators goes to zero!!")
+			}
+			num = mod(num*(x_samples[j]-x), q)
+		}
+
+		for i := 0; i < len(x_samples); i++ {
+
+			zk.glob_constants.values_num[x-1][i] = mod(inverse(x_samples[i]-x, q)*num, q)
+		}
+		// p.glob_constant_num[x-1] = p.lagrange_constants_for_point(x_samples)
+		zk.glob_constants.flag_num[x-1] = true
+
+	}
+
+	// num := 1
+	// for j := 0; j < len(x_samples); j++ {
+	// 	xj := x_samples[j]
+	// 	num = mod(num*(xj-x), q)
+	// }
+
+	y := 0
+	for i := 0; i < len(y_samples); i++ {
+		y = y + mod(y_samples[i]*zk.glob_constants.values_denom[i]*zk.glob_constants.values_num[x-1][i], q)
+	}
+	return mod(y, q), nil
+}
+
+func (zk *LigeroZK) Interpolate_at_Point_Code_Test(x_samples []int, y_samples []int, x int, q int) (int, error) {
+	if len(x_samples) != len(y_samples) {
+		return 0, fmt.Errorf("Invalid inputs: x_samples and y_samples length are different")
+
+	}
+
+	for index, item := range x_samples {
+		if item == x {
+			return y_samples[index], nil
+		}
+	}
+	if !zk.glob_constants_code_test.flag_denom {
+		zk.glob_constants_code_test.values_denom = make([]int, len(x_samples))
+		zk.glob_constants_code_test.values_denom = GenerateLagrangeConstants(x_samples, x, q)
+		zk.glob_constants_code_test.flag_denom = true
+
+	}
+
+	if !zk.glob_constants_code_test.flag_num[x-1] {
+		zk.glob_constants_code_test.values_num[x-1] = make([]int, len(x_samples))
+
+		num := 1
+		for j := 0; j < len(x_samples); j++ {
+			if x == x_samples[j] {
+				fmt.Println("ERROR: EQUAL. Numerators goes to zero!! IN INTERPOLATE CODE TEST")
+			}
+			num = mod(num*(x_samples[j]-x), q)
+		}
+
+		for i := 0; i < len(x_samples); i++ {
+
+			zk.glob_constants_code_test.values_num[x-1][i] = mod(inverse(x_samples[i]-x, q)*num, q)
+		}
+		// p.glob_constant_num[x-1] = p.lagrange_constants_for_point(x_samples)
+		zk.glob_constants_code_test.flag_num[x-1] = true
+
+	}
+
+	// num := 1
+	// for j := 0; j < len(x_samples); j++ {
+	// 	xj := x_samples[j]
+	// 	num = mod(num*(xj-x), q)
+	// }
+
+	y := 0
+	for i := 0; i < len(y_samples); i++ {
+		y = y + mod(y_samples[i]*zk.glob_constants_code_test.values_denom[i]*zk.glob_constants_code_test.values_num[x-1][i], q)
+	}
+	return mod(y, q), nil
+}
+
+// lagrange_constants_for_point returns lagrange constants for the given x
+func GenerateLagrangeConstants(x_samples []int, x int, q int) []int {
+
+	constants := make([]int, len(x_samples))
+	for i := range constants {
+		constants[i] = 0
+	}
+
+	for i := 0; i < len(constants); i++ {
+		xi := x_samples[i]
+		// num := 1
+		denum := 1
+		for j := 0; j < len(constants); j++ {
+			if j != i {
+				xj := x_samples[j]
+				// num = mod(num*(xj-x), q)
+				denum = mod(denum*(xj-xi), q)
+			}
+		}
+		constants[i] = mod(inverse(denum, q), q)
+	}
+
+	return constants
+}
+
+/**
 // interpolate_at_point takes points and returns
 // the value at a given x using a lagrange interpolation.
 func (zk *LigeroZK) Interpolate_at_Point(x_samples []int, y_samples []int, x int, q int) (int, error) {
@@ -112,7 +240,7 @@ func GenerateLagrangeConstants(x_samples []int, x int, q int) []int {
 	}
 
 	return constants
-}
+}**/
 
 // from http://www.ucl.ac.uk/~ucahcjm/combopt/ext_gcd_python_programs.pdf
 func egcd_binary(a int, b int) int {

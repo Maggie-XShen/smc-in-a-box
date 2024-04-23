@@ -13,15 +13,13 @@ var verify_end time.Duration
 
 func main() {
 
-	zk, err := ligero.NewLigeroZK(1, 1, 4, 1, 10631, 240)
+	zk, err := ligero.NewLigeroZK(1000000, 2000, 4, 1, 45161, 240)
 	if err != nil {
 		log.Fatalf("err: %v", err)
 	}
 
-	//secrets := []int{0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1}
-
-	secrets := make([]int, 1)
-	for i := 0; i < 1; i++ {
+	secrets := make([]int, 1000000)
+	for i := 0; i < 1000000; i++ {
 		secrets[i] = 1
 	}
 
@@ -44,6 +42,7 @@ func main() {
 		verify, err := zk.VerifyProof(*proof[i])
 		if i == 0 {
 			verify_end = time.Since(verify_start)
+			fmt.Printf("proof verification end: %v\n", verify_end)
 		}
 
 		if err != nil {
@@ -55,5 +54,5 @@ func main() {
 		}
 		fmt.Printf("verification succeed for party %d\n", proof[i].PartyShares[0].Index)
 	}
-	fmt.Printf("proof verification end: %v\n", verify_end)
+
 }

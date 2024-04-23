@@ -7,42 +7,28 @@
     "Complaint_urls":[
         "http://127.0.0.1:50002/complaint/", 
         "http://127.0.0.1:50003/complaint/", 
-        "http://127.0.0.1:50004/complaint/", 
-        "http://127.0.0.1:50005/complaint/", 
-        "http://127.0.0.1:50006/complaint/",
-        "http://127.0.0.1:50007/complaint/"
+        "http://127.0.0.1:50004/complaint/"
     ],
     "Masked_share_urls":[
         "http://127.0.0.1:50002/maskedShare/", 
         "http://127.0.0.1:50003/maskedShare/", 
-        "http://127.0.0.1:50004/maskedShare/", 
-        "http://127.0.0.1:50005/maskedShare/", 
-        "http://127.0.0.1:50006/maskedShare/",
-        "http://127.0.0.1:50007/maskedShare/"
-
+        "http://127.0.0.1:50004/maskedShare/"
     ],
     "Dolev_complaint_urls":[
         "http://127.0.0.1:50002/dolevComplaint/", 
         "http://127.0.0.1:50003/dolevComplaint/", 
-        "http://127.0.0.1:50004/dolevComplaint/",
-        "http://127.0.0.1:50005/dolevComplaint/", 
-        "http://127.0.0.1:50006/dolevComplaint/", 
-        "http://127.0.0.1:50007/dolevComplaint/"
+        "http://127.0.0.1:50004/dolevComplaint/"
     ],
     "Dolev_masked_share_urls":[
         "http://127.0.0.1:50002/dolevMaskedShare/", 
         "http://127.0.0.1:50003/dolevMaskedShare/", 
-        "http://127.0.0.1:50004/dolevMaskedShare/",
-        "http://127.0.0.1:50005/dolevMaskedShare/", 
-        "http://127.0.0.1:50006/dolevMaskedShare/", 
-        "http://127.0.0.1:50007/dolevMaskedShare/"
-
+        "http://127.0.0.1:50004/dolevMaskedShare/"
     ],
     "Share_Index": 1,
-    "N": 7,
-    "T": 2,
+    "N": 4,
+    "T": 1,
     "Q": 10631,
-    "N_secrets":10,
-    "M": 2, 
+    "N_secrets":1000,
+    "M": 8, 
     "N_open":240
 }

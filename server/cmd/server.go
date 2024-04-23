@@ -841,13 +841,15 @@ func (s *Server) Close(ticker *time.Ticker) {
 		if int64(len(finished)) == all {
 			end := time.Since(start)
 
-			avg := total_verify_time.Seconds() / float64(client_size)
+			avg := float64(total_verify_time.Milliseconds()) / float64(client_size)
 
-			avg_verify_time := time.Duration(avg) * time.Second
+			avg_verify_time := time.Duration(avg) * time.Millisecond
 
 			logger.WithFields(logrus.Fields{
 				"real_client_share_due":    real_client_share_due.String(),
 				"avg_verify_time":          avg_verify_time.String(),
+				"total_verify_time":        total_verify_time.String(),
+				"num_client_received":      client_count,
 				"real_complaint_due":       real_complaint_due.String(),
 				"mask_share_time":          mask_share_end.String(),
 				"real_share_broadcast_due": real_share_broadcast_due.String(),

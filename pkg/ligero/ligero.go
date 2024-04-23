@@ -44,6 +44,7 @@ type LigeroZK struct {
 	n_secret, n_shares, m, l, n_server, t, q, n_encode, n_open_col int
 	npss                                                           *packed.PackedSecretSharing
 	glob_constants                                                 GlobConstants
+	glob_constants_code_test                                       GlobConstantsCodeTest
 }
 
 type Claim struct {
@@ -81,8 +82,13 @@ func NewLigeroZK(N_secret, M, N_server, T, Q, N_open int) (*LigeroZK, error) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	gc := GlobConstants{flag: make([]bool, Q), values: make([][]int, Q)}
-	return &LigeroZK{n_secret: N_secret, n_shares: N_shares, m: M, l: L, n_server: N_server, t: T, q: Q, n_encode: N_encode, n_open_col: N_open, npss: pss, glob_constants: gc}, nil
+
+	gc := GlobConstants{flag_num: make([]bool, Q), values_num: make([][]int, Q), flag_denom: false, values_denom: make([]int, Q)}
+	gc_codetest := GlobConstantsCodeTest{flag_num: make([]bool, Q), values_num: make([][]int, Q), flag_denom: false, values_denom: make([]int, Q)}
+
+	//gc := GlobConstants{flag: make([]bool, Q), values: make([][]int, Q)}
+
+	return &LigeroZK{n_secret: N_secret, n_shares: N_shares, m: M, l: L, n_server: N_server, t: T, q: Q, n_encode: N_encode, n_open_col: N_open, npss: pss, glob_constants: gc, glob_constants_code_test: gc_codetest}, nil
 }
 
 func (zk *LigeroZK) GenerateProof(secrets []int) ([]*Proof, error) {

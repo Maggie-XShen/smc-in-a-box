@@ -11,9 +11,23 @@ import (
 )
 
 type GlobConstants struct {
-	flag   []bool
-	values [][]int
+	flag_num     []bool
+	values_num   [][]int
+	flag_denom   bool
+	values_denom []int
 }
+
+type GlobConstantsCodeTest struct {
+	flag_num     []bool
+	values_num   [][]int
+	flag_denom   bool
+	values_denom []int
+}
+
+// type GlobConstants struct {
+// 	flag   []bool
+// 	values [][]int
+// }
 
 var auth_path_end time.Duration
 var gen_hash_end time.Duration
@@ -87,15 +101,6 @@ func (zk *LigeroZK) VerifyProof(proof Proof) (bool, error) {
 
 	random_vector := RandVector(h1, len1+len2+len3, zk.q)
 
-	//verify quadratic test proof
-	quadra_start := time.Now()
-	r2 := random_vector[len1 : len1+len2]
-	quadraticTest, err := zk.verify_quadratic_constraints(proof.QuadraTest, r2, proof.ColumnTest)
-	if !quadraticTest {
-		return false, err
-	}
-	quadra_end = time.Since(quadra_start)
-
 	//verify code test proof
 	code_start := time.Now()
 	r1 := random_vector[:len1]
@@ -104,6 +109,15 @@ func (zk *LigeroZK) VerifyProof(proof Proof) (bool, error) {
 		return false, err
 	}
 	code_end = time.Since(code_start)
+
+	//verify quadratic test proof
+	quadra_start := time.Now()
+	r2 := random_vector[len1 : len1+len2]
+	quadraticTest, err := zk.verify_quadratic_constraints(proof.QuadraTest, r2, proof.ColumnTest)
+	if !quadraticTest {
+		return false, err
+	}
+	quadra_end = time.Since(quadra_start)
 
 	//verify linear test proof
 	linear_start := time.Now()
@@ -121,17 +135,16 @@ func (zk *LigeroZK) VerifyProof(proof Proof) (bool, error) {
 	}
 
 	/**
-		list := []step{{name: "auth_path", time: auth_path_end, duration: auth_path_end.String()}, {name: "gen_hash", time: gen_hash_end, duration: gen_hash_end.String()}, {name: "open_col", time: open_col_end, duration: open_col_end.String()}, {name: "code_end", time: code_end, duration: code_end.String()}, {name: "quadra_hash", time: quadra_end, duration: quadra_end.String()}, {name: "linear_end", time: linear_end, duration: linear_end.String()}}
+	list := []step{{name: "auth_path", time: auth_path_end, duration: auth_path_end.String()}, {name: "gen_hash", time: gen_hash_end, duration: gen_hash_end.String()}, {name: "open_col", time: open_col_end, duration: open_col_end.String()}, {name: "code_end", time: code_end, duration: code_end.String()}, {name: "quadra_hash", time: quadra_end, duration: quadra_end.String()}, {name: "linear_end", time: linear_end, duration: linear_end.String()}}
 
-		sort.Slice(list, func(i, j int) bool {
-			return list[i].time > list[j].time
-		})
-		fmt.Printf("%+v\n", list)
+	sort.Slice(list, func(i, j int) bool {
+		return list[i].time > list[j].time
+	})
+	fmt.Printf("%+v\n", list)
 
 	fmt.Printf("quadra_end:%+v\n", quadra_end)
 	fmt.Printf("linear_end:%+v\n", linear_end)
-	fmt.Printf("code_end:%+v\n", code_end)
-	**/
+	fmt.Printf("code_end:%+v\n", code_end)**/
 
 	return true, nil
 }
@@ -216,10 +229,9 @@ func (zk *LigeroZK) verify_code_proof(q_code []int, randomness []int, open_cols 
 	for i := 0; i < length; i++ {
 		x_sample[i] = i + 1
 	}
-
 	for _, col := range open_cols {
 		x := col.Index + 1
-		result1, err := zk.Interpolate_at_Point(x_sample, q_code, x, zk.q)
+		result1, err := zk.Interpolate_at_Point_Code_Test(x_sample, q_code, x, zk.q)
 		if err != nil {
 			return false, fmt.Errorf("code test failed: x_samples and y_samples length are different")
 		}
