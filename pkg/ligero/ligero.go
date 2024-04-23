@@ -324,7 +324,7 @@ func (zk *LigeroZK) encode_extended_witness(input [][]int, key []int) ([][]int, 
 	}
 
 	crs := NewCryptoRandSource()
-	// shamir-secret sharing each row in input
+	// packed-secret sharing each row in input
 	for i := 0; i < len(input); i++ {
 		nonce := i / (1 + zk.n_shares)
 
@@ -339,6 +339,7 @@ func (zk *LigeroZK) encode_extended_witness(input [][]int, key []int) ([][]int, 
 		for j := 0; j < zk.n_encode; j++ {
 			values[j] = shares[j].Value
 		}
+		matrix[i] = values
 
 	}
 
