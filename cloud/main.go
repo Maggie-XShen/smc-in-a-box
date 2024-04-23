@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"sync"
 	"time"
@@ -16,54 +17,65 @@ import (
 
 func main() {
 	party := flag.String("party", "", "type of instance")
+	sid := flag.Int("sid", 0, "server id") //e.g. 0 for s0
+	client_threads := flag.Int("client_threads", 0, "number of clients running on the same machine")
+	start_cid := flag.Int("start_cid", 0, "client id") //e.g. 0 for c0
+	n_server := flag.Int("n_server", 0, "number of servers")
+	n_clients := flag.Int("n_clients", 0, "number of total clients")
+	n_clients_mal := flag.Int("n_clients_mal", 0, "number of malicious clients")
+	n_input := flag.Int("n_input", 0, "number of inputs")
+	template_path := flag.String("template_path", "", "path to config template")
 	start := flag.String("start", "", "start time of server")
+	d0 := flag.Int("d0", 0, "duration from start time to client share due")
+	d1 := flag.Int("d1", 0, "duration from client share due to complaint due")
+	d2 := flag.Int("d2", 0, "duration from client share due to masked share due")
+	d3 := flag.Int("d3", 0, "duration from client share due to server share due")
+
 	flag.Parse()
 
-	n_client := 10
-	n_client_mal := 0
 	n_exp := 1
-	n_input := []int{10} //clarify the number of inputs for each experiment, e.g. n_input={1,2} means first experiment has 1 input, second experiment has 2 inputs
+	input_list := []int{*n_input} //clarify the number of inputs for each experiment, e.g. n_input={1,2} means first experiment has 1 input, second experiment has 2 inputs
 
-	n_server := 4
-	server_port := []string{"https://smc-server-1.cs-georgetown.net:", "https://smc-server-2.cs-georgetown.net:", "https://smc-server-3.cs-georgetown.net:", "https://smc-server-4.cs-georgetown.net:", "https://smc-server-5.cs-georgetown.net:", "https://smc-server-6.cs-georgetown.net:", "https://smc-server-7.cs-georgetown.net:", "https://smc-server-8.cs-georgetown.net:", "https://smc-server-9.cs-georgetown.net:", "https://smc-server-10.cs-georgetown.net:"} //url for each server
+	server_port := []string{"https://server0.privatestats.org:", "https://server1.privatestats.org:", "https://server2.privatestats.org:", "https://server3.privatestats.org:", "https://server4.privatestats.org:", "https://server5.privatestats.org:", "https://server6.privatestats.org:", "https://server7.privatestats.org:", "https://server8.privatestats.org:", "https://server9.privatestats.org:"} //url for each server
 
 	n_outputparty := 1
 	op_port := []string{"443"}
 
 	timestamp, _ := time.Parse("2006-01-02 15:04:05.999999999 +0000 UTC", *start)
-	clientShareDue := timestamp.Add(time.Minute * 4)
-	t1 := 2  // ComplaintDue = ClientShareDue + t1
-	t2 := 5  // MaskedShareDue = ClientShareDue + t2
-	t3 := 10 // ServerShareDue = ClientShareDue + t3
+
+	t0 := time.Duration(*d0)
+	clientShareDue := timestamp.Add(time.Minute * t0)
+	t1 := *d1 // ComplaintDue = ClientShareDue + t1
+	t2 := *d2 // MaskedShareDue = ClientShareDue + t2
+	t3 := *d3 // ServerShareDue = ClientShareDue + t3
 
 	if *party == "client" {
+		client_gen.GenerateClientConfigCloud(*n_clients, filepath.Join(*template_path, "client_template.json"), "./client_config")
 
-		client_gen.GenerateClientConfig(n_client, "client_template.json", "./client_config")
+		client_gen.GenerateClientInputCloud(*n_clients, n_exp, input_list, "./client_input")
 
-		client_gen.GenerateClientInput(n_client, n_exp, n_input, "./client_input")
-
-		run(n_client)
+		run(*client_threads, *start_cid)
 
 	} else if *party == "client_mal" {
 
-		client_gen.GenerateClientConfig(n_client, "client_template.json", "./client_config")
+		client_gen.GenerateClientConfigCloud(*n_clients, filepath.Join(*template_path, "client_template.json"), "./client_config")
 
-		client_gen.GenerateClientInput(n_client, n_exp, n_input, "./client_input")
+		client_gen.GenerateClientInputCloud(*n_clients, n_exp, input_list, "./client_input")
 
-		run_mal(n_client_mal)
+		run_mal(*n_clients_mal, *start_cid)
 
 	} else if *party == "server" {
-		server_gen.GenerateServerConfigCloud(n_server, server_port[:n_server], "server_template.json", "./server_config")
+		server_gen.GenerateServerConfigCloud(*n_server, server_port[:*n_server], filepath.Join(*template_path, "server_template.json"), "./server_config")
 
-		server_gen.GenerateServerInput(n_exp, clientShareDue, t1, t2, "https://smc-outputparty.cs-georgetown.net:443/serverShare/", "./server_input")
+		server_gen.GenerateServerInput(n_exp, clientShareDue, t1, t2, "https://outputparty.privatestats.org/serverShare/", "./server_input")
 
 		arg := make([]string, 6)
 		arg[0] = "../server/cmd/cmd"
-		arg[1] = "-confpath=./server_config/config_server%s.json"
+		arg[1] = fmt.Sprintf("-confpath=./server_config/config_s%s.json", strconv.Itoa(*sid))
 		arg[2] = "-inputpath=./server_input/experiments.json"
 		arg[3] = "-logpath=./server_log/"
-		arg[4] = fmt.Sprintf("-n_client=%d", n_client)
-		arg[5] = fmt.Sprintf("-n_client_mal=%d", n_client_mal)
+		arg[4] = fmt.Sprintf("-n_client=%d", n_clients)
+		arg[5] = fmt.Sprintf("-n_client_mal=%d", n_clients_mal)
 
 		cmd := exec.Command(arg[0], arg[1], arg[2], arg[3], arg[4], arg[5])
 
@@ -75,7 +87,7 @@ func main() {
 		}
 
 	} else if *party == "outputparty" {
-		output_gen.GenerateOPConfig(n_outputparty, op_port, "outputparty_template.json", "./op_config")
+		output_gen.GenerateOPConfig(n_outputparty, op_port, filepath.Join(*template_path, "outputparty_template.json"), "./op_config")
 
 		output_gen.GenerateOPInput(n_exp, clientShareDue, t3, "./op_input")
 
@@ -84,7 +96,7 @@ func main() {
 		arg[1] = "-confpath=./op_config/config_op.json"
 		arg[2] = "-inputpath=./op_input/experiments.json"
 		arg[3] = "-logpath=./op_log/"
-		arg[4] = fmt.Sprintf("-n_client=%d", n_client)
+		arg[4] = fmt.Sprintf("-n_client=%d", n_clients)
 
 		cmd := exec.Command(arg[0], arg[1], arg[2], arg[3], arg[4])
 
@@ -98,15 +110,17 @@ func main() {
 
 }
 
-func run(n_client int) {
-	thirdGroup := make([][]string, n_client)
-	for i := 0; i < n_client; i++ {
+func run(client_threads int, start_cid int) {
+	thirdGroup := make([][]string, client_threads)
+	cid := start_cid
+	for i := 0; i < client_threads; i++ {
 		thirdGroup[i] = make([]string, 5)
 		thirdGroup[i][0] = "../client/cmd/cmd"
-		thirdGroup[i][1] = fmt.Sprintf("-confpath=./client_config/config_c%s.json", strconv.Itoa(i+1))
-		thirdGroup[i][2] = fmt.Sprintf("-inputpath=./client_input/input_c%s.json", strconv.Itoa(i+1))
+		thirdGroup[i][1] = fmt.Sprintf("-confpath=./client_config/config_c%s.json", strconv.Itoa(cid))
+		thirdGroup[i][2] = fmt.Sprintf("-inputpath=./client_input/input_c%s.json", strconv.Itoa(cid))
 		thirdGroup[i][3] = "-logpath=./client_log/"
 		thirdGroup[i][4] = "-mode=honest"
+		cid++
 	}
 
 	var wg sync.WaitGroup
@@ -120,14 +134,16 @@ func run(n_client int) {
 	wg.Wait()
 }
 
-func run_mal(n_client_mal int) {
+func run_mal(n_client_mal int, start_cid int) {
 	thirdGroup := make([][]string, n_client_mal)
+	cid := start_cid
 	for i := 0; i < n_client_mal; i++ {
 		thirdGroup[i] = make([]string, 4)
 		thirdGroup[i][0] = "../client/cmd/cmd"
-		thirdGroup[i][1] = fmt.Sprintf("-confpath=./client_config/config_c%s.json", strconv.Itoa(i+1))
-		thirdGroup[i][2] = fmt.Sprintf("-inputpath=./client_input/input_c%s.json", strconv.Itoa(i+1))
+		thirdGroup[i][1] = fmt.Sprintf("-confpath=./client_config/config_c%s.json", strconv.Itoa(cid))
+		thirdGroup[i][2] = fmt.Sprintf("-inputpath=./client_input/input_c%s.json", strconv.Itoa(cid))
 		thirdGroup[i][3] = "-logpath=./client_log/"
+		cid++
 	}
 
 	var wg sync.WaitGroup

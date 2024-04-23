@@ -116,9 +116,9 @@ func GenerateServerConfigCloud(num int, ip []string, src string, des string) {
 	}
 
 	for i := 0; i < num; i++ {
-		config.Server_ID = "s" + strconv.Itoa(i+1)
-		config.Token = "stk" + strconv.Itoa(i+1)
-		config.Share_Index = i + 1
+		config.Server_ID = "s" + strconv.Itoa(i)
+		config.Token = "stk" + strconv.Itoa(i)
+		config.Share_Index = i
 
 		c_urls := make([]string, num-1)
 		m_urls := make([]string, num-1)

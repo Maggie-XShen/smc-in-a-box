@@ -24,11 +24,11 @@
         "https://smc-server-4.cs-georgetown.net:443/dolevMaskedShare/", 
         "https://smc-server-4.cs-georgetown.net:443/dolevMaskedShare/"
     ],
-    "Share_Index": 1,
+    "Share_Index": 0,
     "N": 4,
     "T": 1,
     "Q": 10631,
-    "N_secrets":1,
-    "M": 1, 
+    "N_secrets":10,
+    "M": 2, 
     "N_open":240
 }

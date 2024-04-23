@@ -1,0 +1,48 @@
+{
+    "Server_ID": "s0",
+    "Token": "stk0",
+    "Cert_path":"/path to cerfiticate",
+    "Key_path":"/path to private key",
+    "Port": "443",
+    "Complaint_urls":[
+        "https://server1.privatestats.org:443/complaint/",
+        "https://server2.privatestats.org:443/complaint/",
+        "https://server3.privatestats.org:443/complaint/",
+        "https://server4.privatestats.org:443/complaint/",
+        "https://server5.privatestats.org:443/complaint/",
+        "https://server6.privatestats.org:443/complaint/"
+    ],
+    "Masked_share_urls":[
+        "https://server1.privatestats.org:443/maskedShare/",
+        "https://server2.privatestats.org:443/maskedShare/",
+        "https://server3.privatestats.org:443/maskedShare/",
+        "https://server4.privatestats.org:443/maskedShare/",
+        "https://server5.privatestats.org:443/maskedShare/",
+        "https://server6.privatestats.org:443/maskedShare/"
+
+    ],
+    "Dolev_complaint_urls":[
+        "http://127.0.0.1:50002/dolevComplaint/", 
+        "http://127.0.0.1:50003/dolevComplaint/", 
+        "http://127.0.0.1:50004/dolevComplaint/", 
+        "http://127.0.0.1:50005/dolevComplaint/", 
+        "http://127.0.0.1:50006/dolevComplaint/",
+        "http://127.0.0.1:50007/dolevComplaint/"
+    ],
+    "Dolev_masked_share_urls":[
+        "http://127.0.0.1:50002/dolevMaskedShare/", 
+        "http://127.0.0.1:50003/dolevMaskedShare/", 
+        "http://127.0.0.1:50004/dolevMaskedShare/", 
+        "http://127.0.0.1:50005/dolevMaskedShare/", 
+        "http://127.0.0.1:50006/dolevMaskedShare/",
+        "http://127.0.0.1:50007/dolevMaskedShare/"
+
+    ],
+    "Share_Index": 0,
+    "N": 7,
+    "T": 2,
+    "Q": 10631,
+    "N_secrets":10,
+    "M": 2, 
+    "N_open":240
+}

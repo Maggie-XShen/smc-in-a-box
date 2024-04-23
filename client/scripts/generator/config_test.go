@@ -9,3 +9,7 @@ import (
 func TestGenerateGonfig(t *testing.T) {
 	generator.GenerateClientConfig(6, "client_template.json", "./config")
 }
+
+func TestGenerateGonfigCloud(t *testing.T) {
+	generator.GenerateClientConfigCloud(4, "client_template.json", "./config")
+}

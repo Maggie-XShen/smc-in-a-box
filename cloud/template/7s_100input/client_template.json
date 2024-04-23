@@ -1,0 +1,17 @@
+{
+    "Client_ID": "c0",
+    "Token": "tk0",
+    "URLs": ["https://server0.privatestats.org:443/client/",
+    "https://server1.privatestats.org:443/client/",
+    "https://server2.privatestats.org:443/client/",
+    "https://server3.privatestats.org:443/client/",
+    "https://server4.privatestats.org:443/client/",
+    "https://server5.privatestats.org:443/client/",
+    "https://server6.privatestats.org:443/client/"],
+    "N": 7,
+    "T": 2,
+    "Q": 10631,
+    "N_secrets":100,
+    "M": 4, 
+    "N_open":240
+}

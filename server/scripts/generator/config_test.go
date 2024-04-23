@@ -12,6 +12,6 @@ func TestGenerateGonfigLocal(t *testing.T) {
 }
 
 func TestGenerateGonfigCloud(t *testing.T) {
-	ips := []string{"https://smc-server1.cs-georgetown.net:", "https://smc-server2.cs-georgetown.net:", "https://smc-server3.cs-georgetown.net:", "https://smc-server4.cs-georgetown.net:", "https://smc-server5.cs-georgetown.net:", "https://smc-server6.cs-georgetown.net:"}
-	generator.GenerateServerConfigCloud(6, ips, "server_template.json", "./config/")
+	ips := []string{"https://server0.privatestats.org:", "https://server1.privatestats.org:", "https://server2.privatestats.org:", "https://server3.privatestats.org:"}
+	generator.GenerateServerConfigCloud(4, ips, "server_template.json", "./config/")
 }
