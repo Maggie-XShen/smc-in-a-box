@@ -7,6 +7,7 @@ import (
 	"log"
 	"math"
 	"math/big"
+	"sync"
 	"time"
 
 	"strings"
@@ -92,6 +93,7 @@ func NewLigeroZK(N_secret, M, N_server, T, Q, N_open int) (*LigeroZK, error) {
 }
 
 func (zk *LigeroZK) GenerateProof(secrets []int) ([]*Proof, error) {
+
 	step_1_start := time.Now()
 	claims, party_sh, err := zk.preprocess(secrets)
 	if err != nil {
@@ -308,7 +310,6 @@ func (zk *LigeroZK) prepare_extended_witness(claims []Claim) ([][]int, error) {
 
 }
 
-// encode extended witness row-by-row using packed secret sharing
 func (zk *LigeroZK) encode_extended_witness(input [][]int, key []int) ([][]int, error) {
 	if len(input) == 0 {
 		return nil, fmt.Errorf("Invalid input: Input is empty")
@@ -317,66 +318,161 @@ func (zk *LigeroZK) encode_extended_witness(input [][]int, key []int) ([][]int, 
 	if len(input) != zk.m*(1+zk.n_shares) || len(input[0]) != zk.l {
 		return nil, fmt.Errorf("Invalid input")
 	}
-
 	matrix := make([][]int, len(input))
-	for i := range matrix {
-		matrix[i] = make([]int, zk.n_encode)
-	}
+	crs1 := NewCryptoRandSource()
 
-	crs := NewCryptoRandSource()
-	// packed-secret sharing each row in input
+	rand_values := make([]int, len(input))
 	for i := 0; i < len(input); i++ {
 		nonce := i / (1 + zk.n_shares)
+		crs1.Seed(key[i%(1+zk.n_shares)], nonce)
+		rand_values[i] = int(crs1.Int63(int64(zk.q)))
+		matrix[i] = make([]int, zk.n_encode)
 
-		crs.Seed(key[i%(1+zk.n_shares)], nonce)
-
-		shares, err := zk.npss.Split(input[i], int(crs.Int63(int64(zk.q))))
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		values := make([]int, zk.n_encode)
-		for j := 0; j < zk.n_encode; j++ {
-			values[j] = shares[j].Value
-		}
-		matrix[i] = values
-
+		// zk.npss.Gen_randomness_seq(rand_values[i])
 	}
 
-	/**
-		var wg sync.WaitGroup
-		//shamir-secret sharing each row in input
-		for i := 0; i < len(input); i++ {
-			wg.Add(1)
-			go func(i int) {
-				defer wg.Done()
-				nonce := i / (1 + zk.n_shares)
+	zk.npss.Split(input[0], rand_values[0])
 
-				crs := NewCryptoRandSource()
-				crs.Seed(key[i%(1+zk.n_shares)], nonce)
+	// Create channels for concurrent processing
+	resultChan := make(chan struct {
+		index int
+		row   []int
+	}, len(input))
+	errChan := make(chan error, len(input))
 
-				shares, err := npss.Split(input[i], int(crs.Int63(int64(zk.q))))
-				if err != nil {
-					log.Fatal(err)
-				}
+	var wg sync.WaitGroup
+	wg.Add(len(input))
 
-				values := make([]int, zk.n_encode)
-				for j := 0; j < zk.n_encode; j++ {
-					values[j] = shares[j].Value
-				}
+	// Process each row concurrently
+	for i := 0; i < len(input); i++ {
+		go func(i int) {
+			defer wg.Done()
 
-				matrix[i] = values
-			}(i)
+			shares, err := zk.npss.Split(input[i], rand_values[i])
+			if err != nil {
+				errChan <- err
+				return
+			}
+			values := make([]int, zk.n_encode)
+			for j := 0; j < zk.n_encode; j++ {
+				values[j] = shares[j].Value
+			}
 
-		}
+			resultChan <- struct {
+				index int
+				row   []int
+			}{index: i, row: values}
+		}(i)
+	}
+
+	// Close result channel after all goroutines finish
+	go func() {
 		wg.Wait()
-	**/
+		close(resultChan)
+	}()
+
+	// Collect results from goroutines and maintain order
+	for result := range resultChan {
+		matrix[result.index] = result.row
+	}
+
+	select {
+	case err := <-errChan:
+		return nil, err
+	default:
+	}
+
 	return matrix, nil
 }
 
-// commit encoded extended witness via Merkle Tree
-// parameter input:columnwise encoded extended witness,
-// each row of the input is a column of encoded extended witness
+// // encode extended witness row-by-row using packed secret sharing
+// func (zk *LigeroZK) encode_extended_witness(input [][]int, key []int) ([][]int, error) {
+// 	if len(input) == 0 {
+// 		return nil, fmt.Errorf("Invalid input: Input is empty")
+// 	}
+
+// 	if len(input) != zk.m*(1+zk.n_shares) || len(input[0]) != zk.l {
+// 		return nil, fmt.Errorf("Invalid input")
+// 	}
+
+// 	matrix := make([][]int, len(input))
+// 	for i := range matrix {
+// 		matrix[i] = make([]int, zk.n_encode)
+// 	}
+
+// 	crs := NewCryptoRandSource()
+
+// 	rand_values := make([]int, len(input))
+// 	for i := 0; i < len(input); i++ {
+// 		nonce := i / (1 + zk.n_shares)
+// 		crs.Seed(key[i%(1+zk.n_shares)], nonce)
+// 		rand_values[i] = int(crs.Int63(int64(zk.q)))
+// 		matrix[i] = make([]int, zk.n_encode)
+
+// 	}
+
+// 	// packed-secret sharing each row in input
+// 	for i := 0; i < len(input); i++ {
+// 		// nonce := i / (1 + zk.n_shares)
+
+// 		// crs.Seed(key[i%(1+zk.n_shares)], nonce)
+
+// 		shares, err := zk.npss.Split(input[i], rand_values[i])
+// 		if err != nil {
+// 			log.Fatal(err)
+// 		}
+// 		fmt.Println("shares : ", i, shares)
+
+// 		values := make([]int, zk.n_encode)
+// 		for j := 0; j < zk.n_encode; j++ {
+// 			values[j] = shares[j].Value
+// 		}
+// 		matrix[i] = values
+
+// 	}
+// 	fmt.Println("Matrix: ", matrix)
+// 	return matrix, nil
+// }
+
+// // commit encoded extended witness via Merkle Tree
+// // parameter input:columnwise encoded extended witness,
+// // each row of the input is a column of encoded extended witness
+// func (zk *LigeroZK) generate_merkletree(input [][]int) (*merkletree.MerkleTree, [][]byte, []int, error) {
+// 	length := len(input)
+// 	if length == 0 {
+// 		return nil, nil, nil, fmt.Errorf("Invalid input: Input is empty")
+// 	}
+
+// 	// generate a list of nonces
+// 	nonces := generate_seeds(length, zk.q)
+
+// 	// hash each column
+// 	leaves := make([][]byte, length)
+
+// 	for i := 0; i < length; i++ {
+// 		list := make([]int, len(input[0])+1)
+// 		list = append(list, input[i]...)
+// 		list = append(list, nonces[i])
+// 		concatenated, err := ConvertColumnToString(list)
+
+// 		if err != nil {
+// 			panic(err)
+// 		}
+
+// 		leaves[i] = []byte(concatenated)
+
+// 	}
+
+// 	//Create a new Merkle Tree from hashed columns
+// 	tree, err := merkletree.New(leaves)
+// 	if err != nil {
+// 		return nil, nil, nil, err
+// 	}
+
+// 	return tree, leaves, nonces, nil
+
+// }
+
 func (zk *LigeroZK) generate_merkletree(input [][]int) (*merkletree.MerkleTree, [][]byte, []int, error) {
 	length := len(input)
 	if length == 0 {
@@ -386,31 +482,49 @@ func (zk *LigeroZK) generate_merkletree(input [][]int) (*merkletree.MerkleTree, 
 	// generate a list of nonces
 	nonces := generate_seeds(length, zk.q)
 
-	// hash each column
-	leaves := make([][]byte, length)
+	// Create channels for concurrent hashing
+	hashedColumns := make(chan struct {
+		index int
+		leaf  []byte
+	}, length)
+	errChan := make(chan error, length)
 
+	// Hash each column concurrently
 	for i := 0; i < length; i++ {
-		list := make([]int, len(input[0])+1)
-		list = append(list, input[i]...)
-		list = append(list, nonces[i])
-		concatenated, err := ConvertColumnToString(list)
-
-		if err != nil {
-			panic(err)
-		}
-
-		leaves[i] = []byte(concatenated)
-
+		go func(i int) {
+			list := make([]int, len(input[0])+1)
+			list = append(list, input[i]...)
+			list = append(list, nonces[i])
+			concatenated, err := ConvertColumnToString(list)
+			if err != nil {
+				errChan <- err
+				return
+			}
+			hashedColumns <- struct {
+				index int
+				leaf  []byte
+			}{index: i, leaf: []byte(concatenated)}
+		}(i)
 	}
 
-	//Create a new Merkle Tree from hashed columns
+	// Collect results from goroutines and maintain order
+	leaves := make([][]byte, length)
+	for j := 0; j < length; j++ {
+		select {
+		case result := <-hashedColumns:
+			leaves[result.index] = result.leaf
+		case err := <-errChan:
+			return nil, nil, nil, err
+		}
+	}
+
+	// Create a new Merkle Tree from hashed columns
 	tree, err := merkletree.New(leaves)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
 	return tree, leaves, nonces, nil
-
 }
 
 func (zk *LigeroZK) generate_fst_merkletree(party_sh [][]rss.Party, seeds []int) (*merkletree.MerkleTree, [][]byte, error) {
@@ -451,18 +565,79 @@ func (zk *LigeroZK) generate_fst_merkletree(party_sh [][]rss.Party, seeds []int)
 
 }
 
-// randomly choose t' columns and get their authentication paths
+// // randomly choose t' columns and get their authentication paths
+// func (zk *LigeroZK) generate_column_check(tree *merkletree.MerkleTree, leaves [][]byte, cols []int, m_nonce []int, c_mask []int, q_mask []int, l_mask []int, input [][]int) ([]OpenedColumn, error) {
+// 	column_check := make([]OpenedColumn, len(cols))
+
+// 	for i := range cols {
+// 		index := cols[i]
+// 		proof, err := tree.GenerateProof(leaves[index])
+// 		if err != nil {
+// 			return nil, err
+// 		}
+// 		column_check[i] = OpenedColumn{List: input[index], Index: index, Merkle_nonce: m_nonce[index], Code_mask: c_mask[index], Quadra_mask: q_mask[index], Linear_mask: l_mask[index], Authpath: proof.Hashes}
+
+// 	}
+
+// 	return column_check, nil
+// }
+
 func (zk *LigeroZK) generate_column_check(tree *merkletree.MerkleTree, leaves [][]byte, cols []int, m_nonce []int, c_mask []int, q_mask []int, l_mask []int, input [][]int) ([]OpenedColumn, error) {
-	column_check := make([]OpenedColumn, len(cols))
+	column_check := make([]OpenedColumn, len(cols)) // Adjusted length here
 
+	// Create channels for concurrent processing
+	resultChan := make(chan struct {
+		index int
+		col   OpenedColumn
+	}, len(cols))
+	errChan := make(chan error, len(cols))
+
+	// Use a wait group to wait for all goroutines to finish
+	var wg sync.WaitGroup
+	wg.Add(len(cols))
+
+	// Process each column concurrently
 	for i := range cols {
-		index := cols[i]
-		proof, err := tree.GenerateProof(leaves[index])
-		if err != nil {
-			return nil, err
-		}
-		column_check[i] = OpenedColumn{List: input[index], Index: index, Merkle_nonce: m_nonce[index], Code_mask: c_mask[index], Quadra_mask: q_mask[index], Linear_mask: l_mask[index], Authpath: proof.Hashes}
+		go func(i int) {
+			defer wg.Done()
+			index := cols[i]
+			proof, err := tree.GenerateProof(leaves[index])
+			if err != nil {
+				errChan <- err
+				return
+			}
+			openedCol := OpenedColumn{
+				List:         input[index],
+				Index:        index,
+				Merkle_nonce: m_nonce[index],
+				Code_mask:    c_mask[index],
+				Quadra_mask:  q_mask[index],
+				Linear_mask:  l_mask[index],
+				Authpath:     proof.Hashes,
+			}
+			resultChan <- struct {
+				index int
+				col   OpenedColumn
+			}{i, openedCol}
+		}(i)
+	}
 
+	// Close result channel after all goroutines finish
+	go func() {
+		wg.Wait()
+		close(resultChan)
+	}()
+
+	// Collect results from goroutines and maintain order
+	for result := range resultChan {
+		column_check[result.index] = result.col
+	}
+
+	// Check for errors
+	select {
+	case err := <-errChan:
+		return nil, err
+	default:
 	}
 
 	return column_check, nil

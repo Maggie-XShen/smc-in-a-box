@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"sync"
 	"time"
 
 	"example.com/SMC/pkg/rss"
@@ -140,11 +141,7 @@ func (zk *LigeroZK) VerifyProof(proof Proof) (bool, error) {
 	sort.Slice(list, func(i, j int) bool {
 		return list[i].time > list[j].time
 	})
-	fmt.Printf("%+v\n", list)
-
-	fmt.Printf("quadra_end:%+v\n", quadra_end)
-	fmt.Printf("linear_end:%+v\n", linear_end)
-	fmt.Printf("code_end:%+v\n", code_end)**/
+	fmt.Printf("%+v\n", list)**/
 
 	return true, nil
 }
@@ -277,6 +274,7 @@ func (zk *LigeroZK) verify_quadratic_constraints(q_quadra []int, randomness []in
 }
 
 func (zk *LigeroZK) verify_linear_proof(parties []rss.Party, key []int, q_linear []int, randomness []int, open_cols []OpenedColumn) (bool, error) {
+
 	row_test := zk.check_shares_with_opened_column(parties, key, open_cols)
 	if !row_test {
 		return false, fmt.Errorf("linear test failed: failed to evaluate shares with the opened columns")
@@ -309,43 +307,149 @@ func (zk *LigeroZK) verify_linear_proof(parties []rss.Party, key []int, q_linear
 	return true, nil
 }
 
-func (zk *LigeroZK) check_shares_with_opened_column(parties []rss.Party, key []int, open_cols []OpenedColumn) bool {
+// func (zk *LigeroZK) check_shares_with_opened_column(parties []rss.Party, key []int, open_cols []OpenedColumn) bool {
 
+// 	size := len(parties)
+// 	claims := make([]Claim, size)
+
+// 	for i := 0; i < size; i++ {
+// 		sh_list := make([]rss.Share, zk.n_shares)
+// 		for j := 0; j < len(parties[0].Shares); j++ {
+// 			sh_list[parties[0].Shares[j].Index] = parties[i].Shares[j]
+// 		}
+// 		claims[i] = Claim{Secret: 0, Shares: sh_list}
+// 	}
+
+// 	extended_witness, err := zk.prepare_extended_witness(claims)
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
+
+// 	encoded_witness, err := zk.encode_extended_witness(extended_witness, key)
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
+
+// 	for _, col := range open_cols {
+// 		for bl := 0; bl < len(encoded_witness); bl = bl + 1 + zk.n_shares {
+// 			for i := 0; i < len(parties[0].Shares); i++ {
+// 				rw := bl + parties[0].Shares[i].Index + 1
+// 				if (encoded_witness[rw][col.Index]) != col.List[rw] {
+// 					return false
+// 				}
+// 			}
+// 		}
+// 	}
+
+// 	return true
+
+// }
+
+func (zk *LigeroZK) check_shares_with_opened_column(parties []rss.Party, key []int, open_cols []OpenedColumn) bool {
 	size := len(parties)
 	claims := make([]Claim, size)
 
+	// Prepare claims for each party concurrently
+	var wg sync.WaitGroup
+	wg.Add(size)
 	for i := 0; i < size; i++ {
-		sh_list := make([]rss.Share, zk.n_shares)
-		for j := 0; j < len(parties[0].Shares); j++ {
-			sh_list[parties[0].Shares[j].Index] = parties[i].Shares[j]
-		}
-		claims[i] = Claim{Secret: 0, Shares: sh_list}
-	}
+		go func(i int) {
+			defer wg.Done()
 
+			shList := make([]rss.Share, zk.n_shares)
+			for j := 0; j < len(parties[0].Shares); j++ {
+				shList[parties[0].Shares[j].Index] = parties[i].Shares[j]
+			}
+			claims[i] = Claim{Secret: 0, Shares: shList}
+		}(i)
+	}
+	wg.Wait()
+
+	// Prepare and encode extended witness concurrently
 	extended_witness, err := zk.prepare_extended_witness(claims)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	encoded_witness, err := zk.encode_extended_witness(extended_witness, key)
+	encodedWitnesses, err := zk.encode_extended_witness(extended_witness, key)
 	if err != nil {
 		log.Fatal(err)
 	}
+	// Check shares with opened columns concurrently
+	var result bool
+	var mu sync.Mutex
+	var wg2 sync.WaitGroup
+	wg2.Add(len(open_cols))
 
 	for _, col := range open_cols {
-		for bl := 0; bl < len(encoded_witness); bl = bl + 1 + zk.n_shares {
-			for i := 0; i < len(parties[0].Shares); i++ {
-				rw := bl + parties[0].Shares[i].Index + 1
-				if (encoded_witness[rw][col.Index]) != col.List[rw] {
-					return false
+		go func(col OpenedColumn) {
+			defer wg2.Done()
+
+			foundMismatch := false
+			for bl := 0; bl < len(encodedWitnesses); bl = bl + 1 + zk.n_shares {
+				for i := 0; i < len(parties[0].Shares); i++ {
+					rw := bl + parties[0].Shares[i].Index + 1
+					if encodedWitnesses[rw][col.Index] != col.List[rw] {
+						foundMismatch = true
+						break
+					}
+				}
+				if foundMismatch {
+					break
 				}
 			}
-		}
+			mu.Lock()
+			if !foundMismatch {
+				result = true
+			}
+			mu.Unlock()
+		}(col)
 	}
+	wg2.Wait()
 
-	return true
-
+	return result
 }
+
+// func (zk *LigeroZK) prepare_encode_extended_witness(claims []Claim, key []int) ([][]int, error) {
+// 	// Prepare extended witnesses for each claim concurrently
+// 	extendedWitnessesChan := make(chan [][]int, len(claims))
+// 	errChan := make(chan error, len(claims))
+// 	var wg sync.WaitGroup
+// 	wg.Add(len(claims))
+// 	for _, claim := range claims {
+// 		go func(claim Claim) {
+// 			defer wg.Done()
+// 			extendedWitness, err := zk.prepare_extended_witness([]Claim{claim}) // Pass single claim in a slice
+// 			if err != nil {
+// 				errChan <- err
+// 				return
+// 			}
+// 			encodedWitness, err := zk.encode_extended_witness(extendedWitness, key)
+// 			if err != nil {
+// 				errChan <- err
+// 				return
+// 			}
+// 			extendedWitnessesChan <- encodedWitness
+// 		}(claim)
+// 	}
+// 	go func() {
+// 		wg.Wait()
+// 		close(extendedWitnessesChan)
+// 	}()
+
+// 	// Collect extended witnesses
+// 	extendedWitnesses := make([][]int, len(claims))
+// 	for i := range claims {
+// 		select {
+// 		case extendedWitness := <-extendedWitnessesChan:
+// 			extendedWitnesses[i] = extendedWitness
+// 		case err := <-errChan:
+// 			return nil, err
+// 		}
+// 	}
+
+// 	return extendedWitnesses, nil
+// }
 
 func (zk *LigeroZK) check_quadra_with_opened_column(test_value []int, randomness []int, open_cols []OpenedColumn) bool {
 	for _, col := range open_cols {

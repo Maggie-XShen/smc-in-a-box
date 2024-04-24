@@ -13,13 +13,13 @@ var verify_end time.Duration
 
 func main() {
 
-	zk, err := ligero.NewLigeroZK(1000, 8, 7, 2, 45161, 240)
+	zk, err := ligero.NewLigeroZK(1, 1, 4, 1, 45161, 240)
 	if err != nil {
 		log.Fatalf("err: %v", err)
 	}
 
-	secrets := make([]int, 1000)
-	for i := 0; i < 1000; i++ {
+	secrets := make([]int, 1)
+	for i := 0; i < 1; i++ {
 		secrets[i] = 1
 	}
 

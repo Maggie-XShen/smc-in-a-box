@@ -75,8 +75,8 @@ func main() {
 		arg[1] = fmt.Sprintf("-confpath=./server_config/config_s%s.json", strconv.Itoa(*sid))
 		arg[2] = "-inputpath=./server_input/experiments.json"
 		arg[3] = "-logpath=./server_log/"
-		arg[4] = fmt.Sprintf("-n_client=%d", n_clients)
-		arg[5] = fmt.Sprintf("-n_client_mal=%d", n_clients_mal)
+		arg[4] = fmt.Sprintf("-n_client=%d", *n_clients)
+		arg[5] = fmt.Sprintf("-n_client_mal=%d", *n_clients_mal)
 
 		cmd := exec.Command(arg[0], arg[1], arg[2], arg[3], arg[4], arg[5])
 
@@ -97,7 +97,7 @@ func main() {
 		arg[1] = "-confpath=./op_config/config_op1.json"
 		arg[2] = "-inputpath=./op_input/experiments.json"
 		arg[3] = "-logpath=./op_log/"
-		arg[4] = fmt.Sprintf("-n_client=%d", n_clients)
+		arg[4] = fmt.Sprintf("-n_client=%d", *n_clients)
 
 		cmd := exec.Command(arg[0], arg[1], arg[2], arg[3], arg[4])
 
