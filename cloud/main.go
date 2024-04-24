@@ -50,6 +50,7 @@ func main() {
 	t3 := *d3 // ServerShareDue = ClientShareDue + t3
 
 	if *party == "client" {
+
 		client_gen.GenerateClientConfigCloud(*n_clients, filepath.Join(*template_path, "client_template.json"), "./client_config")
 
 		client_gen.GenerateClientInputCloud(*n_clients, n_exp, input_list, "./client_input")
@@ -93,7 +94,7 @@ func main() {
 
 		arg := make([]string, 5)
 		arg[0] = "../outputparty/cmd/cmd"
-		arg[1] = "-confpath=./op_config/config_op.json"
+		arg[1] = "-confpath=./op_config/config_op1.json"
 		arg[2] = "-inputpath=./op_input/experiments.json"
 		arg[3] = "-logpath=./op_log/"
 		arg[4] = fmt.Sprintf("-n_client=%d", n_clients)
