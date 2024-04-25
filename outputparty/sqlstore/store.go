@@ -35,6 +35,11 @@ func SetupDatabase(sid string) (*gorm.DB, error) {
 	}
 	log.Printf("Connection to %s Database Established\n", sid)
 
+	// Set the journal mode to WAL
+	if err := db.Exec("PRAGMA journal_mode = WAL").Error; err != nil {
+		return nil, err
+	}
+
 	db.AutoMigrate(&Experiment{})
 
 	db.AutoMigrate(&ServerShare{})
