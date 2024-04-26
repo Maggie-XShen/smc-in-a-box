@@ -1,0 +1,34 @@
+{
+    "Server_ID": "s0",
+    "Token": "stk0",
+    "Cert_path":"./fullchain.pem",
+    "Key_path":"./privkey.pem",
+    "Port": "443",
+    "Complaint_urls":[
+        "https://server1-b.privatestats.org:443/complaint/",
+        "https://server2-b.privatestats.org:443/complaint/",
+        "https://server3-b.privatestats.org:443/complaint/"
+    ],
+    "Masked_share_urls":[
+        "https://server1-b.privatestats.org:443/maskedShare/",
+        "https://server2-b.privatestats.org:443/maskedShare/",
+        "https://server3-b.privatestats.org:443/maskedShare/"
+    ],
+    "Dolev_complaint_urls":[
+        "https://smc-server-2.cs-georgetown.net:443/dolevComplaint/", 
+        "https://smc-server-3.cs-georgetown.net:443dolevComplaint/", 
+        "https://smc-server-4.cs-georgetown.net:443/dolevComplaint/"
+    ],
+    "Dolev_masked_share_urls":[
+        "https://smc-server-4.cs-georgetown.net:443/dolevMaskedShare/", 
+        "https://smc-server-4.cs-georgetown.net:443/dolevMaskedShare/", 
+        "https://smc-server-4.cs-georgetown.net:443/dolevMaskedShare/"
+    ],
+    "Share_Index": 0,
+    "N": 4,
+    "T": 1,
+    "Q": 10631,
+    "N_secrets":100,
+    "M": 4, 
+    "N_open":240
+}
