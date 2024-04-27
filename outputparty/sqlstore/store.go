@@ -6,7 +6,6 @@ import (
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 type DB struct {
@@ -56,7 +55,7 @@ func (db *DB) InsertServerShare(exp_id, server_id string, input_index, index, va
 		Index:       index,
 		Value:       value,
 	}
-	result := db.db.Clauses(clause.Insert{Modifier: "OR IGNORE"}).Create(&s)
+	result := db.db.Create(&s)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -99,7 +98,7 @@ func (db *DB) InsertExperiment(exp_id, due1, due2 string) error {
 		ServerShareDue: due2,
 		Completed:      false,
 	}
-	result := db.db.Clauses(clause.Insert{Modifier: "OR IGNORE"}).Create(&exp)
+	result := db.db.Create(&exp)
 	if result.Error != nil {
 		return result.Error
 	}

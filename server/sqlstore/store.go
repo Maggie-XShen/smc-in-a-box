@@ -7,7 +7,6 @@ import (
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 type DB struct {
@@ -67,7 +66,7 @@ func (db *DB) InsertClient(exp_id, client_id string) error {
 		Exp_ID:    exp_id,
 		Client_ID: client_id,
 	}
-	result := db.db.Clauses(clause.Insert{Modifier: "OR IGNORE"}).Create(&c)
+	result := db.db.Create(&c)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -93,7 +92,7 @@ func (db *DB) InsertClientShare(exp_id, client_id string, input_index, index, va
 		Index:       index,
 		Value:       value,
 	}
-	result := db.db.Clauses(clause.Insert{Modifier: "OR IGNORE"}).Create(&c)
+	result := db.db.Create(&c)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -167,7 +166,7 @@ func (db *DB) InsertComplaint(exp_id, server_id, client_id string, isComplain bo
 		Complain:  isComplain,
 		Root:      mkt_root,
 	}
-	result := db.db.Clauses(clause.Insert{Modifier: "OR IGNORE"}).Create(&comp)
+	result := db.db.Create(&comp)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -257,7 +256,7 @@ func (db *DB) InsertEchoComplaint(exp_id, server_id, complaints string) error {
 		Server_ID:  server_id,
 		Complaints: complaints,
 	}
-	result := db.db.Clauses(clause.Insert{Modifier: "OR IGNORE"}).Create(&echo)
+	result := db.db.Create(&echo)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -279,7 +278,7 @@ func (db *DB) InsertValidClient(exp_id, client_id string) error {
 		Exp_ID:    exp_id,
 		Client_ID: client_id,
 	}
-	result := db.db.Clauses(clause.Insert{Modifier: "OR IGNORE"}).Create(&vc)
+	result := db.db.Create(&vc)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -313,7 +312,7 @@ func (db *DB) InsertMask(exp_id, client_id string, input_index, index, value int
 		Index:       index,
 		Value:       value,
 	}
-	result := db.db.Clauses(clause.Insert{Modifier: "OR IGNORE"}).Create(&vss)
+	result := db.db.Create(&vss)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -384,7 +383,7 @@ func (db *DB) InsertEchoMaskedShare(exp_id, server_id, mask_shares string) error
 		Server_ID:    server_id,
 		MaskedShares: mask_shares,
 	}
-	result := db.db.Clauses(clause.Insert{Modifier: "OR IGNORE"}).Create(&echo)
+	result := db.db.Create(&echo)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -413,7 +412,7 @@ func (db *DB) InsertExperiment(exp_id, due1, due2, due3, owner string) error {
 		Round2_Completed:  false,
 		Round3_Completed:  false,
 	}
-	result := db.db.Clauses(clause.Insert{Modifier: "OR IGNORE"}).Create(&exp)
+	result := db.db.Create(&exp)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -538,7 +537,7 @@ func (db *DB) InsertClientRegistry(exp_id, client_id, token string) error {
 		Client_ID: client_id,
 		Token:     token,
 	}
-	result := db.db.Clauses(clause.Insert{Modifier: "OR IGNORE"}).Create(&cr)
+	result := db.db.Create(&cr)
 	if result.Error != nil {
 		return result.Error
 	}
