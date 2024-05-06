@@ -15,7 +15,7 @@ import (
 
 func main() {
 
-	n_client := 1
+	n_client := 2
 	n_client_mal := 1
 	n_exp := 1
 	n_input := []int{10000} //clarify the number of inputs for each experiment, e.g. n_input={1,2} means first experiment has 1 input, second experiment has 2 inputs
@@ -85,13 +85,13 @@ func run(n_server, n_outputparty, n_client, n_client_mal int) {
 		thirdGroup[i][4] = "-mode=malicious"
 	}
 
-	for i := n_client_mal; i < n_client-n_client_mal; i++ {
-		thirdGroup[i] = make([]string, 5)
-		thirdGroup[i][0] = "../client/cmd/cmd"
-		thirdGroup[i][1] = fmt.Sprintf("-confpath=./client_config/config_c%s.json", strconv.Itoa(i+1))
-		thirdGroup[i][2] = fmt.Sprintf("-inputpath=./client_input/input_c%s.json", strconv.Itoa(i+1))
-		thirdGroup[i][3] = "-logpath=./client_log/"
-		thirdGroup[i][4] = "-mode=honest"
+	for j := n_client_mal; j < n_client; j++ {
+		thirdGroup[j] = make([]string, 5)
+		thirdGroup[j][0] = "../client/cmd/cmd"
+		thirdGroup[j][1] = fmt.Sprintf("-confpath=./client_config/config_c%s.json", strconv.Itoa(j+1))
+		thirdGroup[j][2] = fmt.Sprintf("-inputpath=./client_input/input_c%s.json", strconv.Itoa(j+1))
+		thirdGroup[j][3] = "-logpath=./client_log/"
+		thirdGroup[j][4] = "-mode=honest"
 	}
 
 	var wg sync.WaitGroup

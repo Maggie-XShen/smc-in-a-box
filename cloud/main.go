@@ -20,7 +20,7 @@ func main() {
 	sid := flag.Int("sid", 0, "server id") //e.g. 0 for s0
 	client_threads := flag.Int("client_threads", 0, "number of clients running on the same machine")
 	start_cid := flag.Int("start_cid", 0, "client id") //e.g. 0 for c0
-	n_server := flag.Int("n_server", 0, "number of servers")
+	n_servers := flag.Int("n_servers", 0, "number of servers")
 	n_clients := flag.Int("n_clients", 0, "number of total clients")
 	n_clients_mal := flag.Int("n_clients_mal", 0, "number of malicious clients")
 	n_input := flag.Int("n_input", 0, "number of inputs")
@@ -55,7 +55,7 @@ func main() {
 
 		client_gen.GenerateClientInputCloud(*n_clients, n_exp, input_list, "./client_input")
 
-		run(*client_threads, *start_cid)
+		run(*client_threads, *n_clients, *n_clients_mal, *start_cid)
 
 	} else if *party == "client_mal" {
 
@@ -66,7 +66,7 @@ func main() {
 		run_mal(*n_clients_mal, *start_cid)
 
 	} else if *party == "server" {
-		server_gen.GenerateServerConfigCloud(*n_server, server_port[:*n_server], filepath.Join(*template_path, "server_template.json"), "./server_config")
+		server_gen.GenerateServerConfigCloud(*n_servers, server_port[:*n_servers], filepath.Join(*template_path, "server_template.json"), "./server_config")
 
 		server_gen.GenerateServerInput(n_exp, clientShareDue, t1, t2, "https://outputparty.privatestats.org/serverShare/", "./server_input")
 
@@ -111,24 +111,34 @@ func main() {
 
 }
 
-func run(client_threads int, start_cid int) {
-	thirdGroup := make([][]string, client_threads)
+func run(client_threads int, n_client, n_client_mal, start_cid int) {
+	Group := make([][]string, client_threads)
 	cid := start_cid
-	for i := 0; i < client_threads; i++ {
-		thirdGroup[i] = make([]string, 5)
-		thirdGroup[i][0] = "../client/cmd/cmd"
-		thirdGroup[i][1] = fmt.Sprintf("-confpath=./client_config/config_c%s.json", strconv.Itoa(cid))
-		thirdGroup[i][2] = fmt.Sprintf("-inputpath=./client_input/input_c%s.json", strconv.Itoa(cid))
-		thirdGroup[i][3] = "-logpath=./client_log/"
-		thirdGroup[i][4] = "-mode=honest"
+	for i := 0; i < n_client_mal; i++ {
+		Group[i] = make([]string, 5)
+		Group[i][0] = "../client/cmd/cmd"
+		Group[i][1] = fmt.Sprintf("-confpath=./client_config/config_c%s.json", strconv.Itoa(cid))
+		Group[i][2] = fmt.Sprintf("-inputpath=./client_input/input_c%s.json", strconv.Itoa(cid))
+		Group[i][3] = "-logpath=./client_log/"
+		Group[i][4] = "-mode=malicious"
+		cid++
+	}
+
+	for j := n_client_mal; j < n_client; j++ {
+		Group[j] = make([]string, 5)
+		Group[j][0] = "../client/cmd/cmd"
+		Group[j][1] = fmt.Sprintf("-confpath=./client_config/config_c%s.json", strconv.Itoa(cid))
+		Group[j][2] = fmt.Sprintf("-inputpath=./client_input/input_c%s.json", strconv.Itoa(cid))
+		Group[j][3] = "-logpath=./client_log/"
+		Group[j][4] = "-mode=honest"
 		cid++
 	}
 
 	var wg sync.WaitGroup
 
-	for _, cmd := range thirdGroup {
+	for _, cmd := range Group {
 		wg.Add(1)
-		go executeSecondGroup(cmd[0], cmd[1], cmd[2], cmd[3], cmd[4], &wg)
+		go executeGroup(cmd[0], cmd[1], cmd[2], cmd[3], cmd[4], &wg)
 	}
 
 	// Wait for all commands to finish
@@ -136,29 +146,29 @@ func run(client_threads int, start_cid int) {
 }
 
 func run_mal(n_client_mal int, start_cid int) {
-	thirdGroup := make([][]string, n_client_mal)
+	Group := make([][]string, n_client_mal)
 	cid := start_cid
 	for i := 0; i < n_client_mal; i++ {
-		thirdGroup[i] = make([]string, 4)
-		thirdGroup[i][0] = "../client/cmd/cmd"
-		thirdGroup[i][1] = fmt.Sprintf("-confpath=./client_config/config_c%s.json", strconv.Itoa(cid))
-		thirdGroup[i][2] = fmt.Sprintf("-inputpath=./client_input/input_c%s.json", strconv.Itoa(cid))
-		thirdGroup[i][3] = "-logpath=./client_log/"
+		Group[i] = make([]string, 4)
+		Group[i][0] = "../client/cmd/cmd"
+		Group[i][1] = fmt.Sprintf("-confpath=./client_config/config_c%s.json", strconv.Itoa(cid))
+		Group[i][2] = fmt.Sprintf("-inputpath=./client_input/input_c%s.json", strconv.Itoa(cid))
+		Group[i][3] = "-logpath=./client_log/"
 		cid++
 	}
 
 	var wg sync.WaitGroup
 
-	for _, cmd := range thirdGroup {
+	for _, cmd := range Group {
 		wg.Add(1)
-		go executeSecondGroup(cmd[0], cmd[1], cmd[2], cmd[3], cmd[4], &wg)
+		go executeGroup(cmd[0], cmd[1], cmd[2], cmd[3], cmd[4], &wg)
 	}
 
 	// Wait for all commands to finish
 	wg.Wait()
 }
 
-func executeSecondGroup(command, conf_path, input_path, log_path, mode string, wg *sync.WaitGroup) {
+func executeGroup(command, conf_path, input_path, log_path, mode string, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	cmd := exec.Command(command, conf_path, input_path, log_path, mode)
