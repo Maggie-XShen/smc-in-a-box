@@ -195,7 +195,7 @@ func BenchmarkGenerateProof(b *testing.B) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		zk.GetProofSize(*proof[0])
+		zk.GetSize(*proof[0])
 
 		//fmt.Printf("%d\n", zk.GetProofSize(*proof[0]))
 	}

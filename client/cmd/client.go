@@ -51,12 +51,13 @@ func (c *Client) Run(inputpath string) {
 			log.Fatal(err)
 		}
 
-		theorySingleProofBytes := big.NewInt(zk.GetProofSize(*proof[0])) //Theoretical proof size
+		theorySingleProofBytes, theoryInputSharesBytes := zk.GetSize(*proof[0]) //Theoretical proof size
 
 		logger.WithFields(logrus.Fields{
-			"input":      input,
-			"proof_time": proof_end.String(),
-			"proof_size": theorySingleProofBytes,
+			"input":             input,
+			"proof_time":        proof_end.String(),
+			"proof_size":        big.NewInt(theorySingleProofBytes),
+			"input_shares_size": big.NewInt(theoryInputSharesBytes),
 		}).Info("")
 
 		current_time := time.Now().UTC()
