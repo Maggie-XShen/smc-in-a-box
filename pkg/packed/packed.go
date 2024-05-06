@@ -13,14 +13,15 @@ import (
 // t + k: the minimum number of shares needed to reconstruct the secret
 
 type PackedSecretSharing struct {
-	n, t, k, q int
-	//flag           []bool
-	//glob_constants [][]int
 	flag_num            []bool
 	glob_constant_num   [][]int
+	glob_constant_denum []int
+	n                   int
+	t                   int
+	k                   int
+	q                   int
 	glob_num            int
 	flag_denum          bool
-	glob_constant_denum []int
 }
 
 type Share struct {

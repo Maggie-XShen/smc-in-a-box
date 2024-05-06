@@ -23,8 +23,8 @@ type Complaint struct {
 	Exp_ID    string `gorm:"primaryKey"`
 	Server_ID string `gorm:"primaryKey"`
 	Client_ID string `gorm:"primaryKey"`
-	Complain  bool
 	Root      []byte
+	Complain  bool
 }
 
 type ValidClient struct {

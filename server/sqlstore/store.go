@@ -26,7 +26,7 @@ func SetupDatabase(sid string) (*gorm.DB, error) {
 	db_path := fmt.Sprintf("%s.db", sid)
 
 	// open a database
-	db, err := gorm.Open(sqlite.Open(db_path), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(db_path), &gorm.Config{SkipDefaultTransaction: true})
 	if err != nil {
 		return nil, err
 	}

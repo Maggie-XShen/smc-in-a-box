@@ -15,15 +15,13 @@ import (
 
 var logger *logrus.Logger
 var client_size int     //total number of clients (no dropout) per experiment
-var bad_client_size int // total number of bad client (no dropout) per experiment
 var complaint_size int  //total number of complaints from all servers per experiment
 var mask_share_size int //total number of masked share records per experiment
-var p_sh int            //total number of shares per secret stored by each server
-var start time.Time
 var real_client_share_due time.Time
 var real_complaint_due time.Time
 var real_share_broadcast_due time.Time
 var total_verify_time time.Duration
+var get_complaints_end time.Duration
 var mask_share_end time.Duration
 var share_correct_end time.Duration
 
@@ -47,8 +45,8 @@ func main() {
 	conf := config.Load(*confpath)
 
 	complaint_size = client_size * conf.N
-	bad_client_size = *n_client_mal
-	p_sh = combin.Binomial(conf.N-1, conf.T)
+	bad_client_size := *n_client_mal          // total number of bad client (no dropout) per experiment
+	p_sh := combin.Binomial(conf.N-1, conf.T) //total number of shares per secret stored by each server
 	mask_share_size = conf.N * bad_client_size * conf.N_secrets * p_sh
 
 	logger = logrus.New()
@@ -102,7 +100,7 @@ func main() {
 	go s.WaitForEndOfShareBroadcast(ticker)
 	go s.Close(ticker)
 
-	start = time.Now().UTC()
+	start := time.Now().UTC()
 	logger.WithFields(logrus.Fields{
 		"start": start.String(),
 	}).Info("")

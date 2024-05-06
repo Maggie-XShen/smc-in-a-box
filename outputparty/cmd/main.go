@@ -14,9 +14,7 @@ import (
 )
 
 var logger *logrus.Logger
-var p_sh int //total number of shares per secret stored by each server
 var n_sh int //total number of shares a secret splits to
-var start time.Time
 var real_server_share_due time.Time
 var reconstruction_end time.Duration
 
@@ -34,7 +32,7 @@ func main() {
 	}
 
 	conf := config.Load(*confpath)
-	p_sh = combin.Binomial(conf.N-1, conf.T) //compute total number of shares each party has
+	p_sh := combin.Binomial(conf.N-1, conf.T) //total number of shares per secret stored by each server
 	n_sh = p_sh * conf.N * conf.N_secrets
 
 	logger = logrus.New()
@@ -78,7 +76,7 @@ func main() {
 	go op.WaitForEndOfExperiment(ticker)
 	go op.Close(ticker)
 
-	start = time.Now().UTC()
+	start := time.Now().UTC()
 	logger.WithFields(logrus.Fields{
 		"start": start.String(),
 	}).Info("")

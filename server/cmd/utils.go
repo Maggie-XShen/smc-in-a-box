@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -15,11 +17,8 @@ type ClientRequest struct {
 	Exp_ID    string       `json:"Exp_ID"`
 	Client_ID string       `json:"Client_ID"`
 	Token     string       `json:"Token"`
-	Proof     ligero.Proof `json:"Proof"`
 	Timestamp string       `json:"Timestamp"`
-	//Proof       string       `json:"Proof"`
-	//Hash_proof  string       `json:"HashProof"`
-	//Signature   string       `json:"Signature"`
+	Proof     ligero.Proof `json:"Proof"`
 }
 
 type ClientRegistry struct {
@@ -36,20 +35,20 @@ type ComplaintRequest struct {
 
 type Complaint struct {
 	Client_ID string `json:"Client_ID"`
-	Complain  bool   `json:"Complain"`
 	Root      []byte `json:"Root"`
+	Complain  bool   `json:"Complain"`
 }
 
 type DolevComplaintRequest struct {
-	Round_ID   int              `json:"Round_ID"`
 	Server_ID  string           `json:"Server_ID"`
 	Msg        ComplaintRequest `json:"Msg"`
 	Signatures []Signature      `json:"Signatures"`
+	Round_ID   int              `json:"Round_ID"`
 }
 
 type Signature struct {
-	Sig       []byte `json:"Sig"`
 	Server_ID string `json:"Server_ID"`
+	Sig       []byte `json:"Sig"`
 }
 
 type MaskedShareRequest struct {
@@ -66,17 +65,17 @@ type MaskedShare struct {
 }
 
 type DolevMaskedShareRequest struct {
-	Round_ID   int                `json:"Round_ID"`
 	Server_ID  string             `json:"Server_ID"`
 	Msg        MaskedShareRequest `json:"Msg"`
 	Signatures []Signature        `json:"Signatures"`
+	Round_ID   int                `json:"Round_ID"`
 }
 
 type AggregatedShareRequest struct {
 	Exp_ID    string      `json:"Exp_ID "`
 	Server_ID string      `json:"Server_ID"`
-	Shares    []rss.Party `json:"Shares"`
 	Timestamp string      `json:"Timestamp"`
+	Shares    []rss.Party `json:"Shares"`
 }
 
 type Experiment struct {
@@ -104,7 +103,18 @@ func (cr *ComplaintRequest) ToJson() []byte {
 		log.Fatalf("Cannot marshall complaints request: %s", err)
 	}
 
-	return message
+	// Compress the JSON data using Gzip
+	var compressedData bytes.Buffer
+	gzipWriter := gzip.NewWriter(&compressedData)
+	_, err = gzipWriter.Write(message)
+	if err != nil {
+		log.Fatalf("Cannot compress complaints request: %s", err)
+	}
+	if err := gzipWriter.Close(); err != nil {
+		log.Fatal(err)
+	}
+
+	return compressedData.Bytes()
 }
 
 func (dcr *DolevComplaintRequest) ToJson() []byte {
@@ -137,7 +147,18 @@ func (r *MaskedShareRequest) ToJson() []byte {
 		log.Fatalf("Cannot marshall masked share request: %s", err)
 	}
 
-	return message
+	// Compress the JSON data using Gzip
+	var compressedData bytes.Buffer
+	gzipWriter := gzip.NewWriter(&compressedData)
+	_, err = gzipWriter.Write(message)
+	if err != nil {
+		log.Fatalf("Cannot compress masked share request: %s", err)
+	}
+	if err := gzipWriter.Close(); err != nil {
+		log.Fatal(err)
+	}
+
+	return compressedData.Bytes()
 }
 
 func (dr *DolevMaskedShareRequest) ToJson() []byte {
@@ -170,9 +191,21 @@ func (s *AggregatedShareRequest) ToJson() []byte {
 		log.Fatalf("Cannot marshall aggregated share request: %s", err)
 	}
 
-	return message
+	// Compress the JSON data using Gzip
+	var compressedData bytes.Buffer
+	gzipWriter := gzip.NewWriter(&compressedData)
+	_, err = gzipWriter.Write(message)
+	if err != nil {
+		log.Fatalf("Cannot compress aggregated share request: %s", err)
+	}
+	if err := gzipWriter.Close(); err != nil {
+		log.Fatal(err)
+	}
+
+	return compressedData.Bytes()
 }
 
+/**
 func (c *ClientRequest) ReadJson(req *http.Request) ClientRequest {
 	decoder := json.NewDecoder(req.Body)
 	var t ClientRequest
@@ -183,12 +216,39 @@ func (c *ClientRequest) ReadJson(req *http.Request) ClientRequest {
 	}
 
 	return t
+}**/
+
+func (c *ClientRequest) ReadJson(req *http.Request) ClientRequest {
+	// Decompress the data using Gzip
+	gzipReader, err := gzip.NewReader(req.Body)
+	if err != nil {
+		log.Fatalf("Cannot decompress client request: %s", err)
+	}
+	defer gzipReader.Close()
+
+	decoder := json.NewDecoder(gzipReader)
+
+	var t ClientRequest
+	err = decoder.Decode(&t)
+	if err != nil {
+		log.Fatalf("Cannot decode client request: %s", err)
+	}
+
+	return t
 }
 
 func (c *ComplaintRequest) ReadJson(req *http.Request) ComplaintRequest {
-	decoder := json.NewDecoder(req.Body)
+	// Decompress the data using Gzip
+	gzipReader, err := gzip.NewReader(req.Body)
+	if err != nil {
+		log.Fatalf("Cannot decompress complaints request: %s", err)
+	}
+	defer gzipReader.Close()
+
+	decoder := json.NewDecoder(gzipReader)
+
 	var t ComplaintRequest
-	err := decoder.Decode(&t)
+	err = decoder.Decode(&t)
 	if err != nil {
 		log.Fatalf("Cannot decode server complaint: %s", err)
 	}
@@ -206,9 +266,17 @@ func (dc *DolevComplaintRequest) ReadJson(req *http.Request) DolevComplaintReque
 }
 
 func (m *MaskedShareRequest) ReadJson(req *http.Request) MaskedShareRequest {
-	decoder := json.NewDecoder(req.Body)
+	// Decompress the data using Gzip
+	gzipReader, err := gzip.NewReader(req.Body)
+	if err != nil {
+		log.Fatalf("Cannot decompress masked share request: %s", err)
+	}
+	defer gzipReader.Close()
+
+	decoder := json.NewDecoder(gzipReader)
+
 	var t MaskedShareRequest
-	err := decoder.Decode(&t)
+	err = decoder.Decode(&t)
 	if err != nil {
 		log.Fatalf("Cannot decode masked shares request: %s", err)
 	}
@@ -221,16 +289,6 @@ func (dm *DolevMaskedShareRequest) ReadJson(req *http.Request) DolevMaskedShareR
 	err := decoder.Decode(&t)
 	if err != nil {
 		log.Fatalf("Cannot decode server delov masked share: %s", err)
-	}
-	return t
-}
-
-func (s *AggregatedShareRequest) ReadJson(req *http.Request) AggregatedShareRequest {
-	decoder := json.NewDecoder(req.Body)
-	var t AggregatedShareRequest
-	err := decoder.Decode(&t)
-	if err != nil {
-		log.Fatalf("Cannot decode aggregated share request: %s", err)
 	}
 	return t
 }

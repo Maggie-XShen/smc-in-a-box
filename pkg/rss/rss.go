@@ -9,12 +9,14 @@ import (
 )
 
 type ReplicatedSecretSharing struct {
-	n, t, q int
+	n int
+	t int
+	q int
 }
 
 type Party struct {
-	Index  int     `json:"Index"`
 	Shares []Share `json:"Shares"`
+	Index  int     `json:"Index"`
 }
 
 type Share struct {

@@ -286,6 +286,7 @@ func (s *Server) WaitForEndOfExperiment(ticker *time.Ticker) {
 
 			if currentTime.After(due) {
 
+				get_complaints_start := time.Now()
 				complaints, err := s.store.GetComplaintsPerServer(exp.Exp_ID, s.cfg.Server_ID)
 				if err != nil {
 					log.Printf("%s cannot retreive complaints records - error: %s\n", s.cfg.Server_ID, err)
@@ -329,6 +330,8 @@ func (s *Server) WaitForEndOfExperiment(ticker *time.Ticker) {
 					log.Printf("error: %s cannot set round1 to completed\n", s.cfg.Server_ID)
 					panic(err)
 				}
+
+				get_complaints_end = time.Since(get_complaints_start)
 
 				//s.dolevComplaintBroadcast(1, message, []Signature{})
 
@@ -437,8 +440,6 @@ func (s *Server) WaitForEndOfComplaintBroadcast(ticker *time.Ticker) {
 
 				}
 
-				mask_share_end = time.Since(mask_share_start) //masked share generation computing time
-
 				maskedShares, err := s.store.GetMaskedSharesPerServer(exp.Exp_ID, s.cfg.Server_ID)
 				if err != nil {
 					log.Printf("%s cannot retreive masked shares record\n", s.cfg.Server_ID)
@@ -479,6 +480,8 @@ func (s *Server) WaitForEndOfComplaintBroadcast(ticker *time.Ticker) {
 					log.Printf("%s cannot set round2 to completed\n", s.cfg.Server_ID)
 					panic(err)
 				}
+
+				mask_share_end = time.Since(mask_share_start) //masked share generation computing time
 
 			}
 
@@ -623,8 +626,8 @@ func (s *Server) WaitForEndOfShareBroadcast(ticker *time.Ticker) {
 					aggreShares = []rss.Share{{Index: 0, Value: 27597}, {Index: 2, Value: 28090}, {Index: 3, Value: 35626}, {Index: 4, Value: 36324}, {Index: 5, Value: 38150}}
 				}**/
 
-				msg := AggregatedShareRequest{Exp_ID: exp.Exp_ID, Server_ID: s.cfg.Server_ID, Shares: aggreShares, Timestamp: time.Now().UTC().Format("2006-01-02 15:04:05")}
-				log.Printf("server %s is sending aggregated shares: %+v\n", s.cfg.Server_ID, msg)
+				msg := AggregatedShareRequest{Exp_ID: exp.Exp_ID, Server_ID: s.cfg.Server_ID, Shares: aggreShares, Timestamp: time.Now().UTC().String()}
+				log.Printf("server %s is sending aggregated shares to %s\n", s.cfg.Server_ID, exp.Owner)
 				writer := &msg
 				send(exp.Owner, writer.ToJson())
 
@@ -839,7 +842,7 @@ func (s *Server) Close(ticker *time.Ticker) {
 		}
 
 		if int64(len(finished)) == all {
-			end := time.Since(start)
+			end := time.Now().UTC()
 
 			avg := float64(total_verify_time.Milliseconds()) / float64(client_size)
 
@@ -850,6 +853,7 @@ func (s *Server) Close(ticker *time.Ticker) {
 				"avg_verify_time":          avg_verify_time.String(),
 				"total_verify_time":        total_verify_time.String(),
 				"num_client_received":      client_count,
+				"get_complaints_time":      get_complaints_end.String(),
 				"real_complaint_due":       real_complaint_due.String(),
 				"mask_share_time":          mask_share_end.String(),
 				"real_share_broadcast_due": real_share_broadcast_due.String(),

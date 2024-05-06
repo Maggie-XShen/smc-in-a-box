@@ -14,21 +14,16 @@ import (
 type GlobConstants struct {
 	flag_num     []bool
 	values_num   [][]int
-	flag_denom   bool
 	values_denom []int
+	flag_denom   bool
 }
 
 type GlobConstantsCodeTest struct {
 	flag_num     []bool
 	values_num   [][]int
-	flag_denom   bool
 	values_denom []int
+	flag_denom   bool
 }
-
-// type GlobConstants struct {
-// 	flag   []bool
-// 	values [][]int
-// }
 
 var auth_path_end time.Duration
 var gen_hash_end time.Duration
@@ -51,12 +46,12 @@ type Proof struct {
 
 type OpenedColumn struct {
 	List         []int    `json:"List"`
+	Authpath     [][]byte `json:"Authpath"`
 	Index        int      `json:"Col_index"`
 	Merkle_nonce int      `json:"Merkle_nonce"`
 	Code_mask    int      `json:"Code_mask"`
 	Linear_mask  int      `json:"Linear_mask"`
 	Quadra_mask  int      `json:"Quadra_mask"`
-	Authpath     [][]byte `json:"Authpath"`
 }
 
 func newProof(root []byte, column_check []OpenedColumn, q_code []int, q_quadra []int, q_linear []int, party_sh []rss.Party, seeds []int, fst_root []byte, fst_authpath [][]byte) *Proof {
@@ -129,13 +124,13 @@ func (zk *LigeroZK) VerifyProof(proof Proof) (bool, error) {
 	}
 	linear_end = time.Since(linear_start)
 
+	/**
 	type step struct {
 		name     string
 		time     time.Duration
 		duration string
 	}
 
-	/**
 	list := []step{{name: "auth_path", time: auth_path_end, duration: auth_path_end.String()}, {name: "gen_hash", time: gen_hash_end, duration: gen_hash_end.String()}, {name: "open_col", time: open_col_end, duration: open_col_end.String()}, {name: "code_end", time: code_end, duration: code_end.String()}, {name: "quadra_hash", time: quadra_end, duration: quadra_end.String()}, {name: "linear_end", time: linear_end, duration: linear_end.String()}}
 
 	sort.Slice(list, func(i, j int) bool {

@@ -8,7 +8,6 @@ import (
 	"math"
 	"math/big"
 	"sync"
-	"time"
 
 	"strings"
 
@@ -28,29 +27,24 @@ import (
 // n_encode:the number of shares that each row of rearranged input vector is split into
 // n_open_col: number of opened columns
 
-var step_1_end time.Duration
-var step_2_end time.Duration
-var step_3_end time.Duration
-var step_4_end time.Duration
-var step_5_end time.Duration
-var step_6_end time.Duration
-var step_7_end time.Duration
-var step_8_end time.Duration
-var step_9_end time.Duration
-var step_10_end time.Duration
-var step_11_end time.Duration
-var step_12_end time.Duration
-
 type LigeroZK struct {
-	n_secret, n_shares, m, l, n_server, t, q, n_encode, n_open_col int
-	npss                                                           *packed.PackedSecretSharing
-	glob_constants                                                 GlobConstants
-	glob_constants_code_test                                       GlobConstantsCodeTest
+	npss                     *packed.PackedSecretSharing
+	glob_constants           GlobConstants
+	glob_constants_code_test GlobConstantsCodeTest
+	n_secret                 int
+	n_shares                 int
+	m                        int
+	l                        int
+	n_server                 int
+	t                        int
+	q                        int
+	n_encode                 int
+	n_open_col               int
 }
 
 type Claim struct {
-	Secret int
 	Shares []rss.Share
+	Secret int
 }
 
 func NewLigeroZK(N_secret, M, N_server, T, Q, N_open int) (*LigeroZK, error) {
@@ -93,56 +87,42 @@ func NewLigeroZK(N_secret, M, N_server, T, Q, N_open int) (*LigeroZK, error) {
 }
 
 func (zk *LigeroZK) GenerateProof(secrets []int) ([]*Proof, error) {
-
-	step_1_start := time.Now()
 	claims, party_sh, err := zk.preprocess(secrets)
 	if err != nil {
 		log.Fatal(err)
 	}
-	step_1_end = time.Since(step_1_start)
 
-	step_2_start := time.Now()
 	extended_witness, err := zk.prepare_extended_witness(claims)
 	if err != nil {
 		log.Fatal(err)
 	}
-	step_2_end = time.Since(step_2_start)
 
 	seed0 := generate_seeds(zk.n_shares+1, zk.q)
-	step_3_start := time.Now()
 	encoded_witness, err := zk.encode_extended_witness(extended_witness, seed0)
 	if err != nil {
 		log.Fatal(err)
 	}
-	step_3_end = time.Since(step_3_start)
 
-	step_4_start := time.Now()
 	encoded_witeness_columnwise, err := ConvertToColumnwise(encoded_witness)
 	if err != nil {
 		log.Fatal(err)
 	}
-	step_4_end = time.Since(step_4_start)
 
 	//commit to the Extended Witness via Merkle Tree
-	step_5_start := time.Now()
 	tree, leaves, nonces, err := zk.generate_merkletree(encoded_witeness_columnwise)
 	if err != nil {
 		log.Fatal(err)
 	}
 	root := tree.Root()
-	step_5_end = time.Since(step_5_start)
 
-	step_6_start := time.Now()
 	//generate a vector of random numbers using the hash of merkle tree root as seed
 	len1 := zk.m * (1 + zk.n_shares)
 	len2 := zk.m
 	len3 := zk.m
 	h1 := zk.generate_hash([][]byte{root})
 	random_vector := RandVector(h1, len1+len2+len3, zk.q)
-	step_6_end = time.Since(step_6_start)
 
 	//generate code test
-	step_7_start := time.Now()
 	seed1 := generate_seeds(zk.l, zk.q)
 	code_mask := zk.generate_mask(seed1)
 	r1 := random_vector[:len1]
@@ -151,10 +131,8 @@ func (zk *LigeroZK) GenerateProof(secrets []int) ([]*Proof, error) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	step_7_end = time.Since(step_7_start)
 
 	//generate quadratic test
-	step_8_start := time.Now()
 	seed2 := make([]int, zk.l)
 	quadra_mask := zk.generate_mask(seed2)
 	r2 := random_vector[len1 : len1+len2]
@@ -163,10 +141,8 @@ func (zk *LigeroZK) GenerateProof(secrets []int) ([]*Proof, error) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	step_8_end = time.Since(step_8_start)
 
 	//generate linear test
-	step_9_start := time.Now()
 	seed3 := make([]int, zk.l)
 	linear_mask := zk.generate_mask(seed3)
 	r3 := random_vector[len1+len2:]
@@ -175,18 +151,14 @@ func (zk *LigeroZK) GenerateProof(secrets []int) ([]*Proof, error) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	step_9_end = time.Since(step_9_start)
 
-	step_10_start := time.Now()
 	//generate FST root
 	fst_tree, fst_leaves, err := zk.generate_fst_merkletree(party_sh, seed0)
 	if err != nil {
 		log.Fatal(err)
 	}
 	fst_root := fst_tree.Root()
-	step_10_end = time.Since(step_10_start)
 
-	step_11_start := time.Now()
 	h2 := zk.generate_hash([][]byte{h1, fst_root, ConvertToByteArray(q_code), ConvertToByteArray(q_quadra), ConvertToByteArray(q_linear)})
 
 	//generate column check
@@ -195,9 +167,7 @@ func (zk *LigeroZK) GenerateProof(secrets []int) ([]*Proof, error) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	step_11_end = time.Since(step_11_start)
 
-	step_12_start := time.Now()
 	//generate proof for each party
 	proofs := make([]*Proof, zk.n_server)
 	for i := 0; i < zk.n_server; i++ {
@@ -209,26 +179,6 @@ func (zk *LigeroZK) GenerateProof(secrets []int) ([]*Proof, error) {
 
 		proofs[i] = newProof(root, column_check, q_code, q_quadra, q_linear, party_sh[i], seed0, fst_root, fst_proof.Hashes)
 	}
-	step_12_end = time.Since(step_12_start)
-
-	/**
-	type step struct {
-		name     string
-		time     time.Duration
-		duration string
-	}
-
-	list := []step{{name: "step_1", time: Step_1_end, duration: Step_1_end.String()}, {name: "step_2", time: Step_2_end, duration: Step_2_end.String()}, {name: "step_3", time: Step_3_end, duration: Step_3_end.String()}, {name: "step_4", time: Step_4_end, duration: Step_4_end.String()}, {name: "step_5", time: Step_5_end, duration: Step_5_end.String()}, {name: "step_6", time: Step_6_end, duration: Step_6_end.String()}, {name: "step_7", time: Step_7_end, duration: Step_7_end.String()}, {name: "step_8", time: Step_8_end, duration: Step_8_end.String()}, {name: "step_9", time: Step_9_end, duration: Step_9_end.String()}, {name: "step_10", time: Step_10_end, duration: Step_10_end.String()}, {name: "step_11", time: Step_11_end, duration: Step_11_end.String()}, {name: "step_12", time: Step_12_end, duration: Step_12_end.String()}}
-
-	sort.Slice(list, func(i, j int) bool {
-		return list[i].time > list[j].time
-	})
-
-	fmt.Printf("step 3:%+v\n", step_3_end)
-	fmt.Printf("step 7:%+v\n", step_7_end)
-	fmt.Printf("step 8:%+v\n", step_8_end)
-	fmt.Printf("step 9:%+v\n", step_9_end)
-	**/
 
 	return proofs, nil
 
@@ -335,8 +285,8 @@ func (zk *LigeroZK) encode_extended_witness(input [][]int, key []int) ([][]int, 
 
 	// Create channels for concurrent processing
 	resultChan := make(chan struct {
-		index int
 		row   []int
+		index int
 	}, len(input))
 	errChan := make(chan error, len(input))
 
@@ -359,8 +309,8 @@ func (zk *LigeroZK) encode_extended_witness(input [][]int, key []int) ([][]int, 
 			}
 
 			resultChan <- struct {
-				index int
 				row   []int
+				index int
 			}{index: i, row: values}
 		}(i)
 	}
@@ -484,8 +434,8 @@ func (zk *LigeroZK) generate_merkletree(input [][]int) (*merkletree.MerkleTree, 
 
 	// Create channels for concurrent hashing
 	hashedColumns := make(chan struct {
-		index int
 		leaf  []byte
+		index int
 	}, length)
 	errChan := make(chan error, length)
 
@@ -501,8 +451,8 @@ func (zk *LigeroZK) generate_merkletree(input [][]int) (*merkletree.MerkleTree, 
 				return
 			}
 			hashedColumns <- struct {
-				index int
 				leaf  []byte
+				index int
 			}{index: i, leaf: []byte(concatenated)}
 		}(i)
 	}
@@ -587,8 +537,8 @@ func (zk *LigeroZK) generate_column_check(tree *merkletree.MerkleTree, leaves []
 
 	// Create channels for concurrent processing
 	resultChan := make(chan struct {
-		index int
 		col   OpenedColumn
+		index int
 	}, len(cols))
 	errChan := make(chan error, len(cols))
 
@@ -616,9 +566,9 @@ func (zk *LigeroZK) generate_column_check(tree *merkletree.MerkleTree, leaves []
 				Authpath:     proof.Hashes,
 			}
 			resultChan <- struct {
-				index int
 				col   OpenedColumn
-			}{i, openedCol}
+				index int
+			}{openedCol, i}
 		}(i)
 	}
 

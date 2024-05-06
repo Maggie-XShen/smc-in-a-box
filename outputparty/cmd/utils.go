@@ -1,6 +1,7 @@
 package main
 
 import (
+	"compress/gzip"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -12,8 +13,8 @@ import (
 type AggregatedShareRequest struct {
 	Exp_ID    string      `json:"Exp_ID "`
 	Server_ID string      `json:"Server_ID"`
-	Shares    []rss.Party `json:"Shares"`
 	Timestamp string      `json:"Timestamp"`
+	Shares    []rss.Party `json:"Shares"`
 }
 
 type OutputPartyRequest struct {
@@ -49,9 +50,17 @@ func (op *OutputPartyRequest) ToJson() []byte {
 }
 
 func (s *AggregatedShareRequest) ReadJson(req *http.Request) AggregatedShareRequest {
-	decoder := json.NewDecoder(req.Body)
+	// Decompress the data using Gzip
+	gzipReader, err := gzip.NewReader(req.Body)
+	if err != nil {
+		log.Fatalf("Cannot decompress server request: %s", err)
+	}
+	defer gzipReader.Close()
+
+	decoder := json.NewDecoder(gzipReader)
+
 	var t AggregatedShareRequest
-	err := decoder.Decode(&t)
+	err = decoder.Decode(&t)
 	if err != nil {
 		log.Fatalf("Cannot decode aggregated share request: %s", err)
 	}

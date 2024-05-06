@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"log"
 	"os"
@@ -12,10 +14,8 @@ type ClientRequest struct {
 	Exp_ID    string       `json:"Exp_ID"`
 	Client_ID string       `json:"Client_ID"`
 	Token     string       `json:"Token"`
-	Proof     ligero.Proof `json:"Proof"`
 	Timestamp string       `json:"Timestamp"`
-	//Hash_proof  string       `json:"HashProof"`
-	//Signature   string       `json:"Signature"`
+	Proof     ligero.Proof `json:"Proof"`
 }
 
 type Input struct {
@@ -36,7 +36,18 @@ func (c *ClientRequest) ToJson() []byte {
 		log.Fatalf("Cannot marshall client request: %s", err)
 	}
 
-	return message
+	// Compress the JSON data using Gzip
+	var compressedData bytes.Buffer
+	gzipWriter := gzip.NewWriter(&compressedData)
+	_, err = gzipWriter.Write(message)
+	if err != nil {
+		log.Fatalf("Cannot compress client request: %s", err)
+	}
+	if err := gzipWriter.Close(); err != nil {
+		log.Fatal(err)
+	}
+
+	return compressedData.Bytes()
 }
 
 func ReadClientInput(path string) []Input {

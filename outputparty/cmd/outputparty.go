@@ -148,7 +148,7 @@ func (op *OutputParty) WaitForEndOfExperiment(ticker *time.Ticker) {
 					"result": result,
 				}).Info("")
 
-				fmt.Printf("sum of secrets for %s : %v\n", exp.Exp_ID, result)
+				//fmt.Printf("sum of secrets for %s : %v\n", exp.Exp_ID, result)
 
 				WriteResult(exp.Exp_ID, result)
 
@@ -215,7 +215,7 @@ func (op *OutputParty) Close(ticker *time.Ticker) {
 		}
 
 		if len(all) == 0 {
-			end := time.Since(start)
+			end := time.Now().UTC()
 			logger.WithFields(logrus.Fields{
 				"real_server_share_due": real_server_share_due.String(),
 				"reconstruction_time":   reconstruction_end.String(), //time from output party started to reconstruction of the experiment is done

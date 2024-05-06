@@ -9,7 +9,7 @@ import (
 type Client struct {
 	Client_ID string
 	Token     string
-	URLs      []string //server url
+	URLs      []string
 	N         int
 	T         int
 	K         int

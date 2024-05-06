@@ -48,7 +48,7 @@ func (c *ClientService) CreateClientShare(request ClientRequest, cfg *config.Ser
 		return errors.New("experiment does not exist when server creates client share")
 	}
 
-	timestamp := time.Now().UTC()
+	timestamp, _ := time.Parse("2006-01-02 15:04:05.999999999 +0000 UTC", request.Timestamp)
 	due, _ := time.Parse("2006-01-02 15:04:05.999999999 +0000 UTC", exp.ClientShareDue)
 
 	if timestamp.After(due) {

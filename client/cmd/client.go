@@ -59,7 +59,7 @@ func (c *Client) Run(inputpath string) {
 			"proof_size": theorySingleProofBytes,
 		}).Info("")
 
-		current_time := time.Now().UTC().Format("2006-01-02 15:04:05")
+		current_time := time.Now().UTC()
 		var wg sync.WaitGroup
 		for i := 0; i < len(urls); i++ {
 			wg.Add(1)
@@ -77,9 +77,9 @@ func (c *Client) Run(inputpath string) {
 					mal_proof := proof[idx]
 					mal_proof.CodeTest = make([]int, len(proof[0].CodeTest))
 
-					msg = ClientRequest{Exp_ID: input.Exp_ID, Client_ID: c.cfg.Client_ID, Token: c.cfg.Token, Proof: *mal_proof, Timestamp: current_time}
+					msg = ClientRequest{Exp_ID: input.Exp_ID, Client_ID: c.cfg.Client_ID, Token: c.cfg.Token, Proof: *mal_proof, Timestamp: current_time.String()}
 				} else {
-					msg = ClientRequest{Exp_ID: input.Exp_ID, Client_ID: c.cfg.Client_ID, Token: c.cfg.Token, Proof: *proof[idx], Timestamp: current_time}
+					msg = ClientRequest{Exp_ID: input.Exp_ID, Client_ID: c.cfg.Client_ID, Token: c.cfg.Token, Proof: *proof[idx], Timestamp: current_time.String()}
 				}
 
 				writer := &msg
