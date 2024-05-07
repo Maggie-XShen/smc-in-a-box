@@ -99,21 +99,6 @@ func (db *DB) InsertClientShare(exp_id, client_id string, input_index, index, va
 	return nil
 }
 
-func (db *DB) InsertClientShareTx(tx *gorm.DB, exp_id, client_id string, input_index, index, value int) error {
-	c := ClientShare{
-		Exp_ID:      exp_id,
-		Client_ID:   client_id,
-		Input_Index: input_index,
-		Index:       index,
-		Value:       value,
-	}
-	result := tx.Create(&c)
-	if result.Error != nil {
-		return result.Error
-	}
-	return nil
-}
-
 // get client share record
 func (db *DB) GetClientShares(exp_id string, client_id string) ([]ClientShare, error) {
 	var client []ClientShare

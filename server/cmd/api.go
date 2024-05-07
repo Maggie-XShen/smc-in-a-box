@@ -61,22 +61,14 @@ func (c *ClientService) CreateClientShare(request ClientRequest, cfg *config.Ser
 		return err
 	}
 
-	tx := c.db.DB.Begin()
-	if tx.Error != nil {
-		return tx.Error
-	}
 	//insert share to client share table
 	for input_index, party := range request.Proof.PartyShares {
 		for _, share := range party.Shares {
-			err = c.db.InsertClientShareTx(tx, request.Exp_ID, request.Client_ID, input_index, share.Index, share.Value)
+			err = c.db.InsertClientShare(request.Exp_ID, request.Client_ID, input_index, share.Index, share.Value)
 			if err != nil {
 				return err
 			}
 		}
-	}
-
-	if err = tx.Commit().Error; err != nil {
-		log.Fatal(err)
 	}
 
 	zk, err := ligero.NewLigeroZK(cfg.N_secrets, cfg.M, cfg.N, cfg.T, cfg.Q, cfg.N_open)
