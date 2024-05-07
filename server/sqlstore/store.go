@@ -10,7 +10,7 @@ import (
 )
 
 type DB struct {
-	db *gorm.DB
+	DB *gorm.DB
 }
 
 func NewDB(id string) *DB {
@@ -18,7 +18,7 @@ func NewDB(id string) *DB {
 	if err != nil {
 		log.Fatalf("Cannot set up database: %s", err)
 	}
-	return &DB{db: db}
+	return &DB{DB: db}
 
 }
 
@@ -66,7 +66,7 @@ func (db *DB) InsertClient(exp_id, client_id string) error {
 		Exp_ID:    exp_id,
 		Client_ID: client_id,
 	}
-	result := db.db.Create(&c)
+	result := db.DB.Create(&c)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -76,7 +76,7 @@ func (db *DB) InsertClient(exp_id, client_id string) error {
 // get all clients per experiments
 func (db *DB) GetClientsPerExperiment(exp_id string) ([]Client, error) {
 	var client []Client
-	r := db.db.Find(&client, "exp_id = ?", exp_id)
+	r := db.DB.Find(&client, "exp_id = ?", exp_id)
 	if r.Error != nil {
 		return nil, r.Error
 	}
@@ -92,7 +92,22 @@ func (db *DB) InsertClientShare(exp_id, client_id string, input_index, index, va
 		Index:       index,
 		Value:       value,
 	}
-	result := db.db.Create(&c)
+	result := db.DB.Create(&c)
+	if result.Error != nil {
+		return result.Error
+	}
+	return nil
+}
+
+func (db *DB) InsertClientShareTx(tx *gorm.DB, exp_id, client_id string, input_index, index, value int) error {
+	c := ClientShare{
+		Exp_ID:      exp_id,
+		Client_ID:   client_id,
+		Input_Index: input_index,
+		Index:       index,
+		Value:       value,
+	}
+	result := tx.Create(&c)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -102,7 +117,7 @@ func (db *DB) InsertClientShare(exp_id, client_id string, input_index, index, va
 // get client share record
 func (db *DB) GetClientShares(exp_id string, client_id string) ([]ClientShare, error) {
 	var client []ClientShare
-	r := db.db.Find(&client, "exp_id = ? and client_id = ?", exp_id, client_id)
+	r := db.DB.Find(&client, "exp_id = ? and client_id = ?", exp_id, client_id)
 	if r.Error != nil {
 		return nil, r.Error
 	}
@@ -112,7 +127,7 @@ func (db *DB) GetClientShares(exp_id string, client_id string) ([]ClientShare, e
 // get clients' share records of an experiment
 func (db *DB) GetClientsSharesPerExperiment(exp_id string) ([]ClientShare, error) {
 	var clients []ClientShare
-	r := db.db.Find(&clients, "exp_id = ?", exp_id)
+	r := db.DB.Find(&clients, "exp_id = ?", exp_id)
 	if r.Error != nil {
 		return nil, r.Error
 	}
@@ -126,7 +141,7 @@ func (db *DB) UpdateClientShare(exp_id, client_id string, input_index, index, va
 	if r.Error != nil {
 		return r.Error
 	}**/
-	db.db.Save(&ClientShare{Exp_ID: exp_id, Client_ID: client_id, Input_Index: input_index, Index: index, Value: value})
+	db.DB.Save(&ClientShare{Exp_ID: exp_id, Client_ID: client_id, Input_Index: input_index, Index: index, Value: value})
 	return nil
 }
 
@@ -166,7 +181,7 @@ func (db *DB) InsertComplaint(exp_id, server_id, client_id string, isComplain bo
 		Complain:  isComplain,
 		Root:      mkt_root,
 	}
-	result := db.db.Create(&comp)
+	result := db.DB.Create(&comp)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -176,7 +191,7 @@ func (db *DB) InsertComplaint(exp_id, server_id, client_id string, isComplain bo
 // get all complaints of an experiment
 func (db *DB) GetComplaintsPerExperiment(exp_id string) ([]Complaint, error) {
 	var comp []Complaint
-	r := db.db.Find(&comp, "exp_id = ?", exp_id)
+	r := db.DB.Find(&comp, "exp_id = ?", exp_id)
 	if r.Error != nil {
 		return nil, r.Error
 	}
@@ -186,14 +201,14 @@ func (db *DB) GetComplaintsPerExperiment(exp_id string) ([]Complaint, error) {
 // get count of complaints of an experiment
 func (db *DB) CountComplaintsPerExperiment(exp_id string) int64 {
 	var count int64
-	db.db.Model(&Complaint{}).Where("exp_id = ?", exp_id).Count(&count)
+	db.DB.Model(&Complaint{}).Where("exp_id = ?", exp_id).Count(&count)
 	return count
 }
 
 // get a complaint record
 func (db *DB) GetComplaint(exp_id, server_id, client_id string) (*Complaint, error) {
 	var comp Complaint
-	r := db.db.Find(&comp, "exp_id = ? and server_id = ? and client_id", exp_id, server_id, client_id)
+	r := db.DB.Find(&comp, "exp_id = ? and server_id = ? and client_id", exp_id, server_id, client_id)
 	if r.Error != nil {
 		return nil, r.Error
 	}
@@ -203,7 +218,7 @@ func (db *DB) GetComplaint(exp_id, server_id, client_id string) (*Complaint, err
 // get complaint record where complaint is false
 func (db *DB) GetNoComplain(exp_id, client_id string) ([]Complaint, error) {
 	var comp []Complaint
-	r := db.db.Find(&comp, "exp_id = ? and client_id = ? and complain=?", exp_id, client_id, false)
+	r := db.DB.Find(&comp, "exp_id = ? and client_id = ? and complain=?", exp_id, client_id, false)
 	if r.Error != nil {
 		return nil, r.Error
 	}
@@ -215,9 +230,9 @@ func (db *DB) GetDropoutClient(exp_id string) ([]string, error) {
 	var client []struct {
 		Client_ID string
 	}
-	sub := db.db.Model(&Client{}).Select("client_id").Where("exp_id = ?", exp_id)
+	sub := db.DB.Model(&Client{}).Select("client_id").Where("exp_id = ?", exp_id)
 
-	r := db.db.Model(&Complaint{}).Select("client_id").Where("client_id NOT IN (?)", sub).Group("client_id").Find(&client)
+	r := db.DB.Model(&Complaint{}).Select("client_id").Where("client_id NOT IN (?)", sub).Group("client_id").Find(&client)
 	if r.Error != nil {
 		return nil, r.Error
 	}
@@ -233,7 +248,7 @@ func (db *DB) GetDropoutClient(exp_id string) ([]string, error) {
 // get complaint records per exp_id, server_id
 func (db *DB) GetComplaintsPerServer(exp_id, server_id string) ([]Complaint, error) {
 	var comp []Complaint
-	r := db.db.Find(&comp, "exp_id = ? and server_id = ?", exp_id, server_id)
+	r := db.DB.Find(&comp, "exp_id = ? and server_id = ?", exp_id, server_id)
 	if r.Error != nil {
 		return nil, r.Error
 	}
@@ -243,7 +258,7 @@ func (db *DB) GetComplaintsPerServer(exp_id, server_id string) ([]Complaint, err
 // get complaint records per exp_id, client_id
 func (db *DB) GetComplaintsPerClient(exp_id, client_id string) ([]Complaint, error) {
 	var comp []Complaint
-	r := db.db.Find(&comp, "exp_id = ? and client_id = ?", exp_id, client_id)
+	r := db.DB.Find(&comp, "exp_id = ? and client_id = ?", exp_id, client_id)
 	if r.Error != nil {
 		return nil, r.Error
 	}
@@ -256,7 +271,7 @@ func (db *DB) InsertEchoComplaint(exp_id, server_id, complaints string) error {
 		Server_ID:  server_id,
 		Complaints: complaints,
 	}
-	result := db.db.Create(&echo)
+	result := db.DB.Create(&echo)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -266,7 +281,7 @@ func (db *DB) InsertEchoComplaint(exp_id, server_id, complaints string) error {
 // get echo complaint record
 func (db *DB) GetEchoComplaint(exp_id, server_id, complaints string) ([]EchoComplaint, error) {
 	var echo []EchoComplaint
-	r := db.db.Find(&echo, "exp_id = ? and server_id = ? and complaints = ?", exp_id, server_id, complaints)
+	r := db.DB.Find(&echo, "exp_id = ? and server_id = ? and complaints = ?", exp_id, server_id, complaints)
 	if r.Error != nil {
 		return nil, r.Error
 	}
@@ -278,7 +293,7 @@ func (db *DB) InsertValidClient(exp_id, client_id string) error {
 		Exp_ID:    exp_id,
 		Client_ID: client_id,
 	}
-	result := db.db.Create(&vc)
+	result := db.DB.Create(&vc)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -288,7 +303,7 @@ func (db *DB) InsertValidClient(exp_id, client_id string) error {
 // get all valid clients
 func (db *DB) GetValidClientsPerExperiment(exp_id string) ([]ValidClient, error) {
 	var vc []ValidClient
-	r := db.db.Find(&vc, "exp_id = ?", exp_id)
+	r := db.DB.Find(&vc, "exp_id = ?", exp_id)
 	if r.Error != nil {
 		return nil, r.Error
 	}
@@ -297,7 +312,7 @@ func (db *DB) GetValidClientsPerExperiment(exp_id string) ([]ValidClient, error)
 
 // delete a client from valid client table
 func (db *DB) DeleteValidClient(exp_id, client_id string) error {
-	r := db.db.Delete(&ValidClient{Exp_ID: exp_id, Client_ID: client_id})
+	r := db.DB.Delete(&ValidClient{Exp_ID: exp_id, Client_ID: client_id})
 	if r.Error != nil {
 		return r.Error
 	}
@@ -312,7 +327,7 @@ func (db *DB) InsertMask(exp_id, client_id string, input_index, index, value int
 		Index:       index,
 		Value:       value,
 	}
-	result := db.db.Create(&vss)
+	result := db.DB.Create(&vss)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -321,7 +336,7 @@ func (db *DB) InsertMask(exp_id, client_id string, input_index, index, value int
 
 func (db *DB) GetMask(exp_id, client_id string, input_index, index int) (*Mask, error) {
 	var vss Mask
-	r := db.db.Find(&vss, "exp_id = ? and client_id = ? and input_index =? and index=?", exp_id, client_id, input_index, index)
+	r := db.DB.Find(&vss, "exp_id = ? and client_id = ? and input_index =? and index=?", exp_id, client_id, input_index, index)
 	if r.Error != nil {
 		return nil, r.Error
 	}
@@ -337,7 +352,7 @@ func (db *DB) InsertMaskedShare(exp_id, server_id, client_id string, input_index
 		Index:       index,
 		Value:       value,
 	}
-	result := db.db.Create(&mask_share)
+	result := db.DB.Create(&mask_share)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -346,7 +361,7 @@ func (db *DB) InsertMaskedShare(exp_id, server_id, client_id string, input_index
 
 func (db *DB) GetMaskedShares(exp_id, server_id, client_id string) ([]MaskedShare, error) {
 	var masked_shares []MaskedShare
-	r := db.db.Find(&masked_shares, "exp_id = ? and server_id = ? and client_id = ?", exp_id, server_id, client_id)
+	r := db.DB.Find(&masked_shares, "exp_id = ? and server_id = ? and client_id = ?", exp_id, server_id, client_id)
 	if r.Error != nil {
 		return nil, r.Error
 	}
@@ -355,7 +370,7 @@ func (db *DB) GetMaskedShares(exp_id, server_id, client_id string) ([]MaskedShar
 
 func (db *DB) GetMaskedSharesPerServer(exp_id, server_id string) ([]MaskedShare, error) {
 	var masked_shares []MaskedShare
-	r := db.db.Find(&masked_shares, "exp_id = ? and server_id = ?", exp_id, server_id)
+	r := db.DB.Find(&masked_shares, "exp_id = ? and server_id = ?", exp_id, server_id)
 	if r.Error != nil {
 		return nil, r.Error
 	}
@@ -364,7 +379,7 @@ func (db *DB) GetMaskedSharesPerServer(exp_id, server_id string) ([]MaskedShare,
 
 func (db *DB) GetMaskedSharesPerExperiment(exp_id string) ([]MaskedShare, error) {
 	var masked_shares []MaskedShare
-	r := db.db.Find(&masked_shares, "exp_id = ? ", exp_id)
+	r := db.DB.Find(&masked_shares, "exp_id = ? ", exp_id)
 	if r.Error != nil {
 		return nil, r.Error
 	}
@@ -373,7 +388,7 @@ func (db *DB) GetMaskedSharesPerExperiment(exp_id string) ([]MaskedShare, error)
 
 func (db *DB) CountMaskedSharesPerExperiment(exp_id string) int64 {
 	var count int64
-	db.db.Model(&MaskedShare{}).Where("exp_id = ?", exp_id).Count(&count)
+	db.DB.Model(&MaskedShare{}).Where("exp_id = ?", exp_id).Count(&count)
 	return count
 }
 
@@ -383,7 +398,7 @@ func (db *DB) InsertEchoMaskedShare(exp_id, server_id, mask_shares string) error
 		Server_ID:    server_id,
 		MaskedShares: mask_shares,
 	}
-	result := db.db.Create(&echo)
+	result := db.DB.Create(&echo)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -393,7 +408,7 @@ func (db *DB) InsertEchoMaskedShare(exp_id, server_id, mask_shares string) error
 // get echo masked share record
 func (db *DB) GetEchoMaskedShare(exp_id, server_id, mask_shares string) ([]EchoMaskedShare, error) {
 	var echo []EchoMaskedShare
-	r := db.db.Find(&echo, "exp_id = ? and server_id = ? and maskedshares = ?", exp_id, server_id, mask_shares)
+	r := db.DB.Find(&echo, "exp_id = ? and server_id = ? and maskedshares = ?", exp_id, server_id, mask_shares)
 	if r.Error != nil {
 		return nil, r.Error
 	}
@@ -412,7 +427,7 @@ func (db *DB) InsertExperiment(exp_id, due1, due2, due3, owner string) error {
 		Round2_Completed:  false,
 		Round3_Completed:  false,
 	}
-	result := db.db.Create(&exp)
+	result := db.DB.Create(&exp)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -423,7 +438,7 @@ func (db *DB) InsertExperiment(exp_id, due1, due2, due3, owner string) error {
 // get experiment record
 func (db *DB) GetExperiment(exp_id string) (*Experiment, error) {
 	var exp Experiment
-	r := db.db.Find(&exp, "exp_id = ?", exp_id)
+	r := db.DB.Find(&exp, "exp_id = ?", exp_id)
 	if r.Error != nil {
 		return nil, r.Error
 	}
@@ -433,7 +448,7 @@ func (db *DB) GetExperiment(exp_id string) (*Experiment, error) {
 // get all experiments not pass client share submission due
 func (db *DB) GetAllExperiments() ([]Experiment, error) {
 	var experiments []Experiment
-	r := db.db.Find(&experiments, "Round1_Completed = ?", false)
+	r := db.DB.Find(&experiments, "Round1_Completed = ?", false)
 	if r.Error != nil {
 		return nil, r.Error
 	}
@@ -444,7 +459,7 @@ func (db *DB) GetAllExperiments() ([]Experiment, error) {
 // get experiments count
 func (db *DB) GetExperimentCount() (int64, error) {
 	var count int64
-	err := db.db.Model(&Experiment{}).Count(&count).Error
+	err := db.DB.Model(&Experiment{}).Count(&count).Error
 	if err != nil {
 		return 0, err
 	}
@@ -455,7 +470,7 @@ func (db *DB) GetExperimentCount() (int64, error) {
 // get all experiments that round1 is completed
 func (db *DB) GetExpsWithRound1Completed() ([]Experiment, error) {
 	var experiments []Experiment
-	r := db.db.Find(&experiments, "round1_completed = ? and round2_completed=? and round3_completed=?", true, false, false)
+	r := db.DB.Find(&experiments, "round1_completed = ? and round2_completed=? and round3_completed=?", true, false, false)
 	if r.Error != nil {
 		return nil, r.Error
 	}
@@ -466,7 +481,7 @@ func (db *DB) GetExpsWithRound1Completed() ([]Experiment, error) {
 // get all experiments records that round2 is completed
 func (db *DB) GetExpsWithRound2Completed() ([]Experiment, error) {
 	var experiments []Experiment
-	r := db.db.Find(&experiments, "round1_completed = ? and round2_completed=? and round3_completed=?", true, true, false)
+	r := db.DB.Find(&experiments, "round1_completed = ? and round2_completed=? and round3_completed=?", true, true, false)
 	if r.Error != nil {
 		return nil, r.Error
 	}
@@ -477,7 +492,7 @@ func (db *DB) GetExpsWithRound2Completed() ([]Experiment, error) {
 // get all experiments records that round3 is completed
 func (db *DB) GetExpsWithRound3Completed() ([]Experiment, error) {
 	var experiments []Experiment
-	r := db.db.Find(&experiments, "round1_completed = ? and round2_completed=? and round3_completed=?", true, true, true)
+	r := db.DB.Find(&experiments, "round1_completed = ? and round2_completed=? and round3_completed=?", true, true, true)
 	if r.Error != nil {
 		return nil, r.Error
 	}
@@ -487,7 +502,7 @@ func (db *DB) GetExpsWithRound3Completed() ([]Experiment, error) {
 
 // set client share submission round to completed
 func (db *DB) UpdateRound1Completed(exp_id string) error {
-	r := db.db.Model(&Experiment{}).Where("exp_ID = ?", exp_id).Update("Round1_Completed", true)
+	r := db.DB.Model(&Experiment{}).Where("exp_ID = ?", exp_id).Update("Round1_Completed", true)
 	if r.Error != nil {
 		return r.Error
 	}
@@ -496,7 +511,7 @@ func (db *DB) UpdateRound1Completed(exp_id string) error {
 
 // set complant broadcast round to completed
 func (db *DB) UpdateRound2Completed(exp_id string) error {
-	r := db.db.Model(&Experiment{}).Where("exp_ID = ?", exp_id).Update("Round2_Completed", true)
+	r := db.DB.Model(&Experiment{}).Where("exp_ID = ?", exp_id).Update("Round2_Completed", true)
 	if r.Error != nil {
 		return r.Error
 	}
@@ -505,7 +520,7 @@ func (db *DB) UpdateRound2Completed(exp_id string) error {
 
 // set experiment status to completed
 func (db *DB) UpdateRound3Completed(exp_id string) error {
-	r := db.db.Model(&Experiment{}).Where("exp_ID = ?", exp_id).Update("Round3_Completed", true)
+	r := db.DB.Model(&Experiment{}).Where("exp_ID = ?", exp_id).Update("Round3_Completed", true)
 	if r.Error != nil {
 		return r.Error
 	}
@@ -514,7 +529,7 @@ func (db *DB) UpdateRound3Completed(exp_id string) error {
 
 // delete experiment record from experiment table
 func (db *DB) DeleteExperiment(exp_id string) error {
-	r := db.db.Delete(&Experiment{Exp_ID: exp_id})
+	r := db.DB.Delete(&Experiment{Exp_ID: exp_id})
 	if r.Error != nil {
 		return r.Error
 	}
@@ -523,7 +538,7 @@ func (db *DB) DeleteExperiment(exp_id string) error {
 
 // delete client record from client table
 func (db *DB) DeleteClient(exp_id string) error {
-	r := db.db.Delete(&ClientShare{Exp_ID: exp_id})
+	r := db.DB.Delete(&ClientShare{Exp_ID: exp_id})
 	if r.Error != nil {
 		return r.Error
 	}
@@ -537,7 +552,7 @@ func (db *DB) InsertClientRegistry(exp_id, client_id, token string) error {
 		Client_ID: client_id,
 		Token:     token,
 	}
-	result := db.db.Create(&cr)
+	result := db.DB.Create(&cr)
 	if result.Error != nil {
 		return result.Error
 	}
