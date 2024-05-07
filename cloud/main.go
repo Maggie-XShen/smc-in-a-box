@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -78,12 +79,26 @@ func main() {
 		arg[4] = fmt.Sprintf("-n_client=%d", *n_clients)
 		arg[5] = fmt.Sprintf("-n_client_mal=%d", *n_clients_mal)
 
+		logFile, err := os.Create("stdout.log")
+		if err != nil {
+			fmt.Printf("Error creating stdout.log file: %v\n", err)
+			return
+		}
+		defer logFile.Close()
+
+		multiWriter := io.MultiWriter(logFile, os.Stdout)
+
 		cmd := exec.Command(arg[0], arg[1], arg[2], arg[3], arg[4], arg[5])
 
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
+		cmd.Stdout = multiWriter
+		cmd.Stderr = multiWriter
 		if err := cmd.Start(); err != nil {
 			fmt.Printf("Error executing command %s with %s: %v\n", arg[0], arg[1], err)
+			return
+		}
+
+		if err := cmd.Wait(); err != nil {
+			fmt.Printf("Command failed: %v\n", err)
 			return
 		}
 
@@ -99,12 +114,26 @@ func main() {
 		arg[3] = "-logpath=./op_log/"
 		arg[4] = fmt.Sprintf("-n_client=%d", *n_clients)
 
+		logFile, err := os.Create("stdout.log")
+		if err != nil {
+			fmt.Printf("Error creating stdout.log file: %v\n", err)
+			return
+		}
+		defer logFile.Close()
+
+		multiWriter := io.MultiWriter(logFile, os.Stdout)
+
 		cmd := exec.Command(arg[0], arg[1], arg[2], arg[3], arg[4])
 
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
+		cmd.Stdout = multiWriter
+		cmd.Stderr = multiWriter
 		if err := cmd.Start(); err != nil {
 			fmt.Printf("Error executing command %s with %s: %v\n", arg[0], arg[1], err)
+			return
+		}
+
+		if err := cmd.Wait(); err != nil {
+			fmt.Printf("Command failed: %v\n", err)
 			return
 		}
 	}
