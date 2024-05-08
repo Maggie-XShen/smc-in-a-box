@@ -22,7 +22,7 @@ func NewDB(id string) *DB {
 
 func SetupDatabase(sid string) (*gorm.DB, error) {
 	//dsn := fmt.Sprintf("smc:smcinabox@tcp(127.0.0.1:3306)/%s?charset=utf8mb4&parseTime=True&loc=Local", sid)
-	dsn := "smc:smcinabox@tcp(127.0.0.1:3306)/%smc?charset=utf8mb4&parseTime=True&loc=Local"
+	dsn := "smc:smcinabox@tcp(127.0.0.1:3306)/smc?charset=utf8mb4&parseTime=True&loc=Local"
 
 	// Open a connection to the MySQL database
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
