@@ -1,11 +1,10 @@
 package sqlstore
 
 import (
-	"fmt"
 	"log"
 	"os"
 
-	"gorm.io/driver/sqlite"
+	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
 
@@ -23,34 +22,21 @@ func NewDB(id string) *DB {
 }
 
 func SetupDatabase(sid string) (*gorm.DB, error) {
-	db_path := fmt.Sprintf("%s.db", sid)
+	//dsn := fmt.Sprintf("smc:smcinabox@tcp(127.0.0.1:3306)/%s?charset=utf8mb4&parseTime=True&loc=Local", sid)
+	dsn := "smc:smcinabox@tcp(127.0.0.1:3306)/%smc?charset=utf8mb4&parseTime=True&loc=Local"
 
-	// open a database
-	db, err := gorm.Open(sqlite.Open(db_path), &gorm.Config{SkipDefaultTransaction: true})
+	// Open a connection to the MySQL database
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
-		return nil, err
-	}
-
-	// Set the journal mode to WAL
-	if err := db.Exec("PRAGMA journal_mode = WAL").Error; err != nil {
 		return nil, err
 	}
 
 	log.Printf("Connection to %s Database Established\n", sid)
 
-	db.AutoMigrate(&Experiment{})
-
-	db.AutoMigrate(&Client{})
-
-	db.AutoMigrate(&ClientShare{})
-
-	db.AutoMigrate(&Complaint{})
-
-	db.AutoMigrate(&ValidClient{})
-
-	db.AutoMigrate(&Mask{})
-
-	db.AutoMigrate(&MaskedShare{})
+	// Auto-migrate tables
+	if err := db.AutoMigrate(&Experiment{}, &Client{}, &ClientShare{}, &Complaint{}, &ValidClient{}, &Mask{}, &MaskedShare{}); err != nil {
+		return nil, err
+	}
 
 	return db, nil
 }
@@ -193,7 +179,7 @@ func (db *DB) CountComplaintsPerExperiment(exp_id string) int64 {
 // get a complaint record
 func (db *DB) GetComplaint(exp_id, server_id, client_id string) (*Complaint, error) {
 	var comp Complaint
-	r := db.DB.Find(&comp, "exp_id = ? and server_id = ? and client_id", exp_id, server_id, client_id)
+	r := db.DB.Find(&comp, "exp_id = ? and server_id = ? and client_id = ?", exp_id, server_id, client_id)
 	if r.Error != nil {
 		return nil, r.Error
 	}

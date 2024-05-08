@@ -1,10 +1,9 @@
 package sqlstore
 
 import (
-	"fmt"
 	"log"
 
-	"gorm.io/driver/sqlite"
+	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
 
@@ -22,26 +21,21 @@ func NewDB(id string) *DB {
 }
 
 func SetupDatabase(sid string) (*gorm.DB, error) {
-	db_path := fmt.Sprintf("%s.db", sid)
+	//dsn := fmt.Sprintf("smc:smcinabox@tcp(127.0.0.1:3306)/%s?charset=utf8mb4&parseTime=True&loc=Local", sid)
+	dsn := "smc:smcinabox@tcp(127.0.0.1:3306)/%smc?charset=utf8mb4&parseTime=True&loc=Local"
 
-	// remove old database
-	//os.Remove(db_name)
-
-	// open a database
-	db, err := gorm.Open(sqlite.Open(db_path), &gorm.Config{SkipDefaultTransaction: true})
+	// Open a connection to the MySQL database
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
 		return nil, err
 	}
+
 	log.Printf("Connection to %s Database Established\n", sid)
 
-	// Set the journal mode to WAL
-	if err := db.Exec("PRAGMA journal_mode = WAL").Error; err != nil {
+	// Auto-migrate tables
+	if err := db.AutoMigrate(&Experiment{}, &ServerShare{}); err != nil {
 		return nil, err
 	}
-
-	db.AutoMigrate(&Experiment{})
-
-	db.AutoMigrate(&ServerShare{})
 
 	return db, nil
 }
