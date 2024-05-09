@@ -68,6 +68,7 @@ func (op *OutputParty) send(address string, data []byte) {
 func (op *OutputParty) reveal(parties []rss.Party) (int, error) {
 	nrss, err := rss.NewReplicatedSecretSharing(op.cfg.N, op.cfg.T, op.cfg.Q)
 	if err != nil {
+
 		panic(err)
 	}
 
@@ -83,7 +84,7 @@ func (op *OutputParty) WaitForEndOfExperiment(ticker *time.Ticker) {
 	for range ticker.C {
 		experiments, err := op.store.GetAllExperiments()
 		if err != nil {
-			//log.Println("cannot retreive non-completed experiments - error:", err)
+			log.Println("cannot retreive non-completed experiments - error:", err)
 			panic(err)
 		}
 
@@ -95,7 +96,7 @@ func (op *OutputParty) WaitForEndOfExperiment(ticker *time.Ticker) {
 			if currentTime.After(due) {
 				list, err := op.store.GetSharesPerExperiment(exp.Exp_ID)
 				if err != nil {
-					//log.Println("cannot retrieve servers records - error:", err)
+					log.Println("cannot retrieve servers records - error:", err)
 					//continue
 					panic(err)
 				}
@@ -119,6 +120,7 @@ func (op *OutputParty) WaitForEndOfExperiment(ticker *time.Ticker) {
 				// reconstruct sum of secrets
 				nrss, err := rss.NewReplicatedSecretSharing(op.cfg.N, op.cfg.T, op.cfg.Q)
 				if err != nil {
+					log.Println("NewReplicatedSecretSharing failes:", err)
 					panic(err)
 				}
 
@@ -133,6 +135,7 @@ func (op *OutputParty) WaitForEndOfExperiment(ticker *time.Ticker) {
 					}
 					sum, err := nrss.Reconstruct(servers)
 					if err != nil {
+						log.Println("cannot reconstruct:", err)
 						panic(err)
 					}
 
@@ -154,7 +157,7 @@ func (op *OutputParty) WaitForEndOfExperiment(ticker *time.Ticker) {
 
 				err = op.store.UpdateCompletedExperiment(exp.Exp_ID) //set experiments to completed
 				if err != nil {
-					//log.Println("cannot set experiment to completed - error:", err1)
+					log.Println("cannot set experiment to completed - error:", err)
 					panic(err)
 				}
 
@@ -210,7 +213,7 @@ func (op *OutputParty) Close(ticker *time.Ticker) {
 
 		all, err := op.store.GetAllExperiments()
 		if err != nil {
-			//log.Println("cannot retreive non-completed experiments - error:", err)
+			log.Println("cannot retreive non-completed experiments - error:", err)
 			panic(err)
 		}
 

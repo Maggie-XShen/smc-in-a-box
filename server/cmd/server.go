@@ -580,6 +580,7 @@ func (s *Server) WaitForEndOfShareBroadcast(ticker *time.Ticker) {
 								for input_index, shares := range inputMaskedShares {
 									masked_shares, err := computeMajority(shares, s.cfg.T)
 									if err != nil {
+										log.Println("cannot compute majority when doing share correction", err)
 										panic(err)
 									}
 
@@ -617,6 +618,7 @@ func (s *Server) WaitForEndOfShareBroadcast(ticker *time.Ticker) {
 				//compute aggregated share
 				aggreShares, err := s.aggregateShares(clientShares)
 				if err != nil {
+					log.Println("cannot aggregate shares", err)
 					panic(err)
 				}
 
