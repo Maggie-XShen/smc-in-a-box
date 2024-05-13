@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"log"
 	"time"
@@ -62,18 +63,19 @@ func (c *ClientService) CreateClientShare(request ClientRequest, cfg *config.Ser
 	}
 
 	//insert share to client share table
-	for input_index, party := range request.Proof.PartyShares {
-		for _, share := range party.Shares {
-			err = c.db.InsertClientShare(request.Exp_ID, request.Client_ID, input_index, share.Index, share.Value)
-			if err != nil {
-				return err
-			}
-		}
+	shares, err := json.Marshal(Shares{Index: request.Proof.Shares.Index, Values: request.Proof.Shares.Values})
+	if err != nil {
+		return err
+	}
+
+	err = c.db.InsertClientShare(request.Exp_ID, request.Client_ID, shares)
+	if err != nil {
+		return err
 	}
 
 	zk, err := ligero.NewLigeroZK(cfg.N_secrets, cfg.M, cfg.N, cfg.T, cfg.Q, cfg.N_open)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	proof_verify_start := time.Now() //proof verification start time
@@ -103,7 +105,7 @@ func (c *ClientService) CreateClientShare(request ClientRequest, cfg *config.Ser
 
 		err = c.db.InsertComplaint(request.Exp_ID, cfg.Server_ID, request.Client_ID, true, request.Proof.MerkleRoot)
 		if err != nil {
-			panic(err)
+			return err
 		}
 	} else {
 		log.Printf("%s succeed to verify %s proof for %s\n", cfg.Server_ID, request.Client_ID, request.Exp_ID)
@@ -121,7 +123,7 @@ func (c *ClientService) CreateClientShare(request ClientRequest, cfg *config.Ser
 
 		err = c.db.InsertComplaint(request.Exp_ID, cfg.Server_ID, request.Client_ID, false, request.Proof.MerkleRoot)
 		if err != nil {
-			panic(err)
+			return err
 		}
 
 	}
@@ -159,10 +161,10 @@ func (s *ServerService) CreateMaskedShares(request MaskedShareRequest) error {
 	}
 
 	log.Printf("server received masked shares from %s\n", request.Server_ID)
-	for _, masked_sh := range request.MaskedShares {
-		err = s.db.InsertMaskedShare(request.Exp_ID, request.Server_ID, masked_sh.Client_ID, masked_sh.Input_Index, masked_sh.Index, masked_sh.Value)
+	for _, record := range request.MaskedShares {
+		err = s.db.InsertMaskedShare(request.Exp_ID, request.Server_ID, record.Client_ID, record.Shares)
 		if err != nil {
-			panic(err)
+			return err
 		}
 
 	}
@@ -198,22 +200,3 @@ func (e *ExperimentService) CreateExperiment(request Experiment) error {
 
 	return nil
 }
-
-/**
-func (c *ClientService) CreateClientRegistry(request ClientRegistry) error {
-	exp, err := c.db.GetExperiment(request.Exp_ID)
-	if err != nil {
-		return err
-	}
-	if *exp == (sqlstore.Experiment{}) {
-		return errors.New("experiment does not exist when create client registry")
-	}
-
-	err = c.db.InsertClientRegistry(request.Exp_ID, request.Client_ID, request.Token)
-	if err != nil {
-		return err
-	}
-
-	return nil
-
-}**/

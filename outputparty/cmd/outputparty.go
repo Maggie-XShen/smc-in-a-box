@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -41,43 +42,29 @@ func (op *OutputParty) HandelExp(path string) {
 
 }
 
-/**
-func (op *OutputParty) send(address string, data []byte) {
-	req, err := http.NewRequest("POST", address, bytes.NewBuffer(data))
+func (op *OutputParty) serverRequestHandler(rw http.ResponseWriter, req *http.Request) {
+	var request AggregatedShareRequest
+
+	serverService := NewServerService(op.store)
+	data := request.ReadJson(req)
+	err := serverService.CreateServerShare(data)
+
 	if err != nil {
-		log.Fatalf("impossible to build http post request: %s", err)
-	}
-	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
-
-	client := &http.Client{}
-	res, err := client.Do(req)
-	if err != nil {
-		log.Fatalf("impossible to send http request: %s", err)
+		log.Printf("error: %s\n", err)
+		rw.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintln(rw, err)
+		return
 	}
 
-	log.Printf("response Status:%s", res.Status)
+	count := op.store.CountSharesPerExperiment(data.Exp_ID)
 
-	defer res.Body.Close()
-	body, _ := io.ReadAll(res.Body)
-	if len(body) > 0 {
-		fmt.Println("response Body:", string(body))
+	if count == int64(n_sh) {
+		real_server_share_due = time.Now().UTC() //ideal server share due is when all server shares arrived at output party
+
 	}
 
-}**/
+	rw.WriteHeader(http.StatusOK)
 
-func (op *OutputParty) reveal(parties []rss.Party) (int, error) {
-	nrss, err := rss.NewReplicatedSecretSharing(op.cfg.N, op.cfg.T, op.cfg.Q)
-	if err != nil {
-
-		panic(err)
-	}
-
-	results, err := nrss.Reconstruct(parties)
-	if err != nil {
-		panic(err)
-	}
-
-	return results, nil
 }
 
 func (op *OutputParty) WaitForEndOfExperiment(ticker *time.Ticker) {
@@ -103,17 +90,26 @@ func (op *OutputParty) WaitForEndOfExperiment(ticker *time.Ticker) {
 
 				inputShares := make(map[int]map[string][]rss.Share)
 				for _, record := range list {
-					v1, check1 := inputShares[record.Input_Index]
-					if check1 {
-						v2, check2 := v1[record.Server_ID]
-						if check2 {
-							inputShares[record.Input_Index][record.Server_ID] = append(v2, rss.Share{Index: record.Index, Value: record.Value})
-						} else {
-							inputShares[record.Input_Index][record.Server_ID] = []rss.Share{{Index: record.Index, Value: record.Value}}
+					var shares Shares
+					err = json.Unmarshal(record.Shares, &shares)
+					if err != nil {
+						log.Printf("%s cannot unmarshall %s masked shares record\n", op.cfg.OutputParty_ID, record.Server_ID)
+						panic(err)
+					}
+
+					for input_index, sh_list := range shares.Values {
+						_, check1 := inputShares[input_index]
+						if !check1 {
+							inputShares[input_index] = make(map[string][]rss.Share)
+							inputShares[input_index][record.Server_ID] = make([]rss.Share, len(sh_list))
+
 						}
-					} else {
-						inputShares[record.Input_Index] = make(map[string][]rss.Share)
-						inputShares[record.Input_Index][record.Server_ID] = []rss.Share{{Index: record.Index, Value: record.Value}}
+						temp := make([]rss.Share, len(sh_list))
+						for idx, value := range sh_list {
+
+							temp[idx] = rss.Share{Index: shares.Index[idx], Value: value}
+						}
+						inputShares[input_index][record.Server_ID] = temp
 					}
 				}
 
@@ -127,12 +123,13 @@ func (op *OutputParty) WaitForEndOfExperiment(ticker *time.Ticker) {
 				result := make([]int, op.cfg.N_secrets)
 				for input_index, list := range inputShares {
 					size := len(list)
-					servers := make([]rss.Party, size)
+					servers := make([][]rss.Share, size)
 					i := 0
-					for _, shares := range list {
-						servers[i] = rss.Party{Index: 0, Shares: shares}
+					for _, server_shares := range list {
+						servers[i] = server_shares
 						i++
 					}
+
 					sum, err := nrss.Reconstruct(servers)
 					if err != nil {
 						log.Println("cannot reconstruct:", err)
@@ -151,8 +148,6 @@ func (op *OutputParty) WaitForEndOfExperiment(ticker *time.Ticker) {
 					"result": result,
 				}).Info("")
 
-				//fmt.Printf("sum of secrets for %s : %v\n", exp.Exp_ID, result)
-
 				WriteResult(exp.Exp_ID, result)
 
 				err = op.store.UpdateCompletedExperiment(exp.Exp_ID) //set experiments to completed
@@ -167,31 +162,6 @@ func (op *OutputParty) WaitForEndOfExperiment(ticker *time.Ticker) {
 
 		// Todo: check if experiment is over and do something (e.g., remove exp and clients information from DB)
 	}
-}
-
-func (op *OutputParty) serverRequestHandler(rw http.ResponseWriter, req *http.Request) {
-	var request AggregatedShareRequest
-
-	serverService := NewServerService(op.store)
-	data := request.ReadJson(req)
-	err := serverService.CreateServerShare(data)
-
-	if err != nil {
-		log.Printf("error: %s\n", err)
-		rw.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintln(rw, err)
-		return
-	}
-
-	count := op.store.CountSharesPerExperiment(data.Exp_ID)
-
-	if count == int64(n_sh) {
-		real_server_share_due = time.Now().UTC() //ideal server share due is when all server shares arrived at output party
-
-	}
-
-	rw.WriteHeader(http.StatusOK)
-
 }
 
 func (op *OutputParty) Start() {

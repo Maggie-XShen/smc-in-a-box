@@ -43,7 +43,7 @@ type LigeroZK struct {
 }
 
 type Claim struct {
-	Shares []rss.Share
+	Shares []int
 	Secret int
 }
 
@@ -184,7 +184,7 @@ func (zk *LigeroZK) GenerateProof(secrets []int) ([]*Proof, error) {
 
 }
 
-func (zk *LigeroZK) preprocess(secrets []int) ([]Claim, [][]rss.Party, error) {
+func (zk *LigeroZK) preprocess(secrets []int) ([]Claim, []Shares, error) {
 	n_secret := len(secrets)
 	if n_secret == 0 || n_secret != zk.n_secret {
 		return nil, nil, fmt.Errorf("Invalid input when generating proof: wrong number of secrets")
@@ -196,19 +196,25 @@ func (zk *LigeroZK) preprocess(secrets []int) ([]Claim, [][]rss.Party, error) {
 	}
 
 	claims := make([]Claim, n_secret)
-	party_sh := make([][]rss.Party, zk.n_server)
-	for i := 0; i < zk.n_server; i++ {
-		party_sh[i] = make([]rss.Party, n_secret)
-	}
+	party_sh := make([]Shares, zk.n_server)
 
 	for i := 0; i < n_secret; i++ {
-		sh, party, err := nrss.Split(secrets[i])
+		share_list, party, err := nrss.Split(secrets[i])
 		if err != nil {
 			log.Fatalf("err: %v", err)
 		}
-		claims[i] = Claim{Secret: secrets[i], Shares: sh}
-		for j := 0; j < len(party); j++ {
-			party_sh[j][i] = party[j]
+
+		claims[i] = Claim{Secret: secrets[i], Shares: share_list}
+		for j := 0; j < zk.n_server; j++ {
+			if i == 0 {
+				party_sh[j] = Shares{PartyIndex: j, Index: make([]int, len(party[0])), Values: make([][]int, n_secret)}
+
+			}
+			party_sh[j].Values[i] = make([]int, len(party[0]))
+			for k, share := range party[j] {
+				party_sh[j].Index[k] = share.Index
+				party_sh[j].Values[i][k] = share.Value
+			}
 		}
 
 	}
@@ -249,7 +255,7 @@ func (zk *LigeroZK) prepare_extended_witness(claims []Claim) ([][]int, error) {
 			}
 			h := 0
 			for h < zk.n_shares {
-				matrix[i+k+h][j] = claims[index].Shares[h].Value
+				matrix[i+k+h][j] = claims[index].Shares[h]
 				h++
 			}
 			index++
@@ -477,11 +483,11 @@ func (zk *LigeroZK) generate_merkletree(input [][]int) (*merkletree.MerkleTree, 
 	return tree, leaves, nonces, nil
 }
 
-func (zk *LigeroZK) generate_fst_merkletree(party_sh [][]rss.Party, seeds []int) (*merkletree.MerkleTree, [][]byte, error) {
+func (zk *LigeroZK) generate_fst_merkletree(party_sh []Shares, seeds []int) (*merkletree.MerkleTree, [][]byte, error) {
 	// generate and hash each party's shares
 	l1 := len(party_sh)
-	l2 := len(party_sh[0])
-	l3 := len(party_sh[0][0].Shares)
+	l2 := len(party_sh[0].Values)
+	l3 := len(party_sh[0].Index)
 
 	if l1 == 0 || l2 == 0 || l3 == 0 {
 		log.Fatal("party_sh is invalid")
@@ -492,13 +498,13 @@ func (zk *LigeroZK) generate_fst_merkletree(party_sh [][]rss.Party, seeds []int)
 		index := 0
 		for j := 0; j < l2; j++ {
 			for n := 0; n < l3; n++ {
-				list[index] = fmt.Sprintf("%064b", party_sh[i][j].Shares[n].Value)
+				list[index] = fmt.Sprintf("%064b", party_sh[i].Values[j][n])
 				index++
 			}
 		}
 
 		for m := 0; m < l3; m++ {
-			list[index] = fmt.Sprintf("%064b", seeds[party_sh[i][0].Shares[m].Index])
+			list[index] = fmt.Sprintf("%064b", seeds[party_sh[i].Index[m]])
 			index++
 		}
 		concat := strings.Join(list, "")

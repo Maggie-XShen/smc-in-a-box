@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
+	"log"
 
 	"example.com/SMC/outputparty/sqlstore"
 )
@@ -32,15 +34,15 @@ func (ss *ServerService) CreateServerShare(request AggregatedShareRequest) error
 		return errors.New("experiment does not exist when output party creates server's shares record")
 	}
 
-	//insert share to server share table
-	for input_index, party := range request.Shares {
-		for _, share := range party.Shares {
-			err = ss.store.InsertServerShare(request.Exp_ID, request.Server_ID, input_index, share.Index, share.Value)
-			if err != nil {
-				return err
-			}
-		}
+	shares, err := json.Marshal(request.Shares)
+	if err != nil {
+		log.Fatal(err)
+	}
 
+	//insert share to server share table
+	err = ss.store.InsertServerShare(request.Exp_ID, request.Server_ID, shares)
+	if err != nil {
+		return err
 	}
 
 	return nil

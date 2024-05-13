@@ -1,6 +1,7 @@
 package sqlstore
 
 import (
+	"fmt"
 	"log"
 
 	"gorm.io/driver/mysql"
@@ -21,8 +22,8 @@ func NewDB(id string) *DB {
 }
 
 func SetupDatabase(sid string) (*gorm.DB, error) {
-	//dsn := fmt.Sprintf("smc:smcinabox@tcp(127.0.0.1:3306)/%s?charset=utf8mb4&parseTime=True&loc=Local", sid)
-	dsn := "smc:smcinabox@tcp(127.0.0.1:3306)/smc?charset=utf8mb4&parseTime=True&loc=Local"
+	dsn := fmt.Sprintf("smc:smcinabox@tcp(127.0.0.1:3306)/%s?charset=utf8mb4&parseTime=True&loc=Local", sid)
+	//dsn := "smc:smcinabox@tcp(127.0.0.1:3306)/smc?charset=utf8mb4&parseTime=True&loc=Local"
 
 	// Open a connection to the MySQL database
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
@@ -41,13 +42,11 @@ func SetupDatabase(sid string) (*gorm.DB, error) {
 }
 
 // create server sumShare record in the server table
-func (db *DB) InsertServerShare(exp_id, server_id string, input_index, index, value int) error {
+func (db *DB) InsertServerShare(exp_id, server_id string, shares []byte) error {
 	s := ServerShare{
-		Exp_ID:      exp_id,
-		Server_ID:   server_id,
-		Input_Index: input_index,
-		Index:       index,
-		Value:       value,
+		Exp_ID:    exp_id,
+		Server_ID: server_id,
+		Shares:    shares,
 	}
 	result := db.db.Create(&s)
 	if result.Error != nil {

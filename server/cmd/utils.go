@@ -10,7 +10,6 @@ import (
 	"os"
 
 	"example.com/SMC/pkg/ligero"
-	"example.com/SMC/pkg/rss"
 )
 
 type ClientRequest struct {
@@ -57,11 +56,14 @@ type MaskedShareRequest struct {
 	MaskedShares []MaskedShare `json:"MaskedShares"`
 }
 
+type Shares struct {
+	Index  []int   `json:"Index"`
+	Values [][]int `json:"Values"`
+}
+
 type MaskedShare struct {
-	Client_ID   string `json:"Client_ID"`
-	Input_Index int    `json:"Input_Index"`
-	Index       int    `json:"Index"`
-	Value       int    `json:"Value"`
+	Client_ID string `json:"Client_ID"`
+	Shares    []byte `json:"Shares"`
 }
 
 type DolevMaskedShareRequest struct {
@@ -72,10 +74,10 @@ type DolevMaskedShareRequest struct {
 }
 
 type AggregatedShareRequest struct {
-	Exp_ID    string      `json:"Exp_ID "`
-	Server_ID string      `json:"Server_ID"`
-	Timestamp string      `json:"Timestamp"`
-	Shares    []rss.Party `json:"Shares"`
+	Exp_ID    string `json:"Exp_ID "`
+	Server_ID string `json:"Server_ID"`
+	Timestamp string `json:"Timestamp"`
+	Shares    Shares `json:"Shares"`
 }
 
 type Experiment struct {

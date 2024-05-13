@@ -8,11 +8,9 @@ type Experiment struct {
 }
 
 type ServerShare struct {
-	Exp_ID      string `gorm:"primaryKey"`
-	Server_ID   string `gorm:"primaryKey"`
-	Input_Index int    `gorm:"primaryKey"`
-	Index       int    `gorm:"primaryKey"`
-	Value       int
+	Exp_ID    string `gorm:"primaryKey"`
+	Server_ID string `gorm:"primaryKey"`
+	Shares    []byte `gorm:"type:longblob"`
 }
 
 /**

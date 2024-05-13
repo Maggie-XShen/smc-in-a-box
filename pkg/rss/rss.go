@@ -37,7 +37,7 @@ func NewReplicatedSecretSharing(N, T, Q int) (*ReplicatedSecretSharing, error) {
 
 }
 
-func (rss *ReplicatedSecretSharing) Split(secret int) ([]Share, []Party, error) {
+func (rss *ReplicatedSecretSharing) Split(secret int) ([]int, [][]Share, error) {
 
 	n_sh := combin.Binomial(rss.n, rss.t) //compute total number of shares a secret splits to
 
@@ -45,18 +45,18 @@ func (rss *ReplicatedSecretSharing) Split(secret int) ([]Share, []Party, error) 
 	combinations := combin.Combinations(rss.n, rss.t)
 
 	//generate all shares
-	shares := make([]Share, n_sh)
-	shares[n_sh-1] = Share{Index: n_sh - 1, Value: secret}
+	shares := make([]int, n_sh)
+	shares[n_sh-1] = secret
 	for i := 0; i < n_sh-1; i++ {
 		val, err := rand.Int(rand.Reader, big.NewInt(int64(rss.q)))
 		if err != nil {
 			return nil, nil, err
 		}
-		shares[i] = Share{Index: i, Value: int(val.Int64())}
-		temp := shares[n_sh-1].Value
-		shares[n_sh-1].Value = temp - shares[i].Value
+		shares[i] = int(val.Int64())
+		temp := shares[n_sh-1]
+		shares[n_sh-1] = temp - shares[i]
 	}
-	shares[n_sh-1].Value = mod(shares[n_sh-1].Value, rss.q)
+	shares[n_sh-1] = mod(shares[n_sh-1], rss.q)
 
 	/**
 	//generate shares for each party
@@ -78,14 +78,14 @@ func (rss *ReplicatedSecretSharing) Split(secret int) ([]Share, []Party, error) 
 	for i := 0; i < n_sh; i++ {
 		for j := 0; j < rss.n; j++ {
 			if !contains(combinations[i], j) {
-				shParty[j] = append(shParty[j], Share{Index: i, Value: shares[i].Value})
+				shParty[j] = append(shParty[j], Share{Index: i, Value: shares[i]})
 			}
 		}
 	}
 
-	result := make([]Party, rss.n)
+	result := make([][]Share, rss.n)
 	for i := 0; i < rss.n; i++ {
-		result[i] = Party{Index: i, Shares: shParty[i]}
+		result[i] = shParty[i]
 
 	}
 
@@ -93,13 +93,13 @@ func (rss *ReplicatedSecretSharing) Split(secret int) ([]Share, []Party, error) 
 
 }
 
-func (rss *ReplicatedSecretSharing) Reconstruct(parties []Party) (int, error) {
+func (rss *ReplicatedSecretSharing) Reconstruct(parties [][]Share) (int, error) {
 	//generate a map
 	//key: index of the shares the srecret splits to
 	//value:a list values associated to the key
 	mapping := make(map[int][]int)
 	for _, party := range parties {
-		for _, sh := range party.Shares {
+		for _, sh := range party {
 			mapping[sh.Index] = append(mapping[sh.Index], sh.Value)
 		}
 

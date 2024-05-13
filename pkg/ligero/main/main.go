@@ -13,13 +13,13 @@ var verify_end time.Duration
 
 func main() {
 
-	zk, err := ligero.NewLigeroZK(1000, 8, 4, 1, 41543, 240)
+	zk, err := ligero.NewLigeroZK(100000, 100, 7, 2, 41543, 240)
 	if err != nil {
 		log.Fatalf("err: %v", err)
 	}
 
-	secrets := make([]int, 1000)
-	for i := 0; i < 1000; i++ {
+	secrets := make([]int, 100000)
+	for i := 0; i < 100000; i++ {
 		secrets[i] = 1
 	}
 
@@ -46,13 +46,13 @@ func main() {
 		}
 
 		if err != nil {
-			fmt.Printf("verification failed for party %d\n", proof[i].PartyShares[0].Index)
+			fmt.Printf("verification failed for party %d\n", proof[i].Shares.PartyIndex)
 			log.Fatal(err)
 		}
 		if !verify {
-			fmt.Printf("verification failed for party %d\n", proof[i].PartyShares[0].Index)
+			fmt.Printf("verification failed for party %d\n", proof[i].Shares.PartyIndex)
 		}
-		fmt.Printf("verification succeed for party %d\n", proof[i].PartyShares[0].Index)
+		fmt.Printf("verification succeed for party %d\n", proof[i].Shares.PartyIndex)
 	}
 
 }

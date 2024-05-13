@@ -84,7 +84,7 @@ func (c *Client) Run(inputpath string) {
 				}
 
 				writer := &msg
-				log.Printf("client %s is sending data of %s to server%d ...\n", msg.Client_ID, msg.Exp_ID, msg.Proof.PartyShares[0].Index+1)
+				log.Printf("client %s is sending data of %s to server%d ...\n", msg.Client_ID, msg.Exp_ID, msg.Proof.Shares.PartyIndex)
 				c.Send(urls[idx], writer.ToJson())
 			}(i)
 

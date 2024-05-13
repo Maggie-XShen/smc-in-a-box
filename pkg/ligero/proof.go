@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"example.com/SMC/pkg/rss"
 	merkletree "github.com/wealdtech/go-merkletree"
 )
 
@@ -38,10 +37,16 @@ type Proof struct {
 	CodeTest     []int          `json:"CodeTest"`
 	QuadraTest   []int          `json:"QuadraTest"`
 	LinearTest   []int          `json:"LinearTest"`
-	PartyShares  []rss.Party    `json:"PartyShares"`
+	Shares       Shares         `json:"Shares"`
 	Seeds        []int          `json:"Seeds"`
 	FST_root     []byte         `json:"FST_root"`
 	FST_authpath [][]byte       `json:"FST_authpath"`
+}
+
+type Shares struct {
+	Index      []int   `json:"Index"`
+	Values     [][]int `json:"Values"`
+	PartyIndex int     `json:"PartyIndex"`
 }
 
 type OpenedColumn struct {
@@ -54,14 +59,14 @@ type OpenedColumn struct {
 	Quadra_mask  int      `json:"Quadra_mask"`
 }
 
-func newProof(root []byte, column_check []OpenedColumn, q_code []int, q_quadra []int, q_linear []int, party_sh []rss.Party, seeds []int, fst_root []byte, fst_authpath [][]byte) *Proof {
+func newProof(root []byte, column_check []OpenedColumn, q_code []int, q_quadra []int, q_linear []int, shares Shares, seeds []int, fst_root []byte, fst_authpath [][]byte) *Proof {
 	return &Proof{
 		MerkleRoot:   root,
 		ColumnTest:   column_check,
 		CodeTest:     q_code,
 		QuadraTest:   q_quadra,
 		LinearTest:   q_linear,
-		PartyShares:  party_sh,
+		Shares:       shares,
 		Seeds:        seeds,
 		FST_root:     fst_root,
 		FST_authpath: fst_authpath,
@@ -71,7 +76,7 @@ func newProof(root []byte, column_check []OpenedColumn, q_code []int, q_quadra [
 func (zk *LigeroZK) VerifyProof(proof Proof) (bool, error) {
 	//verify fst auth path
 	auth_path_start := time.Now()
-	fstAuthPathTest, err := zk.verify_fst_authpath(proof.PartyShares, proof.Seeds, proof.FST_authpath, proof.FST_root)
+	fstAuthPathTest, err := zk.verify_fst_authpath(proof.Shares, proof.Seeds, proof.FST_authpath, proof.FST_root)
 	if !fstAuthPathTest {
 		return false, err
 	}
@@ -118,7 +123,7 @@ func (zk *LigeroZK) VerifyProof(proof Proof) (bool, error) {
 	//verify linear test proof
 	linear_start := time.Now()
 	r3 := random_vector[len1+len2 : len1+len2+zk.m]
-	linearTest, err := zk.verify_linear_proof(proof.PartyShares, proof.Seeds, proof.LinearTest, r3, proof.ColumnTest)
+	linearTest, err := zk.verify_linear_proof(proof.Shares, proof.Seeds, proof.LinearTest, r3, proof.ColumnTest)
 	if !linearTest {
 		return false, err
 	}
@@ -141,32 +146,32 @@ func (zk *LigeroZK) VerifyProof(proof Proof) (bool, error) {
 	return true, nil
 }
 
-func (zk *LigeroZK) verify_fst_authpath(party_sh []rss.Party, seeds []int, authpath [][]byte, root []byte) (bool, error) {
+func (zk *LigeroZK) verify_fst_authpath(shares Shares, seeds []int, authpath [][]byte, root []byte) (bool, error) {
 	if len(authpath) == 0 || len(root) == 0 {
 		return false, fmt.Errorf("fst authpaty or root cannot be empty")
 	}
 
-	l2 := len(party_sh)
-	l3 := len(party_sh[0].Shares)
+	l2 := len(shares.Values)
+	l3 := len(shares.Index)
 
 	list := make([]string, l2*l3+l3)
 	index := 0
 	for j := 0; j < l2; j++ {
 		for n := 0; n < l3; n++ {
-			list[index] = fmt.Sprintf("%064b", party_sh[j].Shares[n].Value)
+			list[index] = fmt.Sprintf("%064b", shares.Values[j][n])
 			index++
 		}
 	}
 
 	for m := 0; m < l3; m++ {
-		list[index] = fmt.Sprintf("%064b", seeds[party_sh[0].Shares[m].Index])
+		list[index] = fmt.Sprintf("%064b", seeds[shares.Index[m]])
 		index++
 	}
 	concat := strings.Join(list, "")
 
 	var proof merkletree.Proof
 	proof.Hashes = authpath
-	proof.Index = uint64(party_sh[0].Index)
+	proof.Index = uint64(shares.PartyIndex)
 
 	verified, err := merkletree.VerifyProof([]byte(concat), &proof, root)
 	if err != nil {
@@ -268,9 +273,9 @@ func (zk *LigeroZK) verify_quadratic_constraints(q_quadra []int, randomness []in
 	return true, nil
 }
 
-func (zk *LigeroZK) verify_linear_proof(parties []rss.Party, key []int, q_linear []int, randomness []int, open_cols []OpenedColumn) (bool, error) {
+func (zk *LigeroZK) verify_linear_proof(shares Shares, key []int, q_linear []int, randomness []int, open_cols []OpenedColumn) (bool, error) {
 
-	row_test := zk.check_shares_with_opened_column(parties, key, open_cols)
+	row_test := zk.check_shares_with_opened_column(shares, key, open_cols)
 	if !row_test {
 		return false, fmt.Errorf("linear test failed: failed to evaluate shares with the opened columns")
 	}
@@ -340,8 +345,8 @@ func (zk *LigeroZK) verify_linear_proof(parties []rss.Party, key []int, q_linear
 
 // }
 
-func (zk *LigeroZK) check_shares_with_opened_column(parties []rss.Party, key []int, open_cols []OpenedColumn) bool {
-	size := len(parties)
+func (zk *LigeroZK) check_shares_with_opened_column(shares Shares, key []int, open_cols []OpenedColumn) bool {
+	size := len(shares.Values)
 	claims := make([]Claim, size)
 
 	// Prepare claims for each party concurrently
@@ -350,10 +355,9 @@ func (zk *LigeroZK) check_shares_with_opened_column(parties []rss.Party, key []i
 	for i := 0; i < size; i++ {
 		go func(i int) {
 			defer wg.Done()
-
-			shList := make([]rss.Share, zk.n_shares)
-			for j := 0; j < len(parties[0].Shares); j++ {
-				shList[parties[0].Shares[j].Index] = parties[i].Shares[j]
+			shList := make([]int, zk.n_shares)
+			for j := 0; j < len(shares.Index); j++ {
+				shList[shares.Index[j]] = shares.Values[i][j]
 			}
 			claims[i] = Claim{Secret: 0, Shares: shList}
 		}(i)
@@ -382,8 +386,8 @@ func (zk *LigeroZK) check_shares_with_opened_column(parties []rss.Party, key []i
 
 			foundMismatch := false
 			for bl := 0; bl < len(encodedWitnesses); bl = bl + 1 + zk.n_shares {
-				for i := 0; i < len(parties[0].Shares); i++ {
-					rw := bl + parties[0].Shares[i].Index + 1
+				for i := 0; i < len(shares.Index); i++ {
+					rw := bl + shares.Index[i] + 1
 					if encodedWitnesses[rw][col.Index] != col.List[rw] {
 						foundMismatch = true
 						break
@@ -490,7 +494,7 @@ func (zk *LigeroZK) check_linear_with_opened_column(test_value []int, randomness
 
 func (zk *LigeroZK) GetSize(proof Proof) (int64, int64) {
 	col_test_size := len(proof.ColumnTest) * (5 + len(proof.ColumnTest[0].List)*8 + len(proof.ColumnTest[0].Authpath)*len(proof.ColumnTest[0].Authpath[0]))
-	shares_size := len(proof.PartyShares) * (8 + len(proof.PartyShares[0].Shares)*16)
+	shares_size := len(proof.Shares.Values)*8*len(proof.Shares.Index) + len(proof.Shares.Index)*8 + 8
 	proof_size := (len(proof.CodeTest)+len(proof.QuadraTest)+len(proof.LinearTest)+len(proof.Seeds))*8 + len(proof.MerkleRoot) + len(proof.FST_root) + len(proof.FST_authpath)*len(proof.FST_authpath[0]) + col_test_size
 	return int64(proof_size), int64(shares_size)
 }

@@ -7,6 +7,7 @@ import (
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"io"
@@ -30,6 +31,70 @@ type Server struct {
 
 func NewServer(conf *config.Server) *Server {
 	return &Server{cfg: conf, store: sqlstore.NewDB(conf.Server_ID)}
+}
+
+func (s *Server) Start() {
+
+	http.HandleFunc("/client/", s.clientRequestHandler)
+	http.HandleFunc("/complaint/", s.serverComplaintHandler)
+	http.HandleFunc("/maskedShare/", s.serverMaskedSharesHandler)
+	http.HandleFunc("/dolevComplaint/", s.dolevComplaintHandler)
+	http.HandleFunc("/dolevMaskedShare/", s.dolevMaskedSharesHandler)
+
+	log.Fatal(http.ListenAndServe(":"+s.cfg.Port, nil))
+
+}
+
+func (s *Server) StartTLS() {
+
+	http.HandleFunc("/client/", s.clientRequestHandler)
+	http.HandleFunc("/complaint/", s.serverComplaintHandler)
+	http.HandleFunc("/maskedShare/", s.serverMaskedSharesHandler)
+	http.HandleFunc("/dolevComplaint/", s.dolevComplaintHandler)
+	http.HandleFunc("/dolevMaskedShare/", s.dolevMaskedSharesHandler)
+
+	log.Fatal(http.ListenAndServeTLS(":"+s.cfg.Port, s.cfg.Cert_path, s.cfg.Key_path, nil))
+
+}
+
+func (s *Server) Close(ticker *time.Ticker) {
+	for range ticker.C {
+		finished, err := s.store.GetExpsWithRound3Completed()
+		if err != nil {
+			log.Printf("%s cannot retreive completed experiments - error: %s\n", s.cfg.Server_ID, err)
+			continue
+		}
+
+		all, err := s.store.GetExperimentCount()
+		if err != nil {
+			log.Printf("%s cannot retreive non-completed experiments - error: %s\n", s.cfg.Server_ID, err)
+			continue
+		}
+
+		if int64(len(finished)) == all {
+			end := time.Now().UTC()
+
+			avg := float64(total_verify_time.Milliseconds()) / float64(client_size)
+
+			avg_verify_time := time.Duration(avg) * time.Millisecond
+
+			logger.WithFields(logrus.Fields{
+				"real_client_share_due":    real_client_share_due.String(),
+				"avg_verify_time":          avg_verify_time.String(),
+				"total_verify_time":        total_verify_time.String(),
+				"num_client_received":      client_count,
+				"get_complaints_time":      get_complaints_end.String(),
+				"real_complaint_due":       real_complaint_due.String(),
+				"mask_share_time":          mask_share_end.String(),
+				"real_share_broadcast_due": real_share_broadcast_due.String(),
+				"share_correction_time":    share_correct_end.String(),
+				"end":                      end.String(),
+			}).Info("")
+			log.Printf("%s is finishing\n", s.cfg.Server_ID)
+			os.Exit(0)
+		}
+	}
+
 }
 
 /*
@@ -134,142 +199,8 @@ func (s *Server) serverMaskedSharesHandler(rw http.ResponseWriter, req *http.Req
 
 }
 
-func (s *Server) dolevComplaintHandler(rw http.ResponseWriter, req *http.Request) {
-	var request DolevComplaintRequest
-	data := request.ReadJson(req)
-	if data.Round_ID <= s.cfg.T+1 {
-		if data.Round_ID == len(data.Signatures) {
-			complaints := fmt.Sprintf("%+v", data.Msg.Complaints)
-			set, _ := s.store.GetEchoComplaint(data.Msg.Server_ID, data.Msg.Exp_ID, complaints)
-			//check if message already exist
-			str := fmt.Sprintf("%+v", data.Msg)
-			if len(set) == 0 && s.checkSigChain(str, data.Signatures) {
-				s.store.InsertEchoComplaint(data.Msg.Server_ID, data.Msg.Exp_ID, complaints)
-				s.dolevComplaintBroadcast(data.Round_ID+1, data.Msg, data.Signatures)
-			}
-		}
-
-	}
-
-}
-
-func (s *Server) checkSigChain(msg string, sig_chain []Signature) bool {
-	hashed := sha256.Sum256([]byte(fmt.Sprintf("%+v", msg)))
-	for _, sig := range sig_chain {
-		fileName := fmt.Sprintf("cert_%s.pem", sig.Server_ID)
-		cert_path := filepath.Join("./rsa/", fileName)
-		err := rsa.VerifyPKCS1v15(loadPublicKey(cert_path), crypto.SHA256, hashed[:], sig.Sig)
-		if err != nil {
-			log.Printf("Signature verification failed: %s\n", err)
-			return false
-		}
-	}
-	return true
-}
-
-func (s *Server) dolevMaskedSharesHandler(rw http.ResponseWriter, req *http.Request) {
-	var request DolevMaskedShareRequest
-	data := request.ReadJson(req)
-	if data.Round_ID <= s.cfg.T+1 {
-		if data.Round_ID == len(data.Signatures) {
-			mask_shares := fmt.Sprintf("%+v", data.Msg.MaskedShares)
-			set, _ := s.store.GetEchoMaskedShare(data.Msg.Server_ID, data.Msg.Exp_ID, mask_shares)
-			//check if message already exist
-			str := fmt.Sprintf("%+v", data.Msg)
-			if len(set) == 0 && s.checkSigChain(str, data.Signatures) {
-				s.store.InsertEchoMaskedShare(data.Msg.Server_ID, data.Msg.Exp_ID, mask_shares)
-				s.dolevMaskedShareBroadcast(data.Round_ID+1, data.Msg, data.Signatures)
-			}
-		}
-
-	}
-}
-
-func count(complaints []sqlstore.Complaint) (int, int, int) {
-	num_isNotComplain := 0
-	rootCount := make(map[string]int)
-	var maxCount int
-
-	for _, comp := range complaints {
-		if !comp.Complain {
-			num_isNotComplain += 1
-
-			key := string(comp.Root)
-			val, exist := rootCount[key]
-			if exist {
-				rootCount[key] = val + 1
-			} else {
-				rootCount[key] = 1
-			}
-		}
-
-	}
-
-	for _, count := range rootCount {
-		if count > maxCount {
-			maxCount = count
-		}
-	}
-
-	return num_isNotComplain, len(rootCount), maxCount
-}
-
-/**
-func generateMaskedShareMap(input []sqlstore.MaskedShare) (map[int]map[string][]rss.Share, error) {
-	if len(input) <= 0 {
-		return nil, fmt.Errorf("masked shares get from table is empty")
-	}
-	inputMaskedShares := make(map[int]map[string][]rss.Share)
-	for _, record := range input {
-		v1, check1 := inputMaskedShares[record.Input_Index]
-		if check1 {
-			v2, check2 := v1[record.Server_ID]
-			if check2 {
-				inputMaskedShares[record.Input_Index][record.Server_ID] = append(v2, rss.Share{Index: record.Index, Value: record.Value})
-			} else {
-				inputMaskedShares[record.Input_Index][record.Server_ID] = []rss.Share{{Index: record.Index, Value: record.Value}}
-			}
-		} else {
-			inputMaskedShares[record.Input_Index] = make(map[string][]rss.Share)
-			inputMaskedShares[record.Input_Index][record.Server_ID] = []rss.Share{{Index: record.Index, Value: record.Value}}
-		}
-	}
-
-	return inputMaskedShares, nil
-}**/
-
-func computeMajority(input map[string][]rss.Share, t int) ([]rss.Share, error) {
-	if len(input) <= 0 {
-		return nil, fmt.Errorf("masked shares map is empty")
-	}
-
-	shareValue := make(map[int][]int)
-	for _, shares := range input {
-		for _, sh := range shares {
-			v1, check1 := shareValue[sh.Index]
-			if check1 {
-				shareValue[sh.Index] = append(v1, sh.Value)
-			} else {
-				shareValue[sh.Index] = []int{sh.Value}
-			}
-		}
-	}
-
-	result := make([]rss.Share, len(shareValue))
-	for index, values := range shareValue {
-		val, err := FindMajority(values, t)
-		if err != nil {
-			return nil, err
-		}
-
-		result = append(result, rss.Share{Index: index, Value: val})
-	}
-
-	return result, nil
-}
-
 // When experiment's due is triggered, server broadcasts complaint message
-func (s *Server) WaitForEndOfExperiment(ticker *time.Ticker) {
+func (s *Server) WaitForEndOfClientShareBroadcast(ticker *time.Ticker) {
 
 	for range ticker.C {
 
@@ -408,30 +339,36 @@ func (s *Server) WaitForEndOfComplaintBroadcast(ticker *time.Ticker) {
 
 						//generate mask and masked shares
 						if num_isNotComplain < s.cfg.N || rootCount > 1 {
-							clientShares, err := s.store.GetClientShares(exp.Exp_ID, c.Client_ID)
+							record, err := s.store.GetClientShares(exp.Exp_ID, c.Client_ID)
 							if err != nil {
 								log.Printf("%s cannot get client shares record\n", s.cfg.Server_ID)
 								panic(err)
 							}
 
-							for _, cs := range clientShares {
-								key := 1 //TODO: change key to offline generated key
-								crs := NewCryptoRandSource()
-								crs.Seed(key, cs.Exp_ID, cs.Client_ID, cs.Input_Index, cs.Index)
-								mask := int(crs.Int63(int64(s.cfg.Q)))
+							var shares Shares //{Index:..., Values:...}
+							err = json.Unmarshal(record.Shares, &shares)
+							if err != nil {
+								log.Printf("%s cannot unmarshall client shares record\n", s.cfg.Server_ID)
+								panic(err)
+							}
 
-								err := s.store.InsertMask(cs.Exp_ID, cs.Client_ID, cs.Input_Index, cs.Index, mask)
-								if err != nil {
-									log.Printf("%s cannot add mask record to the table\n", s.cfg.Server_ID)
-									panic(err)
+							for input_index, sh_list := range shares.Values {
+								for idx, value := range sh_list {
+									mask := s.getMask(c.Exp_ID, c.Client_ID, input_index, shares.Index[idx])
+									shares.Values[input_index][idx] = value + mask
 								}
+							}
 
-								err = s.store.InsertMaskedShare(cs.Exp_ID, s.cfg.Server_ID, cs.Client_ID, cs.Input_Index, cs.Index, mask+cs.Value)
-								if err != nil {
-									log.Printf("%s cannot add masked share to the table\n", s.cfg.Server_ID)
-									panic(err)
-								}
+							newShares, err := json.Marshal(shares)
+							if err != nil {
+								log.Printf("%s cannot marshall %s masked shares record\n", s.cfg.Server_ID, c.Client_ID)
+								panic(err)
+							}
 
+							err = s.store.InsertMaskedShare(c.Exp_ID, s.cfg.Server_ID, c.Client_ID, newShares)
+							if err != nil {
+								log.Printf("%s cannot add masked share to the table\n", s.cfg.Server_ID)
+								panic(err)
 							}
 
 						}
@@ -449,8 +386,8 @@ func (s *Server) WaitForEndOfComplaintBroadcast(ticker *time.Ticker) {
 
 				if len(maskedShares) > 0 {
 					var set []MaskedShare
-					for _, mask_sh := range maskedShares {
-						set = append(set, MaskedShare{Client_ID: mask_sh.Client_ID, Input_Index: mask_sh.Input_Index, Index: mask_sh.Index, Value: mask_sh.Value})
+					for _, record := range maskedShares {
+						set = append(set, MaskedShare{Client_ID: record.Client_ID, Shares: record.Shares})
 					}
 
 					message := MaskedShareRequest{
@@ -523,37 +460,44 @@ func (s *Server) WaitForEndOfShareBroadcast(ticker *time.Ticker) {
 					}
 
 					if len(notComplain) < s.cfg.N {
-						//build input shares map for each client
+						//build <input_index, sever_shares> map for each client
 						inputMaskedShares := make(map[int]map[string][]rss.Share)
-						for _, entry := range notComplain {
-							masked_shares, _ := s.store.GetMaskedShares(exp.Exp_ID, entry.Server_ID, entry.Client_ID)
-							for _, record := range masked_shares {
-								v1, check1 := inputMaskedShares[record.Input_Index]
-								if check1 {
-									v2, check2 := v1[record.Server_ID]
-									if check2 {
-										inputMaskedShares[record.Input_Index][record.Server_ID] = append(v2, rss.Share{Index: record.Index, Value: record.Value})
-									} else {
-										inputMaskedShares[record.Input_Index][record.Server_ID] = []rss.Share{{Index: record.Index, Value: record.Value}}
-									}
-								} else {
-									inputMaskedShares[record.Input_Index] = make(map[string][]rss.Share)
-									inputMaskedShares[record.Input_Index][record.Server_ID] = []rss.Share{{Index: record.Index, Value: record.Value}}
-								}
+						for _, record := range notComplain {
+							result, _ := s.store.GetMaskedSharesPerClient(exp.Exp_ID, record.Server_ID, record.Client_ID)
+
+							var shares Shares
+							err = json.Unmarshal(result.Shares, &shares)
+							if err != nil {
+								log.Printf("%s cannot unmarshall %s masked shares record\n", s.cfg.Server_ID, vc.Client_ID)
+								panic(err)
 							}
 
+							for input_index, sh_list := range shares.Values {
+								_, check1 := inputMaskedShares[input_index]
+								if !check1 {
+									inputMaskedShares[input_index] = make(map[string][]rss.Share)
+									inputMaskedShares[input_index][record.Server_ID] = make([]rss.Share, len(sh_list))
+								}
+								temp := make([]rss.Share, len(sh_list))
+								for idx, value := range sh_list {
+									temp[idx] = rss.Share{Index: shares.Index[idx], Value: value}
+								}
+								inputMaskedShares[input_index][record.Server_ID] = temp
+							}
 						}
 
 						//remove invalid client from valid set
 						isRemoved := false
 						for _, list := range inputMaskedShares {
-							parties := []rss.Party{}
-							for _, shares := range list {
-								parties = append(parties, rss.Party{Index: 0, Shares: shares})
+							servers := make([][]rss.Share, len(list))
+							i := 0
+							for _, server_shares := range list {
+								servers[i] = server_shares
+								i++
 							}
 							nrss, _ := rss.NewReplicatedSecretSharing(s.cfg.N, s.cfg.T, s.cfg.Q)
 
-							_, err := nrss.Reconstruct(parties)
+							_, err := nrss.Reconstruct(servers)
 							if err != nil {
 								log.Printf("%s reconstruct fail, need to remove client from valid set - err: %s\n", s.cfg.Server_ID, err)
 								err = s.store.DeleteValidClient(exp.Exp_ID, vc.Client_ID)
@@ -577,29 +521,44 @@ func (s *Server) WaitForEndOfShareBroadcast(ticker *time.Ticker) {
 
 							//share correction
 							if record.Exp_ID != "" && record.Complain {
-								for input_index, shares := range inputMaskedShares {
-									masked_shares, err := computeMajority(shares, s.cfg.T)
+								result, _ := s.store.GetMaskedSharesPerClient(exp.Exp_ID, s.cfg.Server_ID, vc.Client_ID)
+
+								var shares Shares
+								err = json.Unmarshal(result.Shares, &shares)
+								if err != nil {
+									log.Printf("%s cannot unmarshall %s masked shares record\n", s.cfg.Server_ID, vc.Client_ID)
+									panic(err)
+								}
+
+								for input_index, server_sh := range inputMaskedShares {
+									masked_shares, err := computeMajority(server_sh, s.cfg.T)
 									if err != nil {
 										log.Println("cannot compute majority when doing share correction", err)
 										panic(err)
 									}
 
 									for _, sh := range masked_shares {
-										mask, err := s.store.GetMask(exp.Exp_ID, vc.Client_ID, input_index, sh.Index)
-										if err != nil {
-											log.Printf("%s cannot get mask from table\n", s.cfg.Server_ID)
-											panic(err)
-										}
+										mask := s.getMask(exp.Exp_ID, vc.Client_ID, input_index, sh.Index)
 
-										newShare := sh.Value - mask.Value
-										err = s.store.UpdateClientShare(exp.Exp_ID, vc.Client_ID, input_index, sh.Index, newShare)
-										if err != nil {
-											log.Printf("%s cannot update client share\n", s.cfg.Server_ID)
-											panic(err)
+										for i := 0; i < len(shares.Index); i++ {
+											if shares.Index[i] == sh.Index {
+												shares.Values[input_index][i] = sh.Value - mask
+											}
 										}
 
 									}
 
+								}
+
+								newShares, err := json.Marshal(shares)
+								if err != nil {
+									log.Fatal(err)
+								}
+
+								err = s.store.UpdateClientShare(exp.Exp_ID, vc.Client_ID, newShares)
+								if err != nil {
+									log.Printf("%s cannot update client share\n", s.cfg.Server_ID)
+									panic(err)
 								}
 							}
 						}
@@ -648,37 +607,40 @@ func (s *Server) WaitForEndOfShareBroadcast(ticker *time.Ticker) {
 
 }
 
-func (s *Server) aggregateShares(clientShares []sqlstore.ClientShare) ([]rss.Party, error) {
+func (s *Server) getMask(exp_id, client_id string, input_index, share_index int) int {
+	key := 1 //TODO: change key to offline generated key
+	crs := NewCryptoRandSource()
+	crs.Seed(key, exp_id, client_id, input_index, share_index)
+	mask := int(crs.Int63(int64(s.cfg.Q)))
+	return mask
+}
+
+func (s *Server) aggregateShares(clientShares []sqlstore.ClientShare) (Shares, error) {
 	if len(clientShares) == 0 {
-		return nil, fmt.Errorf("client shares are empty: no valid client exists")
+		return Shares{}, fmt.Errorf("client shares are empty: no valid client exists")
 	}
 
-	aggreShare := make(map[int]map[int]int) //(intput_index,(share_index, aggregateed_sh))
-	for _, record := range clientShares {
-		v1, check1 := aggreShare[record.Input_Index]
-		if check1 {
-			v2, check2 := v1[record.Index]
-			if check2 {
-				aggreShare[record.Input_Index][record.Index] = v2 + record.Value
-			} else {
-				aggreShare[record.Input_Index][record.Index] = record.Value
+	var aggreShare Shares
+	err := json.Unmarshal(clientShares[0].Shares, &aggreShare)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for i := 1; i < len(clientShares); i++ {
+		var shares Shares
+		err = json.Unmarshal(clientShares[i].Shares, &shares)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		for input_index, sh_list := range shares.Values {
+			for idx, value := range sh_list {
+				aggreShare.Values[input_index][idx] += value
 			}
-		} else {
-			aggreShare[record.Input_Index] = make(map[int]int)
-			aggreShare[record.Input_Index][record.Index] = record.Value
 		}
 	}
 
-	result := make([]rss.Party, s.cfg.N_secrets)
-	for i := 0; i < len(aggreShare); i++ {
-		var shares []rss.Share
-		for index, value := range aggreShare[i] {
-			shares = append(shares, rss.Share{Index: index, Value: value})
-		}
-		result[i] = rss.Party{Index: 0, Shares: shares}
-	}
-
-	return result, nil
+	return aggreShare, nil
 }
 
 func send(address string, data []byte) {
@@ -703,6 +665,116 @@ func send(address string, data []byte) {
 
 	}
 
+}
+
+func count(complaints []sqlstore.Complaint) (int, int, int) {
+	num_isNotComplain := 0
+	rootCount := make(map[string]int)
+	var maxCount int
+
+	for _, comp := range complaints {
+		if !comp.Complain {
+			num_isNotComplain += 1
+
+			key := string(comp.Root)
+			val, exist := rootCount[key]
+			if exist {
+				rootCount[key] = val + 1
+			} else {
+				rootCount[key] = 1
+			}
+		}
+
+	}
+
+	for _, count := range rootCount {
+		if count > maxCount {
+			maxCount = count
+		}
+	}
+
+	return num_isNotComplain, len(rootCount), maxCount
+}
+
+func computeMajority(input map[string][]rss.Share, t int) ([]rss.Share, error) {
+	if len(input) <= 0 {
+		return nil, fmt.Errorf("masked shares map is empty")
+	}
+
+	shareValue := make(map[int][]int)
+	for _, shares := range input {
+		for _, sh := range shares {
+			v1, check1 := shareValue[sh.Index]
+			if check1 {
+				shareValue[sh.Index] = append(v1, sh.Value)
+			} else {
+				shareValue[sh.Index] = []int{sh.Value}
+			}
+		}
+	}
+
+	result := make([]rss.Share, len(shareValue))
+	for index, values := range shareValue {
+		val, err := FindMajority(values, t)
+		if err != nil {
+			return nil, err
+		}
+
+		result = append(result, rss.Share{Index: index, Value: val})
+	}
+
+	return result, nil
+}
+
+func (s *Server) dolevComplaintHandler(rw http.ResponseWriter, req *http.Request) {
+	var request DolevComplaintRequest
+	data := request.ReadJson(req)
+	if data.Round_ID <= s.cfg.T+1 {
+		if data.Round_ID == len(data.Signatures) {
+			complaints := fmt.Sprintf("%+v", data.Msg.Complaints)
+			set, _ := s.store.GetEchoComplaint(data.Msg.Server_ID, data.Msg.Exp_ID, complaints)
+			//check if message already exist
+			str := fmt.Sprintf("%+v", data.Msg)
+			if len(set) == 0 && s.checkSigChain(str, data.Signatures) {
+				s.store.InsertEchoComplaint(data.Msg.Server_ID, data.Msg.Exp_ID, complaints)
+				s.dolevComplaintBroadcast(data.Round_ID+1, data.Msg, data.Signatures)
+			}
+		}
+
+	}
+
+}
+
+func (s *Server) checkSigChain(msg string, sig_chain []Signature) bool {
+	hashed := sha256.Sum256([]byte(fmt.Sprintf("%+v", msg)))
+	for _, sig := range sig_chain {
+		fileName := fmt.Sprintf("cert_%s.pem", sig.Server_ID)
+		cert_path := filepath.Join("./rsa/", fileName)
+		err := rsa.VerifyPKCS1v15(loadPublicKey(cert_path), crypto.SHA256, hashed[:], sig.Sig)
+		if err != nil {
+			log.Printf("Signature verification failed: %s\n", err)
+			return false
+		}
+	}
+	return true
+}
+
+func (s *Server) dolevMaskedSharesHandler(rw http.ResponseWriter, req *http.Request) {
+	var request DolevMaskedShareRequest
+	data := request.ReadJson(req)
+	if data.Round_ID <= s.cfg.T+1 {
+		if data.Round_ID == len(data.Signatures) {
+			mask_shares := fmt.Sprintf("%+v", data.Msg.MaskedShares)
+			set, _ := s.store.GetEchoMaskedShare(data.Msg.Server_ID, data.Msg.Exp_ID, mask_shares)
+			//check if message already exist
+			str := fmt.Sprintf("%+v", data.Msg)
+			if len(set) == 0 && s.checkSigChain(str, data.Signatures) {
+				s.store.InsertEchoMaskedShare(data.Msg.Server_ID, data.Msg.Exp_ID, mask_shares)
+				s.dolevMaskedShareBroadcast(data.Round_ID+1, data.Msg, data.Signatures)
+			}
+		}
+
+	}
 }
 
 func (s *Server) dolevComplaintBroadcast(round int, msg ComplaintRequest, sig_chain []Signature) {
@@ -803,68 +875,4 @@ func (s *Server) loadPrivateKey(path string) *rsa.PrivateKey {
 	}
 
 	return privateKey.(*rsa.PrivateKey)
-}
-
-func (s *Server) Start() {
-
-	http.HandleFunc("/client/", s.clientRequestHandler)
-	http.HandleFunc("/complaint/", s.serverComplaintHandler)
-	http.HandleFunc("/maskedShare/", s.serverMaskedSharesHandler)
-	http.HandleFunc("/dolevComplaint/", s.dolevComplaintHandler)
-	http.HandleFunc("/dolevMaskedShare/", s.dolevMaskedSharesHandler)
-
-	log.Fatal(http.ListenAndServe(":"+s.cfg.Port, nil))
-
-}
-
-func (s *Server) StartTLS() {
-
-	http.HandleFunc("/client/", s.clientRequestHandler)
-	http.HandleFunc("/complaint/", s.serverComplaintHandler)
-	http.HandleFunc("/maskedShare/", s.serverMaskedSharesHandler)
-	http.HandleFunc("/dolevComplaint/", s.dolevComplaintHandler)
-	http.HandleFunc("/dolevMaskedShare/", s.dolevMaskedSharesHandler)
-
-	log.Fatal(http.ListenAndServeTLS(":"+s.cfg.Port, s.cfg.Cert_path, s.cfg.Key_path, nil))
-
-}
-
-func (s *Server) Close(ticker *time.Ticker) {
-	for range ticker.C {
-		finished, err := s.store.GetExpsWithRound3Completed()
-		if err != nil {
-			log.Printf("%s cannot retreive completed experiments - error: %s\n", s.cfg.Server_ID, err)
-			continue
-		}
-
-		all, err := s.store.GetExperimentCount()
-		if err != nil {
-			log.Printf("%scannot retreive non-completed experiments - error: %s\n", s.cfg.Server_ID, err)
-			continue
-		}
-
-		if int64(len(finished)) == all {
-			end := time.Now().UTC()
-
-			avg := float64(total_verify_time.Milliseconds()) / float64(client_size)
-
-			avg_verify_time := time.Duration(avg) * time.Millisecond
-
-			logger.WithFields(logrus.Fields{
-				"real_client_share_due":    real_client_share_due.String(),
-				"avg_verify_time":          avg_verify_time.String(),
-				"total_verify_time":        total_verify_time.String(),
-				"num_client_received":      client_count,
-				"get_complaints_time":      get_complaints_end.String(),
-				"real_complaint_due":       real_complaint_due.String(),
-				"mask_share_time":          mask_share_end.String(),
-				"real_share_broadcast_due": real_share_broadcast_due.String(),
-				"share_correction_time":    share_correct_end.String(),
-				"end":                      end.String(),
-			}).Info("")
-			log.Printf("%s is finishing\n", s.cfg.Server_ID)
-			os.Exit(0)
-		}
-	}
-
 }

@@ -1,6 +1,7 @@
 package sqlstore
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -22,8 +23,8 @@ func NewDB(id string) *DB {
 }
 
 func SetupDatabase(sid string) (*gorm.DB, error) {
-	//dsn := fmt.Sprintf("smc:smcinabox@tcp(127.0.0.1:3306)/%s?charset=utf8mb4&parseTime=True&loc=Local", sid)
-	dsn := "smc:smcinabox@tcp(127.0.0.1:3306)/smc?charset=utf8mb4&parseTime=True&loc=Local"
+	dsn := fmt.Sprintf("smc:smcinabox@tcp(127.0.0.1:3306)/%s?charset=utf8mb4&parseTime=True&loc=Local", sid)
+	//dsn := "smc:smcinabox@tcp(127.0.0.1:3306)/smc?charset=utf8mb4&parseTime=True&loc=Local"
 
 	// Open a connection to the MySQL database
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
@@ -34,7 +35,7 @@ func SetupDatabase(sid string) (*gorm.DB, error) {
 	log.Printf("Connection to %s Database Established\n", sid)
 
 	// Auto-migrate tables
-	if err := db.AutoMigrate(&Experiment{}, &Client{}, &ClientShare{}, &Complaint{}, &ValidClient{}, &Mask{}, &MaskedShare{}); err != nil {
+	if err := db.AutoMigrate(&Experiment{}, &Client{}, &ClientShare{}, &Complaint{}, &ValidClient{}, &MaskedShare{}); err != nil {
 		return nil, err
 	}
 
@@ -70,13 +71,11 @@ func (db *DB) GetClientsPerExperiment(exp_id string) ([]Client, error) {
 }
 
 // create client share record
-func (db *DB) InsertClientShare(exp_id, client_id string, input_index, index, value int) error {
+func (db *DB) InsertClientShare(exp_id, client_id string, shares []byte) error {
 	c := ClientShare{
-		Exp_ID:      exp_id,
-		Client_ID:   client_id,
-		Input_Index: input_index,
-		Index:       index,
-		Value:       value,
+		Exp_ID:    exp_id,
+		Client_ID: client_id,
+		Shares:    shares,
 	}
 	result := db.DB.Create(&c)
 	if result.Error != nil {
@@ -86,11 +85,11 @@ func (db *DB) InsertClientShare(exp_id, client_id string, input_index, index, va
 }
 
 // get client share record
-func (db *DB) GetClientShares(exp_id string, client_id string) ([]ClientShare, error) {
-	var client []ClientShare
+func (db *DB) GetClientShares(exp_id string, client_id string) (ClientShare, error) {
+	var client ClientShare
 	r := db.DB.Find(&client, "exp_id = ? and client_id = ?", exp_id, client_id)
 	if r.Error != nil {
-		return nil, r.Error
+		return ClientShare{}, r.Error
 	}
 	return client, nil
 }
@@ -106,13 +105,13 @@ func (db *DB) GetClientsSharesPerExperiment(exp_id string) ([]ClientShare, error
 }
 
 // update client's share
-func (db *DB) UpdateClientShare(exp_id, client_id string, input_index, index, value int) error {
+func (db *DB) UpdateClientShare(exp_id, client_id string, shares []byte) error {
 	/**
 	r := db.db.Model(&ClientShare{}).Where("exp_id = ? and client_id = ? and input_index = ? and index = ?", exp_id, client_id, input_index, index).Update("value", value)
 	if r.Error != nil {
 		return r.Error
 	}**/
-	db.DB.Save(&ClientShare{Exp_ID: exp_id, Client_ID: client_id, Input_Index: input_index, Index: index, Value: value})
+	db.DB.Save(&ClientShare{Exp_ID: exp_id, Client_ID: client_id, Shares: shares})
 	return nil
 }
 
@@ -138,7 +137,7 @@ func (db *DB) GetValidClientShares(exp_id string) ([]ClientShare, error) {
 			return nil, err
 		}
 
-		clients = append(clients, shares...)
+		clients = append(clients, shares)
 
 	}
 	return clients, nil
@@ -290,6 +289,7 @@ func (db *DB) DeleteValidClient(exp_id, client_id string) error {
 	return nil
 }
 
+/**
 func (db *DB) InsertMask(exp_id, client_id string, input_index, index, value int) error {
 	vss := Mask{
 		Exp_ID:      exp_id,
@@ -312,16 +312,14 @@ func (db *DB) GetMask(exp_id, client_id string, input_index, index int) (*Mask, 
 		return nil, r.Error
 	}
 	return &vss, nil
-}
+}**/
 
-func (db *DB) InsertMaskedShare(exp_id, server_id, client_id string, input_index, index, value int) error {
+func (db *DB) InsertMaskedShare(exp_id, server_id, client_id string, shares []byte) error {
 	mask_share := MaskedShare{
-		Exp_ID:      exp_id,
-		Server_ID:   server_id,
-		Client_ID:   client_id,
-		Input_Index: input_index,
-		Index:       index,
-		Value:       value,
+		Exp_ID:    exp_id,
+		Server_ID: server_id,
+		Client_ID: client_id,
+		Shares:    shares,
 	}
 	result := db.DB.Create(&mask_share)
 	if result.Error != nil {
@@ -330,11 +328,11 @@ func (db *DB) InsertMaskedShare(exp_id, server_id, client_id string, input_index
 	return nil
 }
 
-func (db *DB) GetMaskedShares(exp_id, server_id, client_id string) ([]MaskedShare, error) {
-	var masked_shares []MaskedShare
+func (db *DB) GetMaskedSharesPerClient(exp_id, server_id, client_id string) (MaskedShare, error) {
+	var masked_shares MaskedShare
 	r := db.DB.Find(&masked_shares, "exp_id = ? and server_id = ? and client_id = ?", exp_id, server_id, client_id)
 	if r.Error != nil {
-		return nil, r.Error
+		return MaskedShare{}, r.Error
 	}
 	return masked_shares, nil
 }

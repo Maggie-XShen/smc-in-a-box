@@ -6,15 +6,18 @@ import (
 	"log"
 	"net/http"
 	"os"
-
-	"example.com/SMC/pkg/rss"
 )
 
 type AggregatedShareRequest struct {
-	Exp_ID    string      `json:"Exp_ID "`
-	Server_ID string      `json:"Server_ID"`
-	Timestamp string      `json:"Timestamp"`
-	Shares    []rss.Party `json:"Shares"`
+	Exp_ID    string `json:"Exp_ID "`
+	Server_ID string `json:"Server_ID"`
+	Timestamp string `json:"Timestamp"`
+	Shares    Shares `json:"Shares"`
+}
+
+type Shares struct {
+	Index  []int   `json:"Index"`
+	Values [][]int `json:"Values"`
 }
 
 type OutputPartyRequest struct {

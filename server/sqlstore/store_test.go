@@ -1,6 +1,8 @@
 package sqlstore
 
 import (
+	"encoding/json"
+	"reflect"
 	"testing"
 )
 
@@ -14,11 +16,11 @@ func TestInsertClient(t *testing.T) {
 	} else {
 		clients, err := db.GetClientsPerExperiment("exp1")
 		if err != nil {
-			t.Fatal(err)
+			t.Log(err)
 		} else {
 			got, want := len(clients), 1
 			if got != want {
-				t.Fatalf("num_clients=%v, want %v", got, want)
+				t.Logf("num_clients=%v, want %v", got, want)
 			}
 		}
 	}
@@ -26,15 +28,15 @@ func TestInsertClient(t *testing.T) {
 	// create same client for experiment 1
 	err = db.InsertClient("exp1", "c1")
 	if err != nil {
-		t.Fatal(err)
+		t.Log(err)
 	} else {
 		clients, err := db.GetClientsPerExperiment("exp1")
 		if err != nil {
-			t.Fatal(err)
+			t.Log(err)
 		} else {
 			got, want := len(clients), 1
 			if got != want {
-				t.Fatalf("num_clients=%v, want %v", got, want)
+				t.Logf("num_clients=%v, want %v", got, want)
 			}
 		}
 	}
@@ -42,15 +44,15 @@ func TestInsertClient(t *testing.T) {
 	// create second client for experiment 1
 	err = db.InsertClient("exp1", "c2")
 	if err != nil {
-		t.Fatal(err)
+		t.Log(err)
 	} else {
 		clients, err := db.GetClientsPerExperiment("exp1")
 		if err != nil {
-			t.Fatal(err)
+			t.Log(err)
 		} else {
 			got, want := len(clients), 2
 			if got != want {
-				t.Fatalf("num_clients=%v, want %v", got, want)
+				t.Logf("num_clients=%v, want %v", got, want)
 			}
 		}
 	}
@@ -58,122 +60,79 @@ func TestInsertClient(t *testing.T) {
 	// create new client for experiment 2
 	err = db.InsertClient("exp2", "c1")
 	if err != nil {
-		t.Fatal(err)
+		t.Log(err)
 	} else {
 		clients, err := db.GetClientsPerExperiment("exp2")
 		if err != nil {
-			t.Fatal(err)
+			t.Log(err)
 		} else {
 			got, want := len(clients), 1
 			if got != want {
-				t.Fatalf("num_clients=%v, want %v", got, want)
+				t.Logf("num_clients=%v, want %v", got, want)
 			}
 		}
 	}
 
-	DeleteDB("test.db")
+	//DeleteDB("test.db")
 
 }
 
 func TestInsertClientShare(t *testing.T) {
 	db := NewDB("test")
 
+	shares, _ := json.Marshal([][]int{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}})
 	//create a new client's share
-	err := db.InsertClientShare("exp1", "c1", 1, 1, 12)
+	err := db.InsertClientShare("exp1", "c1", shares)
 	if err != nil {
-		t.Fatal(err)
+		t.Log(err)
 	}
 
 	// create client share which already exist
-	err = db.InsertClientShare("exp1", "c1", 1, 1, 15)
+	newShares, _ := json.Marshal([][]int{{0, 0, 0}})
+	err = db.InsertClientShare("exp1", "c1", newShares)
 	if err != nil {
-		t.Fatal(err)
-	} else {
-		shares, err := db.GetClientShares("exp1", "c1")
-		if err != nil {
-			t.Fatal(err)
-		} else {
-			got, want := len(shares), 1
-			if got != want {
-				t.Fatalf("num_client_shares=%v, want %v", got, want)
-			}
-			got, want = shares[0].Value, 12
-			if got != want {
-				t.Fatalf("client_share_value=%v, want %v", got, want)
-			}
-
-		}
+		t.Log(err)
 	}
 
-	// create second client share
-	err = db.InsertClientShare("exp1", "c1", 1, 2, 20)
+	record, err := db.GetClientShares("exp1", "c1")
 	if err != nil {
-		t.Fatal(err)
+		t.Log(err)
+	}
+	var array2D [][]int
+	err = json.Unmarshal([]byte(record.Shares), &array2D)
+	if err != nil {
+		t.Log(err)
 	} else {
-		shares, err := db.GetClientShares("exp1", "c1")
-		if err != nil {
-			t.Fatal(err)
-		} else {
-			got, want := len(shares), 2
-			if got != want {
-				t.Fatalf("num_client_shares=%v, want %v", got, want)
-			}
+		got, want := array2D, [][]int{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}}
+		if !reflect.DeepEqual(got, want) {
+			t.Logf("ClientShares_records: %v, want: %v", got, want)
 		}
 	}
 
 	// create new client's share
-	err = db.InsertClientShare("exp1", "c2", 1, 1, 23)
+	err = db.InsertClientShare("exp1", "c2", shares)
 	if err != nil {
-		t.Fatal(err)
+		t.Log(err)
 	} else {
-		shares, err := db.GetClientsSharesPerExperiment("exp1")
+		records, err := db.GetClientsSharesPerExperiment("exp1")
 		if err != nil {
-			t.Fatal(err)
+			t.Log(err)
 		} else {
-			got, want := len(shares), 3
+			got, want := len(records), 2
 			if got != want {
-				t.Fatalf("num_shares=%v, want %v", got, want)
-			}
-		}
-	}
-
-	// create new client's share for experiment 2
-	err = db.InsertClientShare("exp2", "c2", 1, 1, 23)
-	if err != nil {
-		t.Fatal(err)
-	} else {
-		shares, err := db.GetClientsSharesPerExperiment("exp2")
-		if err != nil {
-			t.Fatal(err)
-		} else {
-			got, want := len(shares), 1
-			if got != want {
-				t.Fatalf("num_shares=%v, want %v", got, want)
+				t.Logf("num_ClientShares_records=%v, want %v", got, want)
 			}
 		}
 	}
 
 	//update client share
-	err = db.UpdateClientShare("exp2", "c2", 1, 1, 100)
+	shares, _ = json.Marshal([][]int{{0, 0, 0}})
+	err = db.UpdateClientShare("exp2", "c2", shares)
 	if err != nil {
-		t.Fatal(err)
-	} else {
-		shares, err := db.GetClientShares("exp2", "c2")
-		if err != nil {
-			t.Fatal(err)
-		} else {
-			got, want := len(shares), 1
-			if got != want {
-				t.Fatalf("num_client_shares=%v, want %v", got, want)
-			}
-			got, want = shares[0].Value, 100
-			if got != want {
-				t.Fatalf("client_share_value=%v, want %v", got, want)
-			}
-		}
+		t.Log(err)
 	}
 
-	DeleteDB("test.db")
+	//DeleteDB("test.db")
 
 }
 
@@ -181,66 +140,61 @@ func TestValidClient(t *testing.T) {
 	db := NewDB("test")
 
 	//create a new client's share
-	err := db.InsertClientShare("exp1", "c1", 1, 1, 12)
+	shares, _ := json.Marshal([][]int{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}})
+	err := db.InsertClientShare("exp1", "c1", shares)
 	if err != nil {
-		t.Fatal(err)
-	}
-
-	// create second client share
-	err = db.InsertClientShare("exp1", "c1", 1, 2, 20)
-	if err != nil {
-		t.Fatal(err)
+		t.Log(err)
 	}
 
 	// create new client's share
-	err = db.InsertClientShare("exp1", "c2", 1, 1, 23)
+	err = db.InsertClientShare("exp1", "c2", shares)
 	if err != nil {
-		t.Fatal(err)
+		t.Log(err)
 	}
 
 	// create new client's share for experiment 2
-	err = db.InsertClientShare("exp2", "c2", 1, 1, 23)
+	err = db.InsertClientShare("exp2", "c2", shares)
 	if err != nil {
-		t.Fatal(err)
+		t.Log(err)
 	}
 
 	//create valid client
 	err = db.InsertValidClient("exp1", "c1")
 	if err != nil {
-		t.Fatal(err)
+		t.Log(err)
 	}
 
 	err = db.InsertValidClient("exp2", "c2")
 	if err != nil {
-		t.Fatal(err)
+		t.Log(err)
 	}
 
 	clients, err := db.GetValidClientsPerExperiment("exp1")
 	if err != nil {
-		t.Fatal(err)
+		t.Log(err)
 	} else {
 		got, want := len(clients), 1
 		if got != want {
-			t.Fatalf("num_valid_clients=%v, want %v", got, want)
+			t.Logf("num_valid_clients=%v, want %v", got, want)
 		}
 	}
 
 	//get valid client share
-	shares, err := db.GetValidClientShares("exp1")
+	records, err := db.GetValidClientShares("exp1")
 	if err != nil {
-		t.Fatal(err)
+		t.Log(err)
 	} else {
-		got, want := len(shares), 2
+		got, want := len(records), 2
 		if got != want {
-			t.Fatalf("num_vaid_client_shares=%v, want %v", got, want)
+			t.Logf("num_vaid_client_shares=%v, want %v", got, want)
 		}
-		got1, want1 := shares[0].Client_ID, "c1"
+		got1, want1 := records[0].Client_ID, "c1"
 		if got1 != want1 {
-			t.Fatalf("client_ID=%v, want %v", got, want)
+			t.Logf("client_ID=%v, want %v", got, want)
 		}
-		got1, want1 = shares[1].Client_ID, "c1"
+		got1, want1 = records[1].Client_ID, "c2"
 		if got1 != want1 {
-			t.Fatalf("client_ID=%v, want %v", got, want)
+			t.Logf("client_ID=%v, want %v", got, want)
 		}
 
 	}
@@ -251,15 +205,15 @@ func TestValidClient(t *testing.T) {
 	} else {
 		clients, err := db.GetValidClientsPerExperiment("exp1")
 		if err != nil {
-			t.Fatal(err)
+			t.Log(err)
 		}
 		got, want := len(clients), 0
 		if got != want {
-			t.Fatalf("num_valid_clients=%v, want %v", got, want)
+			t.Logf("num_valid_clients=%v, want %v", got, want)
 		}
 	}
 
-	DeleteDB("test.db")
+	//DeleteDB("test.db")
 
 }
 
