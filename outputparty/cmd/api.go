@@ -34,6 +34,8 @@ func (ss *ServerService) CreateServerShare(request AggregatedShareRequest) error
 		return errors.New("experiment does not exist when output party creates server's shares record")
 	}
 
+	log.Printf("outputparty received server shares from %s\n", request.Server_ID)
+
 	shares, err := json.Marshal(request.Shares)
 	if err != nil {
 		log.Fatal(err)

@@ -140,8 +140,8 @@ func (s *Server) clientRequestHandler(rw http.ResponseWriter, req *http.Request)
 			log.Printf("%s cannot create client share - error: %s\n", s.cfg.Server_ID, err)
 		}
 
-		client_count += 1
-		if client_count == client_size {
+		client_count := s.store.CountComplaintsPerExperiment(data.Exp_ID)
+		if int(client_count) == client_size {
 			real_client_share_due = time.Now().UTC() // time to start the step of assemble complaints and broadcast without waiting
 		}
 	}()
