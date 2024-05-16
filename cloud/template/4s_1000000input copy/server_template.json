@@ -5,14 +5,14 @@
     "Key_path":"./privkey.pem",
     "Port": "443",
     "Complaint_urls":[
-        "https://server1-b.privatestats.org:443/complaint/",
-        "https://server2-b.privatestats.org:443/complaint/",
-        "https://server3-b.privatestats.org:443/complaint/"
+        "https://server1.privatestats.org:443/complaint/",
+        "https://server2.privatestats.org:443/complaint/",
+        "https://server3.privatestats.org:443/complaint/"
     ],
     "Masked_share_urls":[
-        "https://server1-b.privatestats.org:443/maskedShare/",
-        "https://server2-b.privatestats.org:443/maskedShare/",
-        "https://server3-b.privatestats.org:443/maskedShare/"
+        "https://server1.privatestats.org:443/maskedShare/",
+        "https://server2.privatestats.org:443/maskedShare/",
+        "https://server3.privatestats.org:443/maskedShare/"
     ],
     "Dolev_complaint_urls":[
         "https://smc-server-2.cs-georgetown.net:443/dolevComplaint/", 
@@ -27,8 +27,8 @@
     "Share_Index": 0,
     "N": 4,
     "T": 1,
-    "Q": 10631,
-    "N_secrets":1,
-    "M": 1, 
+    "Q": 41543,
+    "N_secrets":1000000,
+    "M": 2000, 
     "N_open":240
 }
