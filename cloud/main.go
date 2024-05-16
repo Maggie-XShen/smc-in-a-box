@@ -56,7 +56,7 @@ func main() {
 
 		client_gen.GenerateClientInputCloud(*n_clients, n_exp, input_list, "./client_input")
 
-		run(*client_threads, *n_clients, *n_clients_mal, *start_cid)
+		run(*client_threads, *n_clients_mal, *start_cid)
 
 	} else if *party == "client_mal" {
 
@@ -140,7 +140,7 @@ func main() {
 
 }
 
-func run(client_threads int, n_client, n_client_mal, start_cid int) {
+func run(client_threads, n_client_mal, start_cid int) {
 	Group := make([][]string, client_threads)
 	cid := start_cid
 	for i := 0; i < n_client_mal; i++ {
@@ -153,7 +153,7 @@ func run(client_threads int, n_client, n_client_mal, start_cid int) {
 		cid++
 	}
 
-	for j := n_client_mal; j < n_client; j++ {
+	for j := n_client_mal; j < client_threads; j++ {
 		Group[j] = make([]string, 5)
 		Group[j][0] = "../client/cmd/cmd"
 		Group[j][1] = fmt.Sprintf("-confpath=./client_config/config_c%s.json", strconv.Itoa(cid))
