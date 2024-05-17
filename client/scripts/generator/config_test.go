@@ -11,5 +11,5 @@ func TestGenerateGonfig(t *testing.T) {
 }
 
 func TestGenerateGonfigCloud(t *testing.T) {
-	generator.GenerateClientConfigCloud(4, "client_template.json", "./config")
+	generator.GenerateClientConfigCloud(4, 10, "client_template.json", "./config")
 }

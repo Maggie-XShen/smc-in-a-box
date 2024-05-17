@@ -52,19 +52,11 @@ func main() {
 
 	if *party == "client" {
 
-		client_gen.GenerateClientConfigCloud(*n_clients, filepath.Join(*template_path, "client_template.json"), "./client_config")
+		client_gen.GenerateClientConfigCloud(*client_threads, *start_cid, filepath.Join(*template_path, "client_template.json"), "./client_config")
 
-		client_gen.GenerateClientInputCloud(*n_clients, n_exp, input_list, "./client_input")
+		client_gen.GenerateClientInputCloud(*client_threads, *start_cid, n_exp, input_list, "./client_input")
 
 		run(*client_threads, *n_clients_mal, *start_cid)
-
-	} else if *party == "client_mal" {
-
-		client_gen.GenerateClientConfigCloud(*n_clients, filepath.Join(*template_path, "client_template.json"), "./client_config")
-
-		client_gen.GenerateClientInputCloud(*n_clients, n_exp, input_list, "./client_input")
-
-		run_mal(*n_clients_mal, *start_cid)
 
 	} else if *party == "server" {
 		server_gen.GenerateServerConfigCloud(*n_servers, server_port[:*n_servers], filepath.Join(*template_path, "server_template.json"), "./server_config")
@@ -160,29 +152,6 @@ func run(client_threads, n_client_mal, start_cid int) {
 		Group[j][2] = fmt.Sprintf("-inputpath=./client_input/input_c%s.json", strconv.Itoa(cid))
 		Group[j][3] = "-logpath=./client_log/"
 		Group[j][4] = "-mode=honest"
-		cid++
-	}
-
-	var wg sync.WaitGroup
-
-	for _, cmd := range Group {
-		wg.Add(1)
-		go executeGroup(cmd[0], cmd[1], cmd[2], cmd[3], cmd[4], &wg)
-	}
-
-	// Wait for all commands to finish
-	wg.Wait()
-}
-
-func run_mal(n_client_mal int, start_cid int) {
-	Group := make([][]string, n_client_mal)
-	cid := start_cid
-	for i := 0; i < n_client_mal; i++ {
-		Group[i] = make([]string, 4)
-		Group[i][0] = "../client/cmd/cmd"
-		Group[i][1] = fmt.Sprintf("-confpath=./client_config/config_c%s.json", strconv.Itoa(cid))
-		Group[i][2] = fmt.Sprintf("-inputpath=./client_input/input_c%s.json", strconv.Itoa(cid))
-		Group[i][3] = "-logpath=./client_log/"
 		cid++
 	}
 

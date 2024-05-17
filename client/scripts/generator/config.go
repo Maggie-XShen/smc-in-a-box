@@ -58,7 +58,7 @@ func GenerateClientConfig(client_num int, src string, des string) {
 	}
 }
 
-func GenerateClientConfigCloud(client_num int, src string, des string) {
+func GenerateClientConfigCloud(client_num, start_cid int, src string, des string) {
 	// Ensure the folder exists
 	err := os.MkdirAll(des, os.ModePerm)
 	if err != nil {
@@ -83,7 +83,8 @@ func GenerateClientConfigCloud(client_num int, src string, des string) {
 		return
 	}
 
-	for i := 0; i < client_num; i++ {
+	size := start_cid + client_num
+	for i := start_cid; i < size; i++ {
 		config.Client_ID = "c" + strconv.Itoa(i)
 		config.Token = "t" + strconv.Itoa(i)
 		//config.URLs = urls

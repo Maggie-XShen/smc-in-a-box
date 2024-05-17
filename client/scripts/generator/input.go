@@ -60,7 +60,7 @@ func GenerateClientInput(client_num int, exp_num int, value_num []int, des strin
 
 }
 
-func GenerateClientInputCloud(client_num int, exp_num int, value_num []int, des string) {
+func GenerateClientInputCloud(client_num, start_cid int, exp_num int, value_num []int, des string) {
 	// Ensure the folder exists
 	err := os.MkdirAll(des, os.ModePerm)
 	if err != nil {
@@ -68,7 +68,8 @@ func GenerateClientInputCloud(client_num int, exp_num int, value_num []int, des 
 		return
 	}
 
-	for i := 0; i < client_num; i++ {
+	size := start_cid + client_num
+	for i := start_cid; i < size; i++ {
 		// List to store data objects
 		dataList := make([]map[string]interface{}, 0)
 
