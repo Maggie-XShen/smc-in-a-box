@@ -552,7 +552,8 @@ func (s *Server) WaitForEndOfShareBroadcast(ticker *time.Ticker) {
 
 								newShares, err := json.Marshal(shares)
 								if err != nil {
-									log.Fatal(err)
+									log.Fatalf("Cannot marshall %s shares when updatting shares: %s", vc.Client_ID, err)
+
 								}
 
 								err = s.store.UpdateClientShare(exp.Exp_ID, vc.Client_ID, newShares)
@@ -623,14 +624,15 @@ func (s *Server) aggregateShares(clientShares []sqlstore.ClientShare) (Shares, e
 	var aggreShare Shares
 	err := json.Unmarshal(clientShares[0].Shares, &aggreShare)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Cannot unmarshall %s shares when aggreating shares: %s", clientShares[0].Client_ID, err)
 	}
 
 	for i := 1; i < len(clientShares); i++ {
 		var shares Shares
 		err = json.Unmarshal(clientShares[i].Shares, &shares)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("Cannot unmarshall %s shares when aggreating shares: %s", clientShares[i].Client_ID, err)
+
 		}
 
 		for input_index, sh_list := range shares.Values {
