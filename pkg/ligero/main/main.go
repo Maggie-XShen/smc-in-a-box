@@ -13,7 +13,7 @@ var verify_end time.Duration
 
 func main() {
 
-	zk, err := ligero.NewLigeroZK(100000, 100, 7, 2, 41543, 240)
+	zk, err := ligero.NewLigeroZK(100000, 100, 4, 1, 41543, 240)
 	if err != nil {
 		log.Fatalf("err: %v", err)
 	}

@@ -2,9 +2,12 @@ package sqlstore
 
 import (
 	"log"
+	"os"
+	"time"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 type DB struct {
@@ -24,8 +27,18 @@ func SetupDatabase(sid string) (*gorm.DB, error) {
 	//dsn := fmt.Sprintf("smc:smcinabox@tcp(127.0.0.1:3306)/%s?charset=utf8mb4&parseTime=True&loc=Local", sid)
 	dsn := "smc:smcinabox@tcp(127.0.0.1:3306)/smc?charset=utf8mb4&parseTime=True&loc=Local"
 
+	// Create a new GORM logger that logs only errors
+	newLogger := logger.New(
+		log.New(os.Stdout, "\r\n", log.LstdFlags), // io writer
+		logger.Config{
+			SlowThreshold: time.Nanosecond, // Set the threshold to a very low value
+			LogLevel:      logger.Silent,   // Set log level to Silent
+			Colorful:      false,           // Disable color
+		},
+	)
+
 	// Open a connection to the MySQL database
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{Logger: newLogger})
 	if err != nil {
 		return nil, err
 	}
