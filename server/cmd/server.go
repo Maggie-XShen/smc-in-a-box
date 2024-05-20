@@ -348,7 +348,7 @@ func (s *Server) WaitForEndOfComplaintBroadcast(ticker *time.Ticker) {
 							var shares Shares //{Index:..., Values:...}
 							err = json.Unmarshal(record.Shares, &shares)
 							if err != nil {
-								log.Printf("%s cannot unmarshall client shares record\n", s.cfg.Server_ID)
+								log.Printf("%s cannot unmarshall %s shares record\n", s.cfg.Server_ID, c.Client_ID)
 								panic(err)
 							}
 
