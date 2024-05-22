@@ -1,7 +1,7 @@
 {
     "OutputParty_ID": "op1",
-    "Cert_path":"/path to certificate",
-    "Key_path":"/path to private key",
+    "Cert_path":"./fullchain.pem",
+    "Key_path":"./privkey.pem",
     "Port": "443",
     "N": 7,
     "T": 2,

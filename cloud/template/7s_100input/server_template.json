@@ -1,8 +1,8 @@
 {
     "Server_ID": "s0",
     "Token": "stk0",
-    "Cert_path":"/path to cerfiticate",
-    "Key_path":"/path to private key",
+    "Cert_path":"./fullchain.pem",
+    "Key_path":"./privkey.pem",
     "Port": "443",
     "Complaint_urls":[
         "https://server1.privatestats.org:443/complaint/",
