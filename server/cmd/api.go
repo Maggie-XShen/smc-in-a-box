@@ -39,7 +39,6 @@ func NewExperimentService(db *sqlstore.DB) *ExperimentService {
 }
 
 func (c *ClientService) CreateClientShare(request ClientRequest, cfg *config.Server) error {
-	// TODO : do some basic validations, e.g. missing exp_id, client_id, etc.
 	exp, err := c.db.GetExperiment(request.Exp_ID)
 	if err != nil {
 		return err

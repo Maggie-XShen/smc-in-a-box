@@ -12,11 +12,3 @@ type ServerShare struct {
 	Server_ID string `gorm:"primaryKey"`
 	Shares    []byte `gorm:"type:longblob"`
 }
-
-/**
-type ServerComputation struct {
-	Exp_ID         string
-	Server_ID      string
-	SumShare_Value int
-	SumShare_Index int
-}**/

@@ -25,7 +25,6 @@ func NewExperimentService(s *sqlstore.DB) *ExperimentService {
 }
 
 func (ss *ServerService) CreateServerShare(request AggregatedShareRequest) error {
-	//Todo: check validity of server request
 	exp, err := ss.store.GetExperiment(request.Exp_ID)
 	if err != nil {
 		return err

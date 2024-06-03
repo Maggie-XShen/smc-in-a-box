@@ -40,35 +40,3 @@ func TestMulMatrix(t *testing.T) {
 		}
 	}
 }
-
-/**
-func TestInterpolateAtPoint(t *testing.T) {
-	tests := []struct {
-		x_sample  []int
-		y_samples []int
-		x         int
-		q         int
-		expected  int
-		wantErr   error
-	}{
-		// Test case 1: Valid input
-		{[]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13}, []int{33, 24, 39, 29, 36, 18, 18, 35, 24, 13, 7, 2, 36}, 40, 41, 0, nil},
-	}
-
-
-	for _, test := range tests {
-		result, err := zk.Interpolate_at_Point(test.x_sample, test.y_samples, test.x, test.q)
-
-		// Check if an error is expected
-		if err != test.wantErr {
-			t.Errorf("Expected error: %v, but got error: %v", test.wantErr, err)
-			continue
-		}
-
-		// Check if the result matches the expected output
-		if !reflect.DeepEqual(result, test.expected) {
-			t.Errorf("Expected %v, but got %v", test.expected, result)
-		}
-	}
-}
-**/

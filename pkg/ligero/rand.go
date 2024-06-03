@@ -1,4 +1,3 @@
-// TODO: add reference
 package ligero
 
 import (

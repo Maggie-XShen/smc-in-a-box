@@ -207,19 +207,6 @@ func (s *AggregatedShareRequest) ToJson() []byte {
 	return compressedData.Bytes()
 }
 
-/**
-func (c *ClientRequest) ReadJson(req *http.Request) ClientRequest {
-	decoder := json.NewDecoder(req.Body)
-	var t ClientRequest
-
-	err := decoder.Decode(&t)
-	if err != nil {
-		log.Fatalf("Cannot decode client request: %s", err)
-	}
-
-	return t
-}**/
-
 func (c *ClientRequest) ReadJson(req *http.Request) ClientRequest {
 	// Decompress the data using Gzip
 	gzipReader, err := gzip.NewReader(req.Body)

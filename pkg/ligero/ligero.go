@@ -81,8 +81,6 @@ func NewLigeroZK(N_secret, M, N_server, T, Q, N_open int) (*LigeroZK, error) {
 	gc := GlobConstants{flag_num: make([]bool, Q), values_num: make([][]int, Q), flag_denom: false, values_denom: make([]int, Q)}
 	gc_codetest := GlobConstantsCodeTest{flag_num: make([]bool, Q), values_num: make([][]int, Q), flag_denom: false, values_denom: make([]int, Q)}
 
-	//gc := GlobConstants{flag: make([]bool, Q), values: make([][]int, Q)}
-
 	return &LigeroZK{n_secret: N_secret, n_shares: N_shares, m: M, l: L, n_server: N_server, t: T, q: Q, n_encode: N_encode, n_open_col: N_open, npss: pss, glob_constants: gc, glob_constants_code_test: gc_codetest}, nil
 }
 
@@ -162,7 +160,7 @@ func (zk *LigeroZK) GenerateProof(secrets []int) ([]*Proof, error) {
 	h2 := zk.generate_hash([][]byte{h1, fst_root, ConvertToByteArray(q_code), ConvertToByteArray(q_quadra), ConvertToByteArray(q_linear)})
 
 	//generate column check
-	r4 := RandVector(h2, zk.n_open_col, len(leaves)) //TODO: need to verify the third parameter
+	r4 := RandVector(h2, zk.n_open_col, len(leaves))
 	column_check, err := zk.generate_column_check(tree, leaves, r4, nonces, code_mask, quadra_mask, linear_mask, encoded_witeness_columnwise)
 	if err != nil {
 		log.Fatal(err)
@@ -283,8 +281,6 @@ func (zk *LigeroZK) encode_extended_witness(input [][]int, key []int) ([][]int, 
 		crs1.Seed(key[i%(1+zk.n_shares)], nonce)
 		rand_values[i] = int(crs1.Int63(int64(zk.q)))
 		matrix[i] = make([]int, zk.n_encode)
-
-		// zk.npss.Gen_randomness_seq(rand_values[i])
 	}
 
 	zk.npss.Split(input[0], rand_values[0])
@@ -340,94 +336,6 @@ func (zk *LigeroZK) encode_extended_witness(input [][]int, key []int) ([][]int, 
 
 	return matrix, nil
 }
-
-// // encode extended witness row-by-row using packed secret sharing
-// func (zk *LigeroZK) encode_extended_witness(input [][]int, key []int) ([][]int, error) {
-// 	if len(input) == 0 {
-// 		return nil, fmt.Errorf("Invalid input: Input is empty")
-// 	}
-
-// 	if len(input) != zk.m*(1+zk.n_shares) || len(input[0]) != zk.l {
-// 		return nil, fmt.Errorf("Invalid input")
-// 	}
-
-// 	matrix := make([][]int, len(input))
-// 	for i := range matrix {
-// 		matrix[i] = make([]int, zk.n_encode)
-// 	}
-
-// 	crs := NewCryptoRandSource()
-
-// 	rand_values := make([]int, len(input))
-// 	for i := 0; i < len(input); i++ {
-// 		nonce := i / (1 + zk.n_shares)
-// 		crs.Seed(key[i%(1+zk.n_shares)], nonce)
-// 		rand_values[i] = int(crs.Int63(int64(zk.q)))
-// 		matrix[i] = make([]int, zk.n_encode)
-
-// 	}
-
-// 	// packed-secret sharing each row in input
-// 	for i := 0; i < len(input); i++ {
-// 		// nonce := i / (1 + zk.n_shares)
-
-// 		// crs.Seed(key[i%(1+zk.n_shares)], nonce)
-
-// 		shares, err := zk.npss.Split(input[i], rand_values[i])
-// 		if err != nil {
-// 			log.Fatal(err)
-// 		}
-// 		fmt.Println("shares : ", i, shares)
-
-// 		values := make([]int, zk.n_encode)
-// 		for j := 0; j < zk.n_encode; j++ {
-// 			values[j] = shares[j].Value
-// 		}
-// 		matrix[i] = values
-
-// 	}
-// 	fmt.Println("Matrix: ", matrix)
-// 	return matrix, nil
-// }
-
-// // commit encoded extended witness via Merkle Tree
-// // parameter input:columnwise encoded extended witness,
-// // each row of the input is a column of encoded extended witness
-// func (zk *LigeroZK) generate_merkletree(input [][]int) (*merkletree.MerkleTree, [][]byte, []int, error) {
-// 	length := len(input)
-// 	if length == 0 {
-// 		return nil, nil, nil, fmt.Errorf("Invalid input: Input is empty")
-// 	}
-
-// 	// generate a list of nonces
-// 	nonces := generate_seeds(length, zk.q)
-
-// 	// hash each column
-// 	leaves := make([][]byte, length)
-
-// 	for i := 0; i < length; i++ {
-// 		list := make([]int, len(input[0])+1)
-// 		list = append(list, input[i]...)
-// 		list = append(list, nonces[i])
-// 		concatenated, err := ConvertColumnToString(list)
-
-// 		if err != nil {
-// 			panic(err)
-// 		}
-
-// 		leaves[i] = []byte(concatenated)
-
-// 	}
-
-// 	//Create a new Merkle Tree from hashed columns
-// 	tree, err := merkletree.New(leaves)
-// 	if err != nil {
-// 		return nil, nil, nil, err
-// 	}
-
-// 	return tree, leaves, nonces, nil
-
-// }
 
 func (zk *LigeroZK) generate_merkletree(input [][]int) (*merkletree.MerkleTree, [][]byte, []int, error) {
 	length := len(input)
@@ -520,23 +428,6 @@ func (zk *LigeroZK) generate_fst_merkletree(party_sh []Shares, seeds []int) (*me
 	return tree, leaves, nil
 
 }
-
-// // randomly choose t' columns and get their authentication paths
-// func (zk *LigeroZK) generate_column_check(tree *merkletree.MerkleTree, leaves [][]byte, cols []int, m_nonce []int, c_mask []int, q_mask []int, l_mask []int, input [][]int) ([]OpenedColumn, error) {
-// 	column_check := make([]OpenedColumn, len(cols))
-
-// 	for i := range cols {
-// 		index := cols[i]
-// 		proof, err := tree.GenerateProof(leaves[index])
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 		column_check[i] = OpenedColumn{List: input[index], Index: index, Merkle_nonce: m_nonce[index], Code_mask: c_mask[index], Quadra_mask: q_mask[index], Linear_mask: l_mask[index], Authpath: proof.Hashes}
-
-// 	}
-
-// 	return column_check, nil
-// }
 
 func (zk *LigeroZK) generate_column_check(tree *merkletree.MerkleTree, leaves [][]byte, cols []int, m_nonce []int, c_mask []int, q_mask []int, l_mask []int, input [][]int) ([]OpenedColumn, error) {
 	column_check := make([]OpenedColumn, len(cols)) // Adjusted length here

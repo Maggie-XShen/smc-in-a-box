@@ -14,10 +14,12 @@ import (
 	"time"
 )
 
-var client_header = []string{"id", "N_secrets", "N", "M", "N_open", "T", "start", "proof_size", "proof_time", "end"}
-var server_header = []string{"id", "N_clients", "N_secrets", "N", "M", "N_open", "T", "client_share_due", "complaint_due", "share_broadcast_due", "start", "avg_verify_time", "num_client_received", "total_verify_time", "real_client_share_due", "real_complaint_due", "mask_share_time", "real_share_broadcast_due", "share_correction_time", "end"}
+var client_header = []string{"id", "N_secrets", "N", "M", "N_open", "T", "start", "input_shares_size", "proof_size", "proof_time", "end"}
+var server_header = []string{"id", "N_clients", "N_secrets", "N", "M", "N_open", "T", "avg_verify_time"}
 var op_header = []string{"id", "N_clients", "N_secrets", "N", "T", "client_share_due", "server_share_due", "start", "real_server_share_due", "reconstruction_time", "end"}
-var server_mal_header = []string{"id", "N_clients", "N_secrets", "N", "M", "N_open", "T", "client_share_due", "complaint_due", "share_broadcast_due", "start", "avg_verify_time", "num_client_received", "real_client_share_due", "real_complaint_due", "mask_share_time", "real_share_broadcast_due", "share_correction_time", "end"}
+var server_mal_header = []string{"id", "N_clients", "N_secrets", "N", "M", "N_open", "T", "mask_share_time", "share_correction_time"}
+
+//var server_mal_header = []string{"id", "N_clients", "N_secrets", "N", "M", "N_open", "T", "client_share_due", "complaint_due", "share_broadcast_due", "start", "real_client_share_due", "real_complaint_due", "mask_share_time", "real_share_broadcast_due", "share_correction_time", "end"}
 
 func main() {
 	logLocation := flag.String("logLocation", "./", "log folder path")

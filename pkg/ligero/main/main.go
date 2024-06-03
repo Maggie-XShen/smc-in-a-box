@@ -13,7 +13,7 @@ var verify_end time.Duration
 
 func main() {
 
-	zk, err := ligero.NewLigeroZK(100000, 100, 4, 1, 41543, 240)
+	zk, err := ligero.NewLigeroZK(1000000, 2000, 4, 1, 41543, 240)
 	if err != nil {
 		log.Fatalf("err: %v", err)
 	}
@@ -26,6 +26,8 @@ func main() {
 	start := time.Now()
 	proof, err := zk.GenerateProof(secrets)
 	end := time.Since(start)
+	proof_size, share_size := zk.GetSize(*proof[0])
+	fmt.Printf("share size: %d, proof size: %d\n", share_size, proof_size)
 
 	fmt.Printf("proof generation end: %v\n", end)
 

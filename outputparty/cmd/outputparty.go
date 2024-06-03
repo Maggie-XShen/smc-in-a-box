@@ -159,8 +159,6 @@ func (op *OutputParty) WaitForEndOfExperiment(ticker *time.Ticker) {
 			}
 
 		}
-
-		// Todo: check if experiment is over and do something (e.g., remove exp and clients information from DB)
 	}
 }
 

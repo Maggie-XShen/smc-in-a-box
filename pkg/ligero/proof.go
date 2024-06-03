@@ -84,8 +84,6 @@ func (zk *LigeroZK) VerifyProof(proof Proof) (bool, error) {
 
 	gen_hash_start := time.Now()
 	h1 := zk.generate_hash([][]byte{proof.MerkleRoot})
-	//h2 := zk.generate_hash([][]byte{h1, proof.FST_root, ConvertToByteArray(proof.CodeTest), ConvertToByteArray(proof.QuadraTest), ConvertToByteArray(proof.LinearTest)})
-	//r4 := zk.generate_random_vector(h2, zk.n_open_col, zk.n_encode)
 	gen_hash_end = time.Since(gen_hash_start)
 
 	//verify opened columns are correct
@@ -128,20 +126,6 @@ func (zk *LigeroZK) VerifyProof(proof Proof) (bool, error) {
 		return false, err
 	}
 	linear_end = time.Since(linear_start)
-
-	/**
-	type step struct {
-		name     string
-		time     time.Duration
-		duration string
-	}
-
-	list := []step{{name: "auth_path", time: auth_path_end, duration: auth_path_end.String()}, {name: "gen_hash", time: gen_hash_end, duration: gen_hash_end.String()}, {name: "open_col", time: open_col_end, duration: open_col_end.String()}, {name: "code_end", time: code_end, duration: code_end.String()}, {name: "quadra_hash", time: quadra_end, duration: quadra_end.String()}, {name: "linear_end", time: linear_end, duration: linear_end.String()}}
-
-	sort.Slice(list, func(i, j int) bool {
-		return list[i].time > list[j].time
-	})
-	fmt.Printf("%+v\n", list)**/
 
 	return true, nil
 }
@@ -307,44 +291,6 @@ func (zk *LigeroZK) verify_linear_proof(shares Shares, key []int, q_linear []int
 	return true, nil
 }
 
-// func (zk *LigeroZK) check_shares_with_opened_column(parties []rss.Party, key []int, open_cols []OpenedColumn) bool {
-
-// 	size := len(parties)
-// 	claims := make([]Claim, size)
-
-// 	for i := 0; i < size; i++ {
-// 		sh_list := make([]rss.Share, zk.n_shares)
-// 		for j := 0; j < len(parties[0].Shares); j++ {
-// 			sh_list[parties[0].Shares[j].Index] = parties[i].Shares[j]
-// 		}
-// 		claims[i] = Claim{Secret: 0, Shares: sh_list}
-// 	}
-
-// 	extended_witness, err := zk.prepare_extended_witness(claims)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-
-// 	encoded_witness, err := zk.encode_extended_witness(extended_witness, key)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-
-// 	for _, col := range open_cols {
-// 		for bl := 0; bl < len(encoded_witness); bl = bl + 1 + zk.n_shares {
-// 			for i := 0; i < len(parties[0].Shares); i++ {
-// 				rw := bl + parties[0].Shares[i].Index + 1
-// 				if (encoded_witness[rw][col.Index]) != col.List[rw] {
-// 					return false
-// 				}
-// 			}
-// 		}
-// 	}
-
-// 	return true
-
-// }
-
 func (zk *LigeroZK) check_shares_with_opened_column(shares Shares, key []int, open_cols []OpenedColumn) bool {
 	size := len(shares.Values)
 	claims := make([]Claim, size)
@@ -408,47 +354,6 @@ func (zk *LigeroZK) check_shares_with_opened_column(shares Shares, key []int, op
 
 	return result
 }
-
-// func (zk *LigeroZK) prepare_encode_extended_witness(claims []Claim, key []int) ([][]int, error) {
-// 	// Prepare extended witnesses for each claim concurrently
-// 	extendedWitnessesChan := make(chan [][]int, len(claims))
-// 	errChan := make(chan error, len(claims))
-// 	var wg sync.WaitGroup
-// 	wg.Add(len(claims))
-// 	for _, claim := range claims {
-// 		go func(claim Claim) {
-// 			defer wg.Done()
-// 			extendedWitness, err := zk.prepare_extended_witness([]Claim{claim}) // Pass single claim in a slice
-// 			if err != nil {
-// 				errChan <- err
-// 				return
-// 			}
-// 			encodedWitness, err := zk.encode_extended_witness(extendedWitness, key)
-// 			if err != nil {
-// 				errChan <- err
-// 				return
-// 			}
-// 			extendedWitnessesChan <- encodedWitness
-// 		}(claim)
-// 	}
-// 	go func() {
-// 		wg.Wait()
-// 		close(extendedWitnessesChan)
-// 	}()
-
-// 	// Collect extended witnesses
-// 	extendedWitnesses := make([][]int, len(claims))
-// 	for i := range claims {
-// 		select {
-// 		case extendedWitness := <-extendedWitnessesChan:
-// 			extendedWitnesses[i] = extendedWitness
-// 		case err := <-errChan:
-// 			return nil, err
-// 		}
-// 	}
-
-// 	return extendedWitnesses, nil
-// }
 
 func (zk *LigeroZK) check_quadra_with_opened_column(test_value []int, randomness []int, open_cols []OpenedColumn) bool {
 	for _, col := range open_cols {

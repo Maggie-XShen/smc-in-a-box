@@ -97,11 +97,6 @@ func (s *Server) Close(ticker *time.Ticker) {
 
 }
 
-/*
-*Set up experiments table before
-client, server and outputparty start communicating
-*
-*/
 func (s *Server) HandleExp(path string) {
 	experiments := ReadServerInput(path)
 
@@ -407,7 +402,6 @@ func (s *Server) WaitForEndOfComplaintBroadcast(ticker *time.Ticker) {
 						}(address)
 					}
 
-					//TODO:dolev strong broadcast
 					//s.dolevMaskedShareBroadcast(1, message, []Signature{})
 
 				}
@@ -604,12 +598,11 @@ func (s *Server) WaitForEndOfShareBroadcast(ticker *time.Ticker) {
 		}
 
 	}
-	//TODO: check if experiment is over and do something (e.g., remove exp and clients information from DB)
 
 }
 
 func (s *Server) getMask(exp_id, client_id string, input_index, share_index int) int {
-	key := 1 //TODO: change key to offline generated key
+	key := 1
 	crs := NewCryptoRandSource()
 	crs.Seed(key, exp_id, client_id, input_index, share_index)
 	mask := int(crs.Int63(int64(s.cfg.Q)))

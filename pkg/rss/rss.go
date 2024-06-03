@@ -41,7 +41,6 @@ func (rss *ReplicatedSecretSharing) Split(secret int) ([]int, [][]Share, error) 
 
 	n_sh := combin.Binomial(rss.n, rss.t) //compute total number of shares a secret splits to
 
-	//p_sh := combin.Binomial(rss.n-1, rss.t) //compute total number of shares stored by each party
 	combinations := combin.Combinations(rss.n, rss.t)
 
 	//generate all shares
@@ -57,21 +56,6 @@ func (rss *ReplicatedSecretSharing) Split(secret int) ([]int, [][]Share, error) 
 		shares[n_sh-1] = temp - shares[i]
 	}
 	shares[n_sh-1] = mod(shares[n_sh-1], rss.q)
-
-	/**
-	//generate shares for each party
-	list := combin.Combinations(n_sh, p_sh)
-
-	result := make([]Party, rss.n)
-	for i := 0; i < rss.n; i++ {
-		p_sh := make([]Share, p_sh)
-		for j := 0; j < len(list[i]); j++ {
-			p_sh[j] = shares[list[i][j]]
-		}
-
-		result[i] = Party{Index: i, Shares: p_sh}
-
-	}**/
 
 	// Associate the above shares to respective parties
 	shParty := make(map[int][]Share)

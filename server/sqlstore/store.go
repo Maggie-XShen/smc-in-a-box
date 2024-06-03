@@ -299,31 +299,6 @@ func (db *DB) DeleteValidClient(exp_id, client_id string) error {
 	return nil
 }
 
-/**
-func (db *DB) InsertMask(exp_id, client_id string, input_index, index, value int) error {
-	vss := Mask{
-		Exp_ID:      exp_id,
-		Client_ID:   client_id,
-		Input_Index: input_index,
-		Index:       index,
-		Value:       value,
-	}
-	result := db.DB.Create(&vss)
-	if result.Error != nil {
-		return result.Error
-	}
-	return nil
-}
-
-func (db *DB) GetMask(exp_id, client_id string, input_index, index int) (*Mask, error) {
-	var vss Mask
-	r := db.DB.Find(&vss, "exp_id = ? and client_id = ? and input_index =? and index=?", exp_id, client_id, input_index, index)
-	if r.Error != nil {
-		return nil, r.Error
-	}
-	return &vss, nil
-}**/
-
 func (db *DB) InsertMaskedShare(exp_id, server_id, client_id string, shares []byte) error {
 	mask_share := MaskedShare{
 		Exp_ID:    exp_id,
@@ -537,45 +512,3 @@ func (db *DB) InsertClientRegistry(exp_id, client_id, token string) error {
 	}
 	return nil
 }
-
-// get client registration record
-/**
-func (store *SqlStore) GetClientRegistry(exp_id string, client_id string) (*ClientRegistry, error) {
-	var cr ClientRegistry
-	r := store.db.Find(&cr, "exp_id = ? and client_id = ?", exp_id, client_id)
-	if r.Error != nil {
-		return nil, r.Error
-	}
-	return &cr, nil
-}**/
-
-// get clients' registration records of an experiment
-/**
-func (store *SqlStore) GetRegisteredClient(exp_id string) ([]ClientRegistry, error) {
-	var registrations []ClientRegistry
-	r := store.db.Find(&registrations, "exp_id = ?", exp_id)
-	if r.Error != nil {
-		return nil, r.Error
-	}
-	return registrations, nil
-}**/
-
-// delete server record from server table
-/**
-func (store *SqlStore) DeleteServer(exp_id string) error {
-	r := store.db.Delete(&ServerComputation{Exp_ID: exp_id})
-	if r.Error != nil {
-		return r.Error
-	}
-	return nil
-}**/
-
-// delete client registration record from client table
-/**
-func (store *SqlStore) DeleteClientRegistry(exp_id string) error {
-	r := store.db.Delete(&ClientRegistry{Exp_ID: exp_id})
-	if r.Error != nil {
-		return r.Error
-	}
-	return nil
-}**/

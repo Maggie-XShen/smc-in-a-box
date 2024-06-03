@@ -44,7 +44,6 @@ func NewPackedSecretSharing(N, T, K, Q int) (*PackedSecretSharing, error) {
 		return nil, fmt.Errorf("q must be a prime number")
 	}
 
-	//return &PackedSecretSharing{n: N, t: T, k: K, q: Q, flag: make([]bool, N), glob_constants: make([][]int, N)}, nil
 	return &PackedSecretSharing{n: N, t: T, k: K, q: Q, flag_num: make([]bool, N), glob_constant_num: make([][]int, N), glob_num: 1, flag_denum: false, glob_constant_denum: make([]int, N)}, nil
 
 }
@@ -126,20 +125,6 @@ func (p *PackedSecretSharing) sample_packed_polynomial(secrets []int, seed int) 
 // interpolate_at_point takes t+k sample points and returns
 // the value at a given x using a lagrange interpolation.
 func (p *PackedSecretSharing) interpolate_at_point(x_samples []int, y_samples []int, x int) int {
-	/**
-	if !p.flag[x-1] {
-		p.glob_constants[x-1] = make([]int, len(x_samples))
-		p.glob_constants[x-1] = p.lagrange_constants_for_point(x_samples, x)
-		p.flag[x-1] = true
-	}
-	//constants := p.lagrange_constants_for_point(x_samples, x)
-
-	y := 0
-	for i := 0; i < len(y_samples); i++ {
-		y = y + y_samples[i]*p.glob_constants[x-1][i]
-	}
-	return mod(y, p.q)
-	**/
 	if !p.flag_denum {
 		p.glob_constant_denum = make([]int, len(x_samples))
 		p.glob_constant_denum = p.lagrange_constants_for_point(x_samples)
@@ -161,11 +146,10 @@ func (p *PackedSecretSharing) interpolate_at_point(x_samples []int, y_samples []
 
 			p.glob_constant_num[x-1][i] = mod(p.inverse(x_samples[i]-x)*num, p.q)
 		}
-		// p.glob_constant_num[x-1] = p.lagrange_constants_for_point(x_samples)
+
 		p.flag_num[x-1] = true
 
 	}
-	//constants := p.lagrange_constants_for_point(x_samples, x)
 
 	y := 0
 	for i := 0; i < len(y_samples); i++ {
@@ -173,32 +157,6 @@ func (p *PackedSecretSharing) interpolate_at_point(x_samples []int, y_samples []
 	}
 	return mod(y, p.q)
 }
-
-/**
-// lagrange_constants_for_point returns lagrange constants for the given x
-func (p *PackedSecretSharing) lagrange_constants_for_point(x_samples []int, x int) []int {
-	constants := make([]int, len(x_samples))
-	for i := range constants {
-		constants[i] = 0
-	}
-
-	for i := 0; i < len(constants); i++ {
-		xi := x_samples[i]
-		num := 1
-		denum := 1
-		for j := 0; j < len(constants); j++ {
-			if j != i {
-				xj := x_samples[j]
-				num = mod(num*(xj-x), p.q)
-				denum = mod(denum*(xj-xi), p.q)
-			}
-		}
-		constants[i] = mod(num*p.inverse(denum), p.q)
-	}
-
-	return constants
-
-}**/
 
 func (p *PackedSecretSharing) lagrange_constants_for_point(x_samples []int) []int {
 
@@ -213,7 +171,6 @@ func (p *PackedSecretSharing) lagrange_constants_for_point(x_samples []int) []in
 		for j := 0; j < len(constants); j++ {
 			if j != i {
 				xj := x_samples[j]
-				// num = mod(num*(xj-x), p.q)
 				denum = mod(denum*(xj-xi), p.q)
 			}
 		}
