@@ -5,7 +5,6 @@ import (
 	"log"
 	"strings"
 	"sync"
-	"time"
 
 	merkletree "github.com/wealdtech/go-merkletree"
 )
@@ -23,13 +22,6 @@ type GlobConstantsCodeTest struct {
 	values_denom []int
 	flag_denom   bool
 }
-
-var auth_path_end time.Duration
-var gen_hash_end time.Duration
-var open_col_end time.Duration
-var code_end time.Duration
-var quadra_end time.Duration
-var linear_end time.Duration
 
 type Proof struct {
 	MerkleRoot   []byte         `json:"MerkleRoot"`
@@ -75,24 +67,31 @@ func newProof(root []byte, column_check []OpenedColumn, q_code []int, q_quadra [
 
 func (zk *LigeroZK) VerifyProof(proof Proof) (bool, error) {
 	//verify fst auth path
-	auth_path_start := time.Now()
 	fstAuthPathTest, err := zk.verify_fst_authpath(proof.Shares, proof.Seeds, proof.FST_authpath, proof.FST_root)
 	if !fstAuthPathTest {
 		return false, err
 	}
-	auth_path_end = time.Since(auth_path_start)
 
-	gen_hash_start := time.Now()
 	h1 := zk.generate_hash([][]byte{proof.MerkleRoot})
-	gen_hash_end = time.Since(gen_hash_start)
+	h2 := zk.generate_hash([][]byte{h1, proof.FST_root, ConvertToByteArray(proof.CodeTest), ConvertToByteArray(proof.QuadraTest), ConvertToByteArray(proof.LinearTest)})
+	r4 := RandVector(h2, zk.n_open_col, zk.n_encode)
+
+	size := len(proof.ColumnTest)
+	if len(r4) == size {
+		for i := 0; i < size; i++ {
+			if r4[i] != proof.ColumnTest[i].Index {
+				return false, fmt.Errorf("opened column's index is wrong ")
+			}
+		}
+	} else {
+		return false, fmt.Errorf("opened column's index is wrong ")
+	}
 
 	//verify opened columns are correct
-	open_col_start := time.Now()
 	openenColumnTest, err := zk.verify_opened_columns(proof.ColumnTest, proof.MerkleRoot)
 	if !openenColumnTest {
 		return false, err
 	}
-	open_col_end = time.Since(open_col_start)
 
 	len1 := zk.m * (1 + zk.n_shares)
 	len2 := zk.m
@@ -101,31 +100,25 @@ func (zk *LigeroZK) VerifyProof(proof Proof) (bool, error) {
 	random_vector := RandVector(h1, len1+len2+len3, zk.q)
 
 	//verify code test proof
-	code_start := time.Now()
 	r1 := random_vector[:len1]
 	codeTest, err := zk.verify_code_proof(proof.CodeTest, r1, proof.ColumnTest)
 	if !codeTest {
 		return false, err
 	}
-	code_end = time.Since(code_start)
 
 	//verify quadratic test proof
-	quadra_start := time.Now()
 	r2 := random_vector[len1 : len1+len2]
 	quadraticTest, err := zk.verify_quadratic_constraints(proof.QuadraTest, r2, proof.ColumnTest)
 	if !quadraticTest {
 		return false, err
 	}
-	quadra_end = time.Since(quadra_start)
 
 	//verify linear test proof
-	linear_start := time.Now()
 	r3 := random_vector[len1+len2 : len1+len2+zk.m]
 	linearTest, err := zk.verify_linear_proof(proof.Shares, proof.Seeds, proof.LinearTest, r3, proof.ColumnTest)
 	if !linearTest {
 		return false, err
 	}
-	linear_end = time.Since(linear_start)
 
 	return true, nil
 }
