@@ -27,6 +27,7 @@ There are three ways running computation:
    ./cmd -confpath=“path_to_client_config_file” -inputpath=“path_to_input_file” -logpath="path_to_log_folder"
    ``` 
    Note: use -mode=honest to run client without malicious behaviour, default setting is malicious client
+   
    **Note:** Servers and output party need to start running before clients.
 2. One-command local execution. This allows all parties running on the same machine.
    At folder local, after preparing each party's template, compile then run
