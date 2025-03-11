@@ -11,7 +11,7 @@ At folder local, after preparing each party's template, compile then run
 ```
 
 ## Build & Run on Cloud Provider
-The deployment and execution are managed through ansible. Details are described in the following repository.
+The deployment and execution on Google Cloud are managed through ansible. Details are described in the following repository.
 https://github.com/GUSecLab/smc-in-a-box-ansible/tree/main
 
 ## Build & Run Locally (without Docker Compose)
@@ -38,6 +38,7 @@ https://github.com/GUSecLab/smc-in-a-box-ansible/tree/main
    If MySQL is running, it will be marked as started.
    
 2. Prepare config file and input file
+   
 Each client, server and output party should obtain a config file and an input file before the software runs. The config file is a JSON blob, and a template of it can be found at client_template.json, server_template.json and outputparty_template.json. Scripts to generate config files and input files for many clients, servers and output parties are located at each party's scripts/generator.
 
 Example of the config file for a client is shown below. 
@@ -58,7 +59,7 @@ Example of the config file for a client is shown below.
 }
 ```
 
-To describe meaning of important filds:
+To describe the meaning of important fields:
 - URLs: a list of server URLs for clients submitting their data to each server.
 - N: number of total servers
 - T: number of malicious servers
@@ -95,7 +96,7 @@ Example of the config file for a server is shown below.
 }
 ```
 
-To describe meaning of important filds:
+To describe the meaning of important fields:
 
 - Cert_path: server's certificate location required when running with cloud provider.
 - Key_path: server's private key location required when running with cloud provider.
@@ -135,7 +136,7 @@ output party
 ]
 ```
 
-To describe meaning of important filds:
+To describe the meaning of important fields:
 
 - Secretes: a vector of a client's input, each bit represents an attribute.
 - ClientShareDue: due time that clients submit shares and proofs to servers.
@@ -145,6 +146,7 @@ To describe meaning of important filds:
 - Owner: a URL of the output party for servers submitting aggregated shares to the output party.
 
 3. Run the software
+   
 To run a server with TLS (default), at the folder server/cmd, compile then run
 ```
 ./cmd -confpath="path_to_server_config_file" -inputpath="path_to_experiments_file" -logpath="path_to_log_folder" -n_client=num_of_clients
@@ -160,7 +162,7 @@ To run a client, at the folder client/cmd, compile then run
 ./cmd -confpath=“path_to_client_config_file” -inputpath=“path_to_input_file” -logpath="path_to_log_folder"
 ``` 
 
-To describe meaning of some parameters:
+To describe the meaning of some parameters:
 - For server and output party, -mode="http" is used to run without TLS, default setting is using TLS; 
 - For server, -n_client_mal=num_of_malicious_client is used to run experiment with malicious clients, default setting is assuming clients are all honest.
 - For client, -mode=honest is used to run client without malicious behavior, default setting is client could act maliciously.
