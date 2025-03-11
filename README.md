@@ -39,9 +39,9 @@ https://github.com/GUSecLab/smc-in-a-box-ansible/tree/main
    
 ### 2. Prepare config file and input file
    
-Each client, server and output party should obtain a config file and an input file before the software runs. The config file is a JSON blob, and a template of it can be found at client_template.json, server_template.json and outputparty_template.json. Scripts to generate config files and input files for many clients, servers and output parties are located at each party's scripts/generator.
+Each client, server, and output party needs a config and input file before running. Example configs are in client_template.json, server_template.json, and outputparty_template.json. Scripts for batch generation are in each party's scripts/generator directory.
 
-Example of the config file for a client is shown below. 
+Client Config Example
 ```
 {
     "Client_ID": "c1",
@@ -59,16 +59,17 @@ Example of the config file for a client is shown below.
 }
 ```
 
-To describe the meaning of important fields:
-- URLs: a list of server URLs for clients submitting their data to each server.
-- N: number of total servers
-- T: number of malicious servers
-- Q: a modulus
-- N_secrets: length of a client's input vector
-- M: row numbers of extended witness in ligero ZK proof
-- N_open: number of opened columns in encoded extended witness
+Key Fields:
 
-Example of the config file for a server is shown below.
+- URLs: List of server URLs for client data submission.
+- N: Total number of servers.
+- T: Number of malicious servers.
+- Q: Modulus.
+- N_secrets: Length of the client's input vector.
+- M: Number of rows in the extended witness for the Ligero ZK proof.
+- N_open: Number of opened columns in the encoded extended witness.
+
+Server Config Example
 ```
 {
     "Server_ID": "s1",
@@ -96,14 +97,33 @@ Example of the config file for a server is shown below.
 }
 ```
 
-To describe the meaning of important fields:
+Key Fields:
 
-- Cert_path: server's certificate location required when running with cloud provider.
-- Key_path: server's private key location required when running with cloud provider.
-- Port: the port on which clients and other servers will connect to server.
-- Complaint_urls: a list of server URLs for a server submitting complaints to other servers.
-- Masked_share_urls: a list of server URLs for a server submitting masked shares to other servers.
-- Share_Index: index number associated to server ID, e.g. 1 for server s1, 2 for server s2
+- Cert_path: Location of the server's certificate, required when running with TLS.
+- Key_path: Location of the server's private key, required when running with TLS.
+- Port: The port for client and server connections.
+- Complaint_urls: List of server URLs for submitting complaints to other servers.
+- Masked_share_urls: List of server URLs for submitting masked shares to other servers.
+- Share_Index: Index number associated with the server ID (e.g., 1 for server s1, 2 for server s2).
+
+Output Party Config Example 
+```
+{
+    "OutputParty_ID": "op1",
+    "Cert_path":"/path to certificate",
+    "Key_path":"/path to private key",
+    "Port": "60000",
+    "N": 4,
+    "T": 1,
+    "N_secrets": 10000,
+    "Q": 41543
+}
+```
+Key Fields:
+
+- Cert_path: Location of the output party's certificate, required when running with TLS.
+- Key_path: Location of the output party's private key, required when running with TLS.
+- Port: The port for server connections.
 
 
 Examples of the input files for client, server and output party are shown below.
@@ -136,14 +156,14 @@ output party
 ]
 ```
 
-To describe the meaning of important fields:
+Important fields are described as follows:
 
-- Secretes: a vector of a client's input, each bit represents an attribute.
-- ClientShareDue: due time that clients submit shares and proofs to servers.
-- ComplaintDue:: due time that servers submit their complaints to each other.
-- ShareBroadcastDue: due time that servers submit masked shares to each other.
-- ServerShareDue: due time that servers submit aggregated shares to the output party.
-- Owner: a URL of the output party for servers submitting aggregated shares to the output party.
+- Secretes: Client input vector, with each bit representing an attribute.
+- ClientShareDue: Deadline for clients to submit shares and proofs.
+- ComplaintDue: Deadline for servers to submit complaints.
+- ShareBroadcastDue: Deadline for servers to share masked data.
+- ServerShareDue: Deadline for servers to submit aggregated shares to the output party.
+- Owner: URL of the output party for servers to submit aggregated shares.
 
 ### 3. Run the software
    
