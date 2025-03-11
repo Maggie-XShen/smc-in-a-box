@@ -14,8 +14,8 @@ At folder local, after preparing each party's template, compile then run
 The deployment and execution on Google Cloud are managed through ansible. Details are described in the following repository.
 https://github.com/GUSecLab/smc-in-a-box-ansible/tree/main
 
-## Build & Run Locally (without Docker Compose)
-1. Building environment
+## Build & Run Manually
+### 1. Building environment
    
    First, ensure that you have Go installed. 
 
@@ -37,7 +37,7 @@ https://github.com/GUSecLab/smc-in-a-box-ansible/tree/main
 
    If MySQL is running, it will be marked as started.
    
-2. Prepare config file and input file
+### 2. Prepare config file and input file
    
 Each client, server and output party should obtain a config file and an input file before the software runs. The config file is a JSON blob, and a template of it can be found at client_template.json, server_template.json and outputparty_template.json. Scripts to generate config files and input files for many clients, servers and output parties are located at each party's scripts/generator.
 
@@ -145,29 +145,29 @@ To describe the meaning of important fields:
 - ServerShareDue: due time that servers submit aggregated shares to the output party.
 - Owner: a URL of the output party for servers submitting aggregated shares to the output party.
 
-3. Run the software
+### 3. Run the software
    
-To run a server with TLS (default), at the folder server/cmd, compile then run
+To start up a server, at the folder server/cmd, compile then run
 ```
 ./cmd -confpath="path_to_server_config_file" -inputpath="path_to_experiments_file" -logpath="path_to_log_folder" -n_client=num_of_clients
 ```
 
-To run an output party with TLS (default), at the folder outputparty/cmd, compile then run
+To start up an output party, at the folder outputparty/cmd, compile then run
 ```
 ./cmd -confpath="path_to_output_party_config_file" -inputpath="path_to_experiments_file" -logpath="path_to_log_folder" -n_client=num_of_clients
 ```
 
-To run a client, at the folder client/cmd, compile then run
+To start up a client, at the folder client/cmd, compile then run
 ```
 ./cmd -confpath=“path_to_client_config_file” -inputpath=“path_to_input_file” -logpath="path_to_log_folder"
 ``` 
 
 To describe the meaning of some parameters:
-- For server and output party, -mode="http" is used to run without TLS, default setting is using TLS; 
-- For server, -n_client_mal=num_of_malicious_client is used to run experiment with malicious clients, default setting is assuming clients are all honest.
-- For client, -mode=honest is used to run client without malicious behavior, default setting is client could act maliciously.
+- For server and output party, use -mode="http" to disable TLS; the default enables it (which requires setup of certificate).
+- For server, use -n_client_mal=num_of_malicious_client to enable malicious clients; the default assumes all are honest.
+- For client, use -mode=honest to run client without malicious behavior. Default setting assumes client could act maliciously.
    
- **Note:** Servers and output party need to start running before clients.
+ **Note:** Servers and the output party must start before clients.
 
 
 ## Citation
