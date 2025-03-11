@@ -20,19 +20,19 @@ https://github.com/GUSecLab/smc-in-a-box-ansible/tree/main
    First, ensure that you have Go installed. 
 
    ```
-   % go version
+   $ go version
    ```
    
    Second, ensure that MySQL is installed and running with a configured username and password for connections. The default credentials in SetupDatabase() (store.go) may need to be replaced with your own.
 
    ```
-   % mysql --version 
+   $ mysql --version 
    ```
 
    If MySQL is installed, you’ll see a version number.
 
    ```
-   % brew services list
+   $ brew services list
    ```
 
    If MySQL is running, it will be marked as started.
@@ -105,6 +105,7 @@ Key Fields:
 - Complaint_urls: List of server URLs for submitting complaints.
 - Masked_share_urls: List of server URLs for submitting masked shares.
 - Share_Index: Server ID index (e.g., 1 for server s1).
+- N, T, Q, N_secrets are same for server, client and output party.
 
 Output Party Config Example 
 ```
@@ -124,6 +125,7 @@ Key Fields:
 - Cert_path: Output party certificate location (required for TLS).
 - Key_path: Output party private key location (required for TLS).
 - Port: Port for server connections.
+- N, T, Q, N_secrets are same for server, client and output party.
 
 Client Input Example
 ```
@@ -165,17 +167,17 @@ Key Fields:
 ### 3. Run the software
 To start up a server, in the server/cmd folder, compile and run:
 ```
-./cmd -confpath="path_to_server_config_file" -inputpath="path_to_experiments_file" -logpath="path_to_log_folder" -n_client=num_of_clients
+$ ./cmd -confpath="path_to_server_config_file" -inputpath="path_to_experiments_file" -logpath="path_to_log_folder" -n_client=num_of_clients
 ```
 
 To start up an output party, in the outputparty/cmd folder, compile and run:
 ```
-./cmd -confpath="path_to_output_party_config_file" -inputpath="path_to_experiments_file" -logpath="path_to_log_folder" -n_client=num_of_clients
+$ ./cmd -confpath="path_to_output_party_config_file" -inputpath="path_to_experiments_file" -logpath="path_to_log_folder" -n_client=num_of_clients
 ```
 
 To start up a client, in the folder client/cmd, compile then run
 ```
-./cmd -confpath=“path_to_client_config_file” -inputpath=“path_to_input_file” -logpath="path_to_log_folder"
+$ ./cmd -confpath=“path_to_client_config_file” -inputpath=“path_to_input_file” -logpath="path_to_log_folder"
 ``` 
 
 Parameter Descriptions:
