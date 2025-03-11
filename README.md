@@ -99,12 +99,12 @@ Server Config Example
 
 Key Fields:
 
-- Cert_path: Location of the server's certificate, required when running with TLS.
-- Key_path: Location of the server's private key, required when running with TLS.
-- Port: The port for client and server connections.
-- Complaint_urls: List of server URLs for submitting complaints to other servers.
-- Masked_share_urls: List of server URLs for submitting masked shares to other servers.
-- Share_Index: Index number associated with the server ID (e.g., 1 for server s1, 2 for server s2).
+- Cert_path: Server certificate location (required for TLS).
+- Key_path: Server private key location (required for TLS).
+- Port: Port for client and server connections.
+- Complaint_urls: List of server URLs for submitting complaints.
+- Masked_share_urls: List of server URLs for submitting masked shares.
+- Share_Index: Server ID index (e.g., 1 for server s1).
 
 Output Party Config Example 
 ```
@@ -121,14 +121,11 @@ Output Party Config Example
 ```
 Key Fields:
 
-- Cert_path: Location of the output party's certificate, required when running with TLS.
-- Key_path: Location of the output party's private key, required when running with TLS.
-- Port: The port for server connections.
+- Cert_path: Output party certificate location (required for TLS).
+- Key_path: Output party private key location (required for TLS).
+- Port: Port for server connections.
 
-
-Examples of the input files for client, server and output party are shown below.
-
-client
+Client Input Example
 ```
 [
    {"Exp_ID":"exp1","Secrets":[0,1]},
@@ -136,7 +133,7 @@ client
 ]
 ```
 
-server
+Server Input Example
 ```
 [
    {"Exp_ID":"exp1",
@@ -147,7 +144,7 @@ server
 ]
 ```
 
-output party
+Output Party Input Example
 ```
 [
    {"Exp_ID":"exp1",
@@ -156,7 +153,7 @@ output party
 ]
 ```
 
-Important fields are described as follows:
+Key Fields:
 
 - Secretes: Client input vector, with each bit representing an attribute.
 - ClientShareDue: Deadline for clients to submit shares and proofs.
@@ -166,26 +163,25 @@ Important fields are described as follows:
 - Owner: URL of the output party for servers to submit aggregated shares.
 
 ### 3. Run the software
-   
-To start up a server, at the folder server/cmd, compile then run
+To start up a server, in the server/cmd folder, compile and run:
 ```
 ./cmd -confpath="path_to_server_config_file" -inputpath="path_to_experiments_file" -logpath="path_to_log_folder" -n_client=num_of_clients
 ```
 
-To start up an output party, at the folder outputparty/cmd, compile then run
+To start up an output party, in the outputparty/cmd folder, compile and run:
 ```
 ./cmd -confpath="path_to_output_party_config_file" -inputpath="path_to_experiments_file" -logpath="path_to_log_folder" -n_client=num_of_clients
 ```
 
-To start up a client, at the folder client/cmd, compile then run
+To start up a client, in the folder client/cmd, compile then run
 ```
 ./cmd -confpath=“path_to_client_config_file” -inputpath=“path_to_input_file” -logpath="path_to_log_folder"
 ``` 
 
-To describe the meaning of some parameters:
-- For server and output party, use -mode="http" to disable TLS; the default enables it (which requires setup of certificate).
-- For server, use -n_client_mal=num_of_malicious_client to enable malicious clients; the default assumes all are honest.
-- For client, use -mode=honest to run client without malicious behavior. Default setting assumes client could act maliciously.
+Parameter Descriptions:
+- For server and output party: use -mode="http" to disable TLS; the default enables it (which requires setup of certificate).
+- For server: use -n_client_mal=num_of_malicious_client to enable malicious clients; the default assumes all are honest.
+- For client: use -mode=honest to run client without malicious behavior. Default setting assumes client could act maliciously.
    
  **Note:** Servers and the output party must start before clients.
 
