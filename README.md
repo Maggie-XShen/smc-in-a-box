@@ -155,7 +155,7 @@ Output Party Input Example
 
 Key Fields:
 
-- Secretes: Client input vector, with each bit representing an attribute.
+- Secrets: Client input vector, with each bit representing an attribute.
 - ClientShareDue: Deadline for clients to submit shares and proofs.
 - ComplaintDue: Deadline for servers to submit complaints.
 - ShareBroadcastDue: Deadline for servers to share masked data.
