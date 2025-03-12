@@ -1,12 +1,12 @@
 # SCIF: Privacy-Preserving Statistics Collection with Input Validation and Full Security
 This repository contains the SCIF prototype, which will be presented in Proceedings on Privacy Enhancing Technologies (PoPETS), 2025.
 
-SCIF is a practical private statistics system, built in Golang, consisting of clients, secure multiparty computation servers, and an output party (e.g., data analyst). It ensures that honest clients' inputs are included in the final result, while excluding malicious inputs. Even with a minority of malicious servers, the output party can still compute the final result. For more details, refer to the [paper](https://eprint.iacr.org/2024/1821).
+SCIF is a practical private statistics system, built in Golang, consisting of clients, secure multiparty computation servers, and an output party (e.g., data analyst). It ensures that honest clients' inputs are included in the final result (e.g., sum), while excluding malicious inputs. Even with a minority of malicious servers, the output party can still compute the final result. For more details, refer to the [paper](https://eprint.iacr.org/2024/1821).
 
 ## Build & Run with Docker Compose
-To start up a cluster of servers, an output party and a cluster of clients, go to the local folder and run:
+To start a cluster of servers, an output party and a cluster of clients, go to the local folder and run:
 ```
-./local
+$ ./local
 ```
 
 ## Build & Run on Cloud Provider
@@ -35,6 +35,7 @@ https://github.com/GUSecLab/smc-in-a-box-ansible/tree/main
    ```
 
    If MySQL is running, it will be marked as started.
+
    
 ### 2. Prepare config file and input file
    
@@ -164,17 +165,22 @@ Key Fields:
 - Owner: URL of the output party for servers to submit aggregated shares.
 
 ### 3. Run the software
-To start up a server, in the server/cmd folder, compile and run:
+Before starting any party, in the smc-in-a-box folder, run the following command line to ensure that all dependencies are properly fetched
+```
+$ go mod tidy
+```
+
+To start a server, in the server/cmd folder, compile and run:
 ```
 $ ./cmd -confpath="path_to_server_config_file" -inputpath="path_to_experiments_file" -logpath="path_to_log_folder" -n_client=num_of_clients
 ```
 
-To start up an output party, in the outputparty/cmd folder, compile and run:
+To start an output party, in the outputparty/cmd folder, compile and run:
 ```
 $ ./cmd -confpath="path_to_output_party_config_file" -inputpath="path_to_experiments_file" -logpath="path_to_log_folder" -n_client=num_of_clients
 ```
 
-To start up a client, in the folder client/cmd, compile then run
+To start a client, in the folder client/cmd, compile then run
 ```
 $ ./cmd -confpath=“path_to_client_config_file” -inputpath=“path_to_input_file” -logpath="path_to_log_folder"
 ``` 
