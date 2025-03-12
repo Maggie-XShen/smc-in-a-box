@@ -1,7 +1,7 @@
 # SCIF: Privacy-Preserving Statistics Collection with Input Validation and Full Security
 This repository contains the SCIF prototype, which will be presented in Proceedings on Privacy Enhancing Technologies (PoPETS), 2025.
 
-SCIF is a practical private statistics system, built in Golang, consisting of clients, secure multiparty computation servers, and an output party (e.g., data analyst). It ensures that honest clients' inputs are included in the final result, while excluding malicious inputs. Even with a minority of malicious servers, the output party can still compute the final result. For more details, refer to the [paper](https://eprint.iacr.org/2024/1821).
+SCIF is a practical private statistics system, built in Golang, consisting of clients, secure multiparty computation servers, and an output party (e.g., data analyst). It ensures that honest clients' inputs are included in the final result, while excluding malicious inputs. Even with a minority of malicious servers, the output party can still compute the final result. For more details, please [refer to our paper](#citation).
 
 ## Build & Run with Docker Compose
 To start up a cluster of servers, an output party and a cluster of clients, go to the local folder and run:
@@ -202,6 +202,7 @@ Jianan Su, Laasya Bangalore, Harel Berger, Jason Yi, Sophia Castor, Muthuramakri
 }
 ```
 
+A pre-print of our paper [is available](https://eprint.iacr.org/2024/1821).
 
 
 
