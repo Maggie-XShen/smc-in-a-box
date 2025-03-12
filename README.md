@@ -188,7 +188,19 @@ Parameter Descriptions:
 
 
 ## Citation
-If you find this work useful, please cite it as follows:
+If you find this work useful, please cite the following paper:
+
+Jianan Su, Laasya Bangalore, Harel Berger, Jason Yi, Sophia Castor, Muthuramakrishnan Venkitasubramaniam, and Micah Sherr. “SCIF: Privacy-Preserving Statistics Collection with Input Validation and Full Security.” In Privacy Enhancing Technologies Symposium (PETS), 2025.
+
+```bibtex
+@inproceedings{scif2025,
+  author = {Su, Jianan and Bangalore, Laasya and Berger, Harel and Yi, Jason and Castor, Sophia and Venkitasubramaniam, Muthuramakrishnan and Sherr, Micah},
+  title = {{SCIF: Privacy-Preserving Statistics Collection with Input Validation and Full Security}},
+  booktitle = {Privacy Enhancing Technologies Symposium (PETS)},
+  year = {2025},
+  month = jul
+}
+```
 
 
 
