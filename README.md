@@ -62,10 +62,10 @@ Key Fields:
 - URLs: List of server URLs for client data submission.
 - N: Total number of servers.
 - T: Number of malicious servers.
-- Q: Modulus.
 - N_secrets: Length of the client's input vector.
-- M: Number of rows in the extended witness for the Ligero ZK proof.
-- N_open: Number of opened columns in the encoded extended witness.
+- M: Number of rows in the extended witness for the Ligero ZK proof (Ligero parameter)
+- N_open: Number of opened columns in the encoded extended witness (Ligero parameter)
+- Q: Modulus for prime field \( \mathbb{F}_p \)  (Ligero parameter)
 
 Server Config Example
 ```
