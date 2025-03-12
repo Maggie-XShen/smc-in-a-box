@@ -65,7 +65,7 @@ Key Fields:
 - N_secrets: Length of the client's input vector.
 - M: Number of rows in the extended witness for the Ligero ZK proof (Ligero parameter)
 - N_open: Number of opened columns in the encoded extended witness (Ligero parameter)
-- Q: Modulus for prime field \( \mathbb{F}_p \)  (Ligero parameter)
+- Q: Field modulus (Ligero parameter)
 
 Server Config Example
 ```
