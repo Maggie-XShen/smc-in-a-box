@@ -37,7 +37,7 @@ https://github.com/GUSecLab/smc-in-a-box-ansible/tree/main
    
 ### 2. Prepare config file and input file
    
-Each client, server, and output party needs a config and input file before running. Example configs are in client_template.json, server_template.json, and outputparty_template.json. Scripts for batch generation are in each party's scripts/generator directory.
+Each client, server, and output party needs a config and input file before running. Example configs are in client_template.json, server_template.json, and outputparty_template.json. Scripts for batch generation of config file and input file are in each party's scripts/generator directory.
 
 Client Config Example
 ```
