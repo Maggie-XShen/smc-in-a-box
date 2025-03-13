@@ -2,8 +2,7 @@
 This repository contains the SCIF prototype, built in Golang. SCIF is a practical private statistics system, consisting of clients, secure multiparty computation servers, and an output party (e.g., data analyst). It ensures that only well-formed client inputs, those satisfying a predefined predicate, are included in the final computation (e.g., sum). Even with a minority of malicious servers, the output party can still compute the final result. For more details, please [refer to our paper](#citation).
 
 ## Build & Run on Cloud Provider
-The deployment and execution on Google Cloud are managed through ansible, and the source code of SCIF is under the tls_mal_mysql_new tag. Details are described in the following repository.
-https://github.com/GUSecLab/smc-in-a-box-ansible/tree/main
+The deployment and execution on Google Cloud are managed through ansible, and the source code of SCIF is under the tls_mal_mysql_new tag. Details are described in the following repository. https://github.com/GUSecLab/smc-in-a-box-ansible/tree/main
 
 ## Build & Run Manually
 ### 1. Building environment
