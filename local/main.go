@@ -15,10 +15,10 @@ import (
 
 func main() {
 
-	n_client := 2
+	n_client := 10
 	n_client_mal := 1
 	n_exp := 1
-	n_input := []int{10000} //clarify the number of inputs for each experiment, e.g. n_input={1,2} means first experiment has 1 input, second experiment has 2 inputs
+	n_input := []int{10} //clarify the number of inputs for each experiment, e.g. n_input={1,2} means first experiment has 1 input, second experiment has 2 inputs
 
 	n_server := 4
 	server_port := []string{"50001", "50002", "50003", "50004", "50005", "50006", "50007"} //port for each server
