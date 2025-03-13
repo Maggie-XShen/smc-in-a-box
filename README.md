@@ -1,14 +1,8 @@
 # SCIF: Privacy-Preserving Statistics Collection with Input Validation and Full Security
 This repository contains the SCIF prototype, built in Golang. SCIF is a practical private statistics system, consisting of clients, secure multiparty computation servers, and an output party (e.g., data analyst). It ensures that only well-formed client inputs, those satisfying a predefined predicate, are included in the final computation (e.g., sum). Even with a minority of malicious servers, the output party can still compute the final result. For more details, please [refer to our paper](#citation).
 
-## Build & Run with Docker Compose
-To start a cluster of servers, an output party and a cluster of clients, go to the local folder and run:
-```
-$ ./local
-```
-
 ## Build & Run on Cloud Provider
-The deployment and execution on Google Cloud are managed through ansible. Details are described in the following repository.
+The deployment and execution on Google Cloud are managed through ansible, and the source code of SCIF is under the tls_mal_mysql_new tag. Details are described in the following repository.
 https://github.com/GUSecLab/smc-in-a-box-ansible/tree/main
 
 ## Build & Run Manually
@@ -20,7 +14,7 @@ https://github.com/GUSecLab/smc-in-a-box-ansible/tree/main
    $ go version
    ```
    
-   Second, ensure that MySQL is installed and running with a configured username and password for connections. The default credentials in SetupDatabase() (store.go) may need to be replaced with your own.
+   Second, ensure that MySQL is installed and running with a configured username and password for connections. The default credentials used in SetupDatabase() may need to be replaced with your own.
 
    ```
    $ mysql --version 
@@ -163,17 +157,17 @@ Key Fields:
 - Owner: URL of the output party for servers to submit aggregated shares.
 
 ### 3. Run the software
-Before starting any party, in the smc-in-a-box folder, run the following command line to ensure that all dependencies are properly fetched
+Before starting any party, in the smc-in-a-box folder, run the following command line to ensure that all dependencies are properly fetched.
 ```
 $ go mod tidy
 ```
 
-To start a server, in the server/cmd folder, compile and run:
+To start a server, in the server/cmd folder, compile then run:
 ```
 $ ./cmd -confpath="path_to_server_config_file" -inputpath="path_to_experiments_file" -logpath="path_to_log_folder" -n_client=num_of_clients
 ```
 
-To start an output party, in the outputparty/cmd folder, compile and run:
+To start an output party, in the outputparty/cmd folder, compile then run:
 ```
 $ ./cmd -confpath="path_to_output_party_config_file" -inputpath="path_to_experiments_file" -logpath="path_to_log_folder" -n_client=num_of_clients
 ```
@@ -190,6 +184,12 @@ Parameter Descriptions:
    
  **Note:** Servers and the output party must start before clients.
 
+At the start of each party's run, a config file and input file will be generated. Debugging messages will scroll by in the terminal window. Once the computation is complete, the log file for each party and the final result file will be generated.
+
+The above commands are for running each party on different physical machines. To start a cluster of servers, an output party, and a cluster of clients (all on the same machine), use the source code with the local tag. Go to the local folder and run:
+```
+$ ./local
+```
 
 ## Citation
 If you find this work useful, please cite the following paper:
