@@ -61,9 +61,9 @@ Key Fields:
 - N: Total number of servers.
 - T: Number of malicious servers.
 - N_secrets: Length of the client's input vector.
-- M: Number of rows in the extended witness for the Ligero ZK proof (Ligero parameter)
-- N_open: Number of opened columns in the encoded extended witness (Ligero parameter)
-- Q: Field modulus (Ligero parameter)
+- M: Number of rows in the extended witness for the Ligero ZK proof (Ligero parameter).
+- N_open: Number of opened columns in the encoded extended witness (Ligero parameter).
+- Q: Field modulus (Ligero parameter).
 
 Server Config Example
 ```
@@ -181,14 +181,14 @@ To start a client, in the folder client/cmd, compile then run
 $ ./cmd -confpath=“path_to_client_config_file” -inputpath=“path_to_input_file” -logpath="path_to_log_folder"
 ``` 
 
+At the start of each party's run, a config file and input file will be generated. Debugging messages will scroll by in the terminal window. Once the computation is complete, the log file for each party and the final result file will be generated.
+
 Parameter Descriptions:
 - For server and output party: use -mode="http" to disable TLS; the default enables it (which requires setup of certificate).
 - For server: use -n_client_mal=num_of_malicious_client to enable malicious clients; the default assumes all are honest.
 - For client: use -mode=honest to run client without malicious behavior. Default setting assumes client could act maliciously.
    
  **Note:** Servers and the output party must start before clients.
-
-At the start of each party's run, a config file and input file will be generated. Debugging messages will scroll by in the terminal window. Once the computation is complete, the log file for each party and the final result file will be generated.
 
 The above commands are for running each party on different physical machines. To start a cluster of servers, an output party, and a cluster of clients (all on the same machine), use the source code with the local tag. Go to the local folder and run:
 ```
