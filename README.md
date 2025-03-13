@@ -20,7 +20,7 @@ https://github.com/GUSecLab/smc-in-a-box-ansible/tree/main
    $ go version
    ```
    
-   Second, ensure that MySQL is installed and running with a configured username and password for connections. The default credentials in SetupDatabase() (store.go) may need to be replaced with your own.
+   Second, ensure that MySQL is installed and running with a configured username and password for connections. The default credentials in SetupDatabase() (located in `store.go` under the `smc-in-a-box/server/sqlstore` directory) may need to be replaced with your own.
 
    ```
    $ mysql --version 
@@ -36,8 +36,18 @@ https://github.com/GUSecLab/smc-in-a-box-ansible/tree/main
 
    
 ### 2. Prepare config file and input file
-   
-Each client, server, and output party needs a config and input file before running. Example configs are in client_template.json, server_template.json, and outputparty_template.json. Scripts for batch generation of config file and input file are in each party's scripts/generator directory.
+<!--   
+Each client, server, and output party needs a config and input file before running. Example configs are in `client_template.json`, `server_template.json`, and `outputparty_template.json` (found in directories `smc-in-a-box/client/config`, `smc-in-a-box/server/config` and `smc-in-a-box/outputparty/config` respectively). Scripts for batch generation of config file and input file are in each party's scripts/generator directory. --->
+
+Each client, server, and output party requires both a config file and an input file before execution. Example configuration files can be found in the following locations:  
+
+- **Client:** `client_template.json` within `smc-in-a-box/client/config` directory
+- **Server:** `server_template.json` within `smc-in-a-box/server/config` directory
+- **Output Party:** `outputparty_template.json` within `smc-in-a-box/outputparty/config` directory
+
+Additionally, scripts for batch generation of config and input files are available in each party's `scripts/generator` directory.
+
+
 
 Client Config Example
 ```
