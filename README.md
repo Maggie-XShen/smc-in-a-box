@@ -4,7 +4,7 @@ This repository contains the SCIF prototype, built in Golang. SCIF is a practica
 ## Build & Run on Cloud Provider
 The deployment and execution on Google Cloud are managed through ansible, and the source code of SCIF is under the tls_mal_mysql_new tag. Details are described in the following repository. https://github.com/GUSecLab/smc-in-a-box-ansible/tree/main
 
-During measurement, we collect execution timestamps and process them using scripts in the benches folder to determine computation runtime. Network traffic between parties is captured by tcpdump, managed via ansible, and packet lengths are analyzed using Wireshark.
+During measurement, execution timestamps is collected and processed using scripts in the benches folder to determine computation runtime. Network traffic between parties is captured by tcpdump, managed via ansible, and packet lengths are analyzed using Wireshark.
 
 ## Build & Run Manually
 ### 1. Building environment
