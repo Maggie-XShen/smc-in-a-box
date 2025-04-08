@@ -6,6 +6,10 @@ The deployment and execution on Google Cloud are managed through ansible, and th
 
 During measurement, execution timestamps is collected and processed using scripts in the benches folder to determine computation runtime. Network traffic between parties is captured by tcpdump, managed via ansible, and packet lengths are analyzed using Wireshark.
 
+<!-- go mod tidy
+cd client/cmd/
+GOOS=js GOARCH=wasm go build -o client.wasm -->
+
 ## Build & Run Manually
 ### 1. Building environment
    

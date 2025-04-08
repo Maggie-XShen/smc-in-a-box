@@ -1,6 +1,8 @@
 module example.com/SMC
 
-go 1.20
+go 1.21
+
+toolchain go1.24.1
 
 require gorm.io/gorm v1.25.9
 
